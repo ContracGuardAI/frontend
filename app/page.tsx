@@ -1,10 +1,9 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
-/* ── glass card shared style ── */
 const glass = {
   background: "rgba(255,255,255,0.055)",
   backdropFilter: "blur(20px)",
@@ -14,23 +13,6 @@ const glass = {
   borderRadius: "16px",
 } as const;
 
-/* ── ambient glow layer (drop behind section cards) ── */
-function Glow({ top, left, right, size = "50%", opacity = 0.030 }: {
-  top?: string; left?: string; right?: string; size?: string; opacity?: number;
-}) {
-  return (
-    <div style={{
-      position: "absolute", pointerEvents: "none", zIndex: 0,
-      top, left, right,
-      width: size, height: size,
-      background: `radial-gradient(ellipse, rgba(255,255,255,${opacity}) 0%, transparent 70%)`,
-      filter: "blur(55px)",
-      transform: "translate(-50%, -50%)",
-    }} />
-  );
-}
-
-/* ══ ICONS ══ */
 function StepIcon({ type }: { type: "review" | "monitor" | "record" }) {
   const c = "rgba(255,255,255,0.90)";
   if (type === "review") return (
@@ -94,7 +76,6 @@ function FeatureIcon({ type }: { type: string }) {
   }
 }
 
-/* ══ ICON BOX ══ */
 function IconBox({ type, size = 52 }: { type: string; size?: number }) {
   return (
     <div style={{
@@ -112,42 +93,68 @@ function IconBox({ type, size = 52 }: { type: string; size?: number }) {
 }
 
 /* ══════════════════════════════════════════════════════
-   HERO
+   HERO — parallax + entrance stagger + mouse spotlight
 ══════════════════════════════════════════════════════ */
 function Hero() {
+  const [parallaxY, setParallaxY] = useState(0);
+  const [spotlight, setSpotlight] = useState({ x: 50, y: 50 });
+  const [spotActive, setSpotActive] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setParallaxY(window.scrollY * 0.10);
+    window.addEventListener("scroll", handler, { passive: true });
+    return () => window.removeEventListener("scroll", handler);
+  }, []);
+
   return (
     <section style={{
       display: "flex", minHeight: "100vh", paddingTop: "62px",
       overflow: "hidden", alignItems: "stretch",
     }}>
       {/* LEFT TEXT */}
-      <div style={{
-        flex: "0 0 46%", minWidth: 0,
-        display: "flex", alignItems: "center",
-        padding: "0 40px 0 180px",
-      }}>
-        <div style={{ paddingBottom: "80px" }}>
+      <div
+        style={{
+          flex: "0 0 46%", minWidth: 0, position: "relative",
+          display: "flex", alignItems: "center",
+          padding: "0 40px 0 180px",
+        }}
+        onMouseMove={e => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setSpotlight({ x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 });
+          setSpotActive(true);
+        }}
+        onMouseLeave={() => setSpotActive(false)}
+      >
+        {/* mouse spotlight */}
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
+          background: spotActive
+            ? `radial-gradient(circle at ${spotlight.x}% ${spotlight.y}%, rgba(255,255,255,0.045) 0%, transparent 62%)`
+            : "transparent",
+          transition: "background 0.15s ease",
+        }} />
+
+        <div style={{ paddingBottom: "80px", position: "relative", zIndex: 1 }}>
 
           {/* badge */}
-          <div style={{
+          <div className="hero-in h0" style={{
             display: "inline-flex", alignItems: "center", gap: "8px",
             border: "1px solid rgba(255,255,255,0.16)", borderRadius: "999px",
             padding: "5px 16px 5px 8px", fontSize: "11.5px",
             color: "rgba(255,255,255,0.62)",
             background: "rgba(255,255,255,0.06)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
+            backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
             boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16)",
             marginBottom: "34px",
           }}>
             <span className="pulse-dot" style={{
               width: "6px", height: "6px", borderRadius: "50%",
-              background: "rgba(255,255,255,0.72)", flexShrink: 0
+              background: "rgba(255,255,255,0.72)", flexShrink: 0,
             }} />
             2,847+ Contracts audited monthly with ContractGuard AI
           </div>
 
-          <h1 style={{
+          <h1 className="hero-in h1" style={{
             fontSize: "clamp(62px,5.8vw,90px)", fontWeight: 900,
             lineHeight: 1.0, letterSpacing: "-0.04em", color: "white",
             marginBottom: "26px",
@@ -155,7 +162,7 @@ function Hero() {
             Contracts<br /><span className="text-shimmer">Secured.</span>
           </h1>
 
-          <p style={{
+          <p className="hero-in h2" style={{
             fontSize: "15.5px", lineHeight: 1.78,
             color: "rgba(255,255,255,0.50)", maxWidth: "310px",
             marginBottom: "42px",
@@ -164,7 +171,7 @@ function Hero() {
             Payments On Track — Effortlessly.
           </p>
 
-          <div style={{ display: "flex", gap: "14px", marginBottom: "64px" }}>
+          <div className="hero-in h3" style={{ display: "flex", gap: "14px", marginBottom: "64px" }}>
             <a href="/audit" style={{
               background: "white", color: "#080808", fontWeight: 700,
               fontSize: "14px", padding: "14px 32px", borderRadius: "6px",
@@ -219,7 +226,7 @@ function Hero() {
             </a>
           </div>
 
-          <div>
+          <div className="hero-in h4">
             <p style={{
               fontSize: "12px", color: "rgba(255,255,255,0.28)",
               letterSpacing: "1.4px", marginBottom: "16px", textTransform: "uppercase" as const,
@@ -232,7 +239,8 @@ function Hero() {
               maskImage: "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
             }}>
               <div className="marquee-track">
-                {["Superteam", "Colosseum", "Solana", "Anthropic", "Phantom", "Metaplex", "Superteam", "Colosseum", "Solana", "Anthropic", "Phantom", "Metaplex"].map((n, i) => (
+                {["Superteam", "Colosseum", "Solana", "Anthropic", "Phantom", "Metaplex",
+                  "Superteam", "Colosseum", "Solana", "Anthropic", "Phantom", "Metaplex"].map((n, i) => (
                   <span key={i} style={{
                     fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap",
                     color: "rgba(255,255,255,0.18)", letterSpacing: "-0.01em",
@@ -245,7 +253,7 @@ function Hero() {
         </div>
       </div>
 
-      {/* RIGHT — image */}
+      {/* RIGHT — image with parallax */}
       <div style={{
         flex: 1, position: "relative", overflow: "hidden", minWidth: 0,
         display: "flex", alignItems: "center", justifyContent: "center",
@@ -298,15 +306,21 @@ function Hero() {
               stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" strokeDasharray="2 9" />
           </svg>
         </div>
+        {/* Parallax wrapper — shifts up as user scrolls */}
         <div style={{
           position: "relative", zIndex: 4,
-          width: "640px", height: "640px",
-          maxWidth: "92%", flexShrink: 0,
-          animation: "floatNode 6s ease-in-out infinite",
-          filter: "drop-shadow(0 0 28px rgba(255,255,255,0.16)) drop-shadow(0 0 68px rgba(255,255,255,0.07))",
+          transform: `translateY(-${parallaxY}px)`,
+          willChange: "transform",
         }}>
-          <Image src="/contraguardv2.png" alt="ContractGuard AI" fill
-            style={{ objectFit: "contain", objectPosition: "center" }} priority />
+          <div style={{
+            width: "640px", height: "640px",
+            maxWidth: "92%", flexShrink: 0,
+            animation: "floatNode 6s ease-in-out infinite",
+            filter: "drop-shadow(0 0 28px rgba(255,255,255,0.16)) drop-shadow(0 0 68px rgba(255,255,255,0.07))",
+          }}>
+            <Image src="/contraguardv2.png" alt="ContractGuard AI" fill
+              style={{ objectFit: "contain", objectPosition: "center" }} priority />
+          </div>
         </div>
         <div style={{
           position: "absolute", inset: 0, zIndex: 5, pointerEvents: "none",
@@ -323,7 +337,7 @@ function Hero() {
 }
 
 /* ══════════════════════════════════════════════════════
-   HOW IT WORKS
+   HOW IT WORKS — added mouse-move gradient to cards
 ══════════════════════════════════════════════════════ */
 function HowItWorks() {
   const steps = [
@@ -358,8 +372,7 @@ function HowItWorks() {
         top: "50%", left: "50%",
         width: "80%", height: "80%",
         background: "radial-gradient(ellipse, rgba(255,255,255,0.028) 0%, transparent 65%)",
-        filter: "blur(60px)",
-        transform: "translate(-50%, -50%)",
+        filter: "blur(60px)", transform: "translate(-50%, -50%)",
       }} />
 
       <div style={{ maxWidth: "1160px", margin: "0 auto", padding: "0 80px", position: "relative", zIndex: 1 }}>
@@ -377,8 +390,7 @@ function HowItWorks() {
           </div>
           <h2 style={{
             fontSize: "clamp(34px,3.8vw,52px)", fontWeight: 900,
-            letterSpacing: "-0.04em", color: "white", lineHeight: 1.05,
-            marginBottom: "16px",
+            letterSpacing: "-0.04em", color: "white", lineHeight: 1.05, marginBottom: "16px",
           }}>
             Three phases.<br />Zero surprises.
           </h2>
@@ -396,35 +408,37 @@ function HowItWorks() {
             <div key={i} className={`card-lift reveal d${i + 1}`} style={{
               ...glass, padding: "36px 30px 34px",
               position: "relative", overflow: "hidden",
-            }}>
-              {/* Top accent gradient line */}
+            }}
+              onMouseMove={e => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                e.currentTarget.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.085) 0%, rgba(255,255,255,0.055) 55%)`;
+              }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.055)"; }}
+            >
               <div style={{
                 position: "absolute", top: 0, left: 0, right: 0, height: "1px",
                 background: "linear-gradient(to right, transparent 5%, rgba(255,255,255,0.22) 40%, rgba(255,255,255,0.22) 60%, transparent 95%)",
                 pointerEvents: "none",
               }} />
 
-              {/* Large decorative step number */}
               <div style={{
                 position: "absolute", top: "10px", right: "18px",
                 fontSize: "96px", fontWeight: 900, fontFamily: "monospace",
                 letterSpacing: "-0.07em", lineHeight: 1,
                 background: "linear-gradient(175deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.03) 75%)",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
+                WebkitBackgroundClip: "text", backgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 userSelect: "none", pointerEvents: "none",
               }}>{s.num}</div>
 
-              {/* Phase label */}
               <span style={{
                 display: "block", fontSize: "9.5px", letterSpacing: "2.2px",
                 color: "rgba(255,255,255,0.38)", fontWeight: 600,
-                textTransform: "uppercase" as const,
-                marginBottom: "30px",
+                textTransform: "uppercase" as const, marginBottom: "30px",
               }}>{s.when}</span>
 
-              {/* Icon box */}
               <div style={{
                 width: "52px", height: "52px", borderRadius: "13px",
                 background: "rgba(255,255,255,0.07)",
@@ -562,15 +576,44 @@ function Features() {
 }
 
 /* ══════════════════════════════════════════════════════
-   STATS
+   STATS — count-up animation on scroll into view
 ══════════════════════════════════════════════════════ */
+const STATS_DATA = [
+  { display: "< $0.01", countTo: null as number | null, suffix: "", label: "PER TRANSACTION", sub: "Near-zero fees on Solana" },
+  { display: "400ms",   countTo: 400,                   suffix: "ms", label: "FINALITY SPEED", sub: "Faster than any other chain" },
+  { display: "100%",    countTo: 100,                   suffix: "%",  label: "IMMUTABLE",      sub: "Records can never be altered" },
+  { display: "Claude",  countTo: null as number | null, suffix: "", label: "POWERED BY AI",  sub: "Anthropic's most capable model" },
+];
+
 function Stats() {
-  const stats = [
-    { value: "< $0.01", label: "PER TRANSACTION", sub: "Near-zero fees on Solana" },
-    { value: "400ms", label: "FINALITY SPEED", sub: "Faster than any other chain" },
-    { value: "100%", label: "IMMUTABLE", sub: "Records can never be altered" },
-    { value: "Claude", label: "POWERED BY AI", sub: "Anthropic's most capable model" },
-  ];
+  const [counts, setCounts] = useState(STATS_DATA.map(s => s.countTo ?? 0));
+  const animatedRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || animatedRef.current) return;
+      animatedRef.current = true;
+      STATS_DATA.forEach((s, i) => {
+        if (s.countTo === null) return;
+        const duration = 1600;
+        const start = performance.now();
+        const to = s.countTo;
+        const tick = (now: number) => {
+          const p = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - p, 3);
+          setCounts(prev => { const n = [...prev]; n[i] = Math.round(to * eased); return n; });
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+      observer.disconnect();
+    }, { threshold: 0.3 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <section style={{
@@ -586,7 +629,7 @@ function Stats() {
         filter: "blur(60px)",
       }} />
       <div style={{ maxWidth: "1160px", margin: "0 auto", padding: "0 80px", position: "relative", zIndex: 1 }}>
-        <div style={{ textAlign: "center", marginBottom: "60px" }}>
+        <div className="reveal" style={{ textAlign: "center", marginBottom: "60px" }}>
           <h2 style={{
             fontSize: "clamp(30px,3.2vw,44px)", fontWeight: 900,
             letterSpacing: "-0.04em", color: "white", marginBottom: "12px",
@@ -596,14 +639,14 @@ function Stats() {
           </p>
         </div>
 
-        <div className="reveal" style={{
+        <div ref={containerRef} className="reveal" style={{
           display: "grid", gridTemplateColumns: "repeat(4,1fr)",
           border: "1px solid rgba(255,255,255,0.13)",
           borderRadius: "16px", overflow: "hidden",
           backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
           boxShadow: "0 4px 24px rgba(0,0,0,0.60), inset 0 1px 0 rgba(255,255,255,0.16)",
         }}>
-          {stats.map((s, i) => (
+          {STATS_DATA.map((s, i) => (
             <div key={i} style={{
               background: "rgba(255,255,255,0.045)",
               padding: "44px 28px", textAlign: "center",
@@ -617,7 +660,9 @@ function Stats() {
               <div style={{
                 fontSize: "clamp(26px,2.8vw,38px)", fontWeight: 900,
                 letterSpacing: "-0.04em", color: "white", marginBottom: "8px",
-              }}>{s.value}</div>
+              }}>
+                {s.countTo !== null ? `${counts[i]}${s.suffix}` : s.display}
+              </div>
               <div style={{
                 fontSize: "10.5px", letterSpacing: "1.6px",
                 color: "rgba(255,255,255,0.55)", marginBottom: "6px",
@@ -632,7 +677,7 @@ function Stats() {
 }
 
 /* ══════════════════════════════════════════════════════
-   CTA
+   CTA — added hover effects to both buttons
 ══════════════════════════════════════════════════════ */
 function CTA() {
   return (
@@ -657,11 +702,9 @@ function CTA() {
       }}>
         <div className="reveal border-glow-pulse" style={{
           background: "rgba(255,255,255,0.058)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
+          backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
           border: "1px solid rgba(255,255,255,0.15)",
-          borderRadius: "24px",
-          padding: "64px 56px",
+          borderRadius: "24px", padding: "64px 56px",
         }}>
           <div style={{
             display: "inline-flex", alignItems: "center",
@@ -697,7 +740,21 @@ function CTA() {
               fontSize: "15px", padding: "15px 36px", borderRadius: "8px",
               textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "10px",
               boxShadow: "0 0 0 1px rgba(255,255,255,0.22), 0 4px 18px rgba(255,255,255,0.14)",
-            }}>
+              transition: "transform 0.22s ease, box-shadow 0.22s ease",
+            }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = "translateY(-2px)";
+                el.style.boxShadow = "0 0 0 1px rgba(255,255,255,0.28), 0 8px 28px rgba(255,255,255,0.22)";
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = "translateY(0)";
+                el.style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 4px 18px rgba(255,255,255,0.14)";
+              }}
+              onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
+              onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
+            >
               Audit Contract
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                 <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor"
@@ -709,7 +766,23 @@ function CTA() {
               fontSize: "15px", padding: "15px 30px", borderRadius: "8px",
               border: "1px solid rgba(255,255,255,0.15)", textDecoration: "none",
               boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
-            }}>
+              transition: "background 0.2s, border-color 0.2s, transform 0.22s ease",
+            }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.background = "rgba(255,255,255,0.10)";
+                el.style.borderColor = "rgba(255,255,255,0.24)";
+                el.style.transform = "translateY(-2px)";
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.background = "rgba(255,255,255,0.06)";
+                el.style.borderColor = "rgba(255,255,255,0.15)";
+                el.style.transform = "translateY(0)";
+              }}
+              onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
+              onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
+            >
               View Pricing
             </a>
           </div>
@@ -720,13 +793,24 @@ function CTA() {
 }
 
 export default function Home() {
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  useEffect(() => {
+    const handler = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      setScrollProgress(docHeight > 0 ? (scrollTop / docHeight) * 100 : 0);
+    };
+    window.addEventListener("scroll", handler, { passive: true });
+    return () => window.removeEventListener("scroll", handler);
+  }, []);
+
   useEffect(() => {
     const els = document.querySelectorAll<Element>('.reveal');
     const observer = new IntersectionObserver(
       entries => entries.forEach(e => {
         if (e.isIntersecting) {
           e.target.classList.add('is-visible');
-          // Remove reveal class after transition finishes so card-lift hover stays snappy
           setTimeout(() => {
             e.target.classList.remove('reveal');
             observer.unobserve(e.target);
@@ -741,6 +825,14 @@ export default function Home() {
 
   return (
     <main style={{ background: "#080808", minHeight: "100vh", color: "white", overflowX: "hidden" }}>
+      {/* Scroll progress bar */}
+      <div style={{
+        position: "fixed", top: 0, left: 0, height: "1.5px",
+        width: `${scrollProgress}%`,
+        background: "linear-gradient(to right, rgba(255,255,255,0.70), rgba(255,255,255,0.25))",
+        zIndex: 200, pointerEvents: "none",
+        transition: "width 0.08s linear",
+      }} />
       <Navbar />
       <Hero />
       <HowItWorks />

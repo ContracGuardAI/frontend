@@ -308,3 +308,33 @@ input:focus, textarea:focus {
   border-color: rgba(255,255,255,0.30) !important;
   box-shadow: 0 0 0 3px rgba(255,255,255,0.06) !important;
 }
+
+/* ── hero entrance stagger ── */
+@keyframes heroIn {
+  from { opacity: 0; transform: translateY(26px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hero-in {
+  opacity: 0;
+  animation: heroIn 0.72s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+.hero-in.h0 { animation-delay: 0.05s; }
+.hero-in.h1 { animation-delay: 0.18s; }
+.hero-in.h2 { animation-delay: 0.32s; }
+.hero-in.h3 { animation-delay: 0.46s; }
+.hero-in.h4 { animation-delay: 0.60s; }
+
+/* ── reveal from sides (for variety) ── */
+.reveal-left {
+  opacity: 0; transform: translateX(-28px);
+  transition: opacity 0.72s cubic-bezier(0.16,1,0.3,1),
+              transform 0.72s cubic-bezier(0.16,1,0.3,1);
+}
+.reveal-left.is-visible { opacity: 1; transform: translateX(0); }
+
+.reveal-right {
+  opacity: 0; transform: translateX(28px);
+  transition: opacity 0.72s cubic-bezier(0.16,1,0.3,1),
+              transform 0.72s cubic-bezier(0.16,1,0.3,1);
+}
+.reveal-right.is-visible { opacity: 1; transform: translateX(0); }
