@@ -93,6 +93,8 @@ export default function CreatePage() {
     { num: 3, label: "Review & Deploy" },
   ];
 
+  const stepAnim = { animation: "fadeSlideUp 0.38s cubic-bezier(0.16,1,0.3,1) 0.04s both" };
+
   return (
     <main style={{ background: "#080808", minHeight: "100vh", color: "white" }}>
       <Navbar />
@@ -109,7 +111,7 @@ export default function CreatePage() {
 
         {/* Header */}
         <div style={{ marginBottom: "48px", textAlign: "center" }}>
-          <div style={{
+          <div className="page-in p0" style={{
             display: "inline-flex", alignItems: "center",
             border: "1px solid rgba(255,255,255,0.14)", borderRadius: "999px",
             padding: "4px 14px", fontSize: "11px",
@@ -120,19 +122,19 @@ export default function CreatePage() {
           }}>
             CREATE CONTRACT
           </div>
-          <h1 style={{
+          <h1 className="page-in p1" style={{
             fontSize: "clamp(32px,3.5vw,48px)", fontWeight: 900,
             letterSpacing: "-0.04em", color: "white", marginBottom: "12px",
           }}>
             Deploy your contract to Solana.
           </h1>
-          <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.42)", lineHeight: 1.7 }}>
+          <p className="page-in p2" style={{ fontSize: "14px", color: "rgba(255,255,255,0.42)", lineHeight: 1.7 }}>
             Set up milestones, define payments, and lock everything on-chain.
           </p>
         </div>
 
         {/* Step indicators */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "48px", gap: "0" }}>
+        <div className="page-in p3" style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "48px", gap: "0" }}>
           {STEPS.map((s, i) => (
             <div key={s.num} style={{ display: "flex", alignItems: "center" }}>
               <div
@@ -177,7 +179,7 @@ export default function CreatePage() {
 
         {/* ── STEP 1 ── */}
         {step === 1 && (
-          <div style={{ ...glass, padding: "40px 44px" }}>
+          <div key="step1" style={{ ...glass, padding: "40px 44px", ...stepAnim }}>
             <h2 style={{ fontSize: "20px", fontWeight: 700, color: "white", marginBottom: "32px", letterSpacing: "-0.025em" }}>
               Contract Details
             </h2>
@@ -245,7 +247,21 @@ export default function CreatePage() {
                 display: "flex", alignItems: "center", gap: "8px",
                 boxShadow: "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)",
                 fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-              }}>
+                transition: "opacity 0.2s, transform 0.2s, box-shadow 0.2s",
+              }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.opacity = "0.88";
+                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 8px 22px rgba(255,255,255,0.18)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.opacity = "1";
+                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)";
+                }}
+                onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
+                onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; }}
+              >
                 Next: Set Checkpoints
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                   <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -257,7 +273,7 @@ export default function CreatePage() {
 
         {/* ── STEP 2 ── */}
         {step === 2 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div key="step2" style={{ display: "flex", flexDirection: "column", gap: "12px", ...stepAnim }}>
             <div style={{ ...glass, padding: "32px 44px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px" }}>
                 <div>
@@ -286,6 +302,7 @@ export default function CreatePage() {
                     border: "1px solid rgba(255,255,255,0.08)",
                     borderRadius: "12px", padding: "20px 22px",
                     position: "relative",
+                    animation: `fadeSlideUp 0.32s cubic-bezier(0.16,1,0.3,1) ${i * 0.05}s both`,
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
                       <div style={{
@@ -302,7 +319,10 @@ export default function CreatePage() {
                           background: "transparent", border: "none", cursor: "pointer",
                           color: "rgba(255,255,255,0.30)", padding: "4px",
                           transition: "color 0.2s",
-                        }}>
+                        }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,100,100,0.70)"; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.30)"; }}
+                        >
                           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                             <line x1="2" y1="2" x2="12" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                             <line x1="12" y1="2" x2="2" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -338,8 +358,19 @@ export default function CreatePage() {
                 color: "rgba(255,255,255,0.45)", fontSize: "13.5px", fontWeight: 600,
                 cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
                 fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-                transition: "border-color 0.2s, color 0.2s",
-              }}>
+                transition: "border-color 0.2s, color 0.2s, background 0.2s",
+              }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.28)";
+                  (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.70)";
+                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.03)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.16)";
+                  (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.45)";
+                  (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                }}
+              >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <line x1="7" y1="1" x2="7" y2="13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                   <line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -354,7 +385,21 @@ export default function CreatePage() {
                 fontSize: "14px", fontWeight: 600, padding: "13px 24px", borderRadius: "7px",
                 border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer",
                 fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-              }}>
+                transition: "background 0.2s, border-color 0.2s, transform 0.2s",
+              }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.09)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.20)";
+                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.12)";
+                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                }}
+                onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
+                onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)"; }}
+              >
                 Back
               </button>
               <button onClick={() => setStep(3)} style={{
@@ -364,7 +409,21 @@ export default function CreatePage() {
                 display: "flex", alignItems: "center", gap: "8px",
                 boxShadow: "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)",
                 fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-              }}>
+                transition: "opacity 0.2s, transform 0.2s, box-shadow 0.2s",
+              }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.opacity = "0.88";
+                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 8px 22px rgba(255,255,255,0.18)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.opacity = "1";
+                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)";
+                }}
+                onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
+                onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; }}
+              >
                 Review & Deploy
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                   <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -376,7 +435,7 @@ export default function CreatePage() {
 
         {/* ── STEP 3 ── */}
         {step === 3 && !deployed && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div key="step3" style={{ display: "flex", flexDirection: "column", gap: "16px", ...stepAnim }}>
             {/* Summary card */}
             <div style={{ ...glass, padding: "36px 44px" }}>
               <h2 style={{ fontSize: "20px", fontWeight: 700, color: "white", marginBottom: "28px", letterSpacing: "-0.025em" }}>
@@ -394,7 +453,17 @@ export default function CreatePage() {
                     background: "rgba(255,255,255,0.03)",
                     border: "1px solid rgba(255,255,255,0.07)",
                     borderRadius: "10px", padding: "14px 16px",
-                  }}>
+                    transition: "border-color 0.2s, background 0.2s",
+                  }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.14)";
+                      (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.05)";
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)";
+                      (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)";
+                    }}
+                  >
                     <div style={{ fontSize: "10.5px", letterSpacing: "1.5px", color: "rgba(255,255,255,0.38)", marginBottom: "6px" }}>{row.label}</div>
                     <div style={{ fontSize: "14px", fontWeight: 600, color: "white", wordBreak: "break-all" }}>{row.value}</div>
                   </div>
@@ -412,6 +481,7 @@ export default function CreatePage() {
                       background: "rgba(255,255,255,0.03)",
                       border: "1px solid rgba(255,255,255,0.07)",
                       borderRadius: "8px", padding: "12px 16px",
+                      animation: `fadeSlideUp 0.30s cubic-bezier(0.16,1,0.3,1) ${i * 0.05}s both`,
                     }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", fontWeight: 700 }}>
@@ -469,7 +539,21 @@ export default function CreatePage() {
                 fontSize: "14px", fontWeight: 600, padding: "13px 24px", borderRadius: "7px",
                 border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer",
                 fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-              }}>
+                transition: "background 0.2s, border-color 0.2s, transform 0.2s",
+              }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.09)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.20)";
+                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.12)";
+                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                }}
+                onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
+                onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)"; }}
+              >
                 Back
               </button>
               <button onClick={handleDeploy} disabled={deploying} style={{
@@ -480,7 +564,23 @@ export default function CreatePage() {
                 display: "flex", alignItems: "center", gap: "8px",
                 boxShadow: "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)",
                 fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-              }}>
+                transition: "opacity 0.2s, transform 0.2s, box-shadow 0.2s",
+              }}
+                onMouseEnter={e => {
+                  if (!deploying) {
+                    (e.currentTarget as HTMLButtonElement).style.opacity = "0.88";
+                    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 8px 22px rgba(255,255,255,0.18)";
+                  }
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.opacity = "1";
+                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)";
+                }}
+                onMouseDown={e => { if (!deploying) (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
+                onMouseUp={e => { if (!deploying) (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; }}
+              >
                 {deploying ? (
                   <>
                     <svg width="14" height="14" viewBox="0 0 44 44" fill="none"
@@ -505,7 +605,7 @@ export default function CreatePage() {
 
         {/* ── DEPLOYED SUCCESS ── */}
         {deployed && (
-          <div style={{ ...glass, padding: "64px 48px", textAlign: "center" }}>
+          <div key="deployed" style={{ ...glass, padding: "64px 48px", textAlign: "center", animation: "fadeSlideUp 0.48s cubic-bezier(0.16,1,0.3,1) 0.04s both" }}>
             <div style={{ marginBottom: "32px", position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
               {/* Ripple rings */}
               {[1, 2, 3].map(n => (
@@ -550,14 +650,42 @@ export default function CreatePage() {
                 fontSize: "14px", padding: "13px 32px", borderRadius: "7px",
                 textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px",
                 boxShadow: "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)",
-              }}>
+                transition: "opacity 0.2s, transform 0.2s, box-shadow 0.2s",
+              }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88";
+                  (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
+                  (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 8px 22px rgba(255,255,255,0.18)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
+                  (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+                  (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)";
+                }}
+                onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
+                onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
+              >
                 View in Dashboard
               </a>
               <a href="/audit" style={{
                 background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.65)",
                 fontSize: "14px", fontWeight: 600, padding: "13px 26px", borderRadius: "7px",
                 border: "1px solid rgba(255,255,255,0.12)", textDecoration: "none",
-              }}>
+                transition: "background 0.2s, border-color 0.2s, transform 0.2s",
+              }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.10)";
+                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.20)";
+                  (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-1px)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.06)";
+                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.12)";
+                  (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+                }}
+                onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
+                onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)"; }}
+              >
                 New Audit
               </a>
             </div>

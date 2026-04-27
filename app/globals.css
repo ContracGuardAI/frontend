@@ -338,3 +338,14 @@ input:focus, textarea:focus {
               transform 0.72s cubic-bezier(0.16,1,0.3,1);
 }
 .reveal-right.is-visible { opacity: 1; transform: translateX(0); }
+
+/* ── inner-page entrance (header + content stagger) ── */
+.page-in {
+  opacity: 0;
+  animation: fadeSlideUp 0.55s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+.page-in.p0 { animation-delay: 0.04s; }
+.page-in.p1 { animation-delay: 0.14s; }
+.page-in.p2 { animation-delay: 0.24s; }
+.page-in.p3 { animation-delay: 0.34s; }
+.page-in.p4 { animation-delay: 0.46s; }

@@ -157,7 +157,7 @@ export default function DashboardPage() {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "40px" }}>
           <div>
-            <div style={{
+            <div className="page-in p0" style={{
               display: "inline-flex", alignItems: "center",
               border: "1px solid rgba(255,255,255,0.14)", borderRadius: "999px",
               padding: "4px 14px", fontSize: "11px",
@@ -168,19 +168,33 @@ export default function DashboardPage() {
             }}>
               DASHBOARD
             </div>
-            <h1 style={{
+            <h1 className="page-in p1" style={{
               fontSize: "clamp(30px,3.5vw,44px)", fontWeight: 900,
               letterSpacing: "-0.04em", color: "white", lineHeight: 1.0,
             }}>
               Your Contracts
             </h1>
           </div>
-          <Link href="/create" style={{
+          <Link href="/create" className="page-in p2" style={{
             background: "white", color: "#080808", fontWeight: 700,
             fontSize: "13.5px", padding: "12px 26px", borderRadius: "7px",
             textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px",
             boxShadow: "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)",
-          }}>
+            transition: "opacity 0.2s, transform 0.2s, box-shadow 0.2s",
+          }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88";
+              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
+              (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 8px 22px rgba(255,255,255,0.18)";
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
+              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+              (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)";
+            }}
+            onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
+            onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
+          >
             <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
               <line x1="7" y1="1" x2="7" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               <line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -190,12 +204,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats */}
-        <div style={{
+        <div className="page-in p3" style={{
           display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
           gap: "12px", marginBottom: "32px",
         }}>
           {stats.map((s, i) => (
-            <div key={i} style={{ ...glass, padding: "22px 24px" }}>
+            <div key={i} className="card-lift" style={{ ...glass, padding: "22px 24px" }}>
               <div style={{ fontSize: "10px", letterSpacing: "1.6px", color: "rgba(255,255,255,0.40)", marginBottom: "8px" }}>{s.label}</div>
               <div className="num-glow" style={{ fontSize: "28px", fontWeight: 900, color: "white", letterSpacing: "-0.04em" }}>
                 {typeof s.value === "number" ? <CountUp end={s.value} /> : s.value}
@@ -205,7 +219,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Filter tabs */}
-        <div style={{ display: "flex", gap: "6px", marginBottom: "20px" }}>
+        <div className="page-in p4" style={{ display: "flex", gap: "6px", marginBottom: "20px" }}>
           {FILTERS.map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
               padding: "8px 18px", borderRadius: "8px", cursor: "pointer",
@@ -229,13 +243,15 @@ export default function DashboardPage() {
 
         {/* Contract cards */}
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {filtered.map(contract => (
+          {filtered.map((contract, i) => (
             <Link key={contract.id} href={`/dashboard/${contract.id}`} style={{ textDecoration: "none" }}>
               <div style={{
                 ...glass, padding: "24px 28px",
-                cursor: "pointer", transition: "border-color 0.2s, background 0.2s, transform 0.25s cubic-bezier(0.16,1,0.3,1), box-shadow 0.25s ease",
+                cursor: "pointer",
+                transition: "border-color 0.25s ease, background 0.25s ease, transform 0.25s cubic-bezier(0.16,1,0.3,1), box-shadow 0.25s ease",
                 display: "grid", gridTemplateColumns: "1fr 1fr auto",
                 gap: "24px", alignItems: "center",
+                animation: `fadeSlideUp 0.5s cubic-bezier(0.16,1,0.3,1) ${i * 0.07}s both`,
               }}
                 onMouseEnter={e => {
                   (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.22)";
@@ -330,7 +346,17 @@ export default function DashboardPage() {
                 fontSize: "14px", fontWeight: 600, padding: "12px 26px", borderRadius: "7px",
                 border: "1px solid rgba(255,255,255,0.14)", textDecoration: "none",
                 display: "inline-flex", alignItems: "center", gap: "8px",
-              }}>
+                transition: "background 0.2s, border-color 0.2s",
+              }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.13)";
+                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.22)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.08)";
+                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.14)";
+                }}
+              >
                 Create Contract
               </Link>
             </div>

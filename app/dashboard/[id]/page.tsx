@@ -149,12 +149,21 @@ export default function ContractDetailPage() {
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "110px 80px 80px", position: "relative", zIndex: 1 }}>
 
         {/* Back link */}
-        <Link href="/dashboard" style={{
+        <Link href="/dashboard" className="page-in p0" style={{
           display: "inline-flex", alignItems: "center", gap: "8px",
           color: "rgba(255,255,255,0.40)", textDecoration: "none",
           fontSize: "13px", marginBottom: "28px",
-          transition: "color 0.2s",
-        }}>
+          transition: "color 0.2s, transform 0.2s",
+        }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.75)";
+            (e.currentTarget as HTMLAnchorElement).style.transform = "translateX(-3px)";
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.40)";
+            (e.currentTarget as HTMLAnchorElement).style.transform = "translateX(0)";
+          }}
+        >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M10 7H2M2 7L6 3M2 7L6 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -162,7 +171,7 @@ export default function ContractDetailPage() {
         </Link>
 
         {/* Contract header */}
-        <div style={{ ...glass, padding: "28px 32px", marginBottom: "20px" }}>
+        <div className="page-in p1" style={{ ...glass, padding: "28px 32px", marginBottom: "20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
@@ -220,7 +229,7 @@ export default function ContractDetailPage() {
         </div>
 
         {/* Main content: 2 columns */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.1fr", gap: "20px" }}>
+        <div className="page-in p2" style={{ display: "grid", gridTemplateColumns: "1fr 1.1fr", gap: "20px" }}>
 
           {/* LEFT: Checkpoint timeline */}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -249,6 +258,19 @@ export default function ContractDetailPage() {
                       border: isActive ? "1px solid rgba(255,255,255,0.22)" : "1px solid rgba(255,255,255,0.10)",
                       background: isActive ? "rgba(255,255,255,0.075)" : "rgba(255,255,255,0.045)",
                       transition: "all 0.2s",
+                      animation: `fadeSlideUp 0.42s cubic-bezier(0.16,1,0.3,1) ${i * 0.08}s both`,
+                    }}
+                    onMouseEnter={e => {
+                      if (!isActive) {
+                        (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.18)";
+                        (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.062)";
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isActive) {
+                        (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.10)";
+                        (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.045)";
+                      }
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -298,10 +320,18 @@ export default function ContractDetailPage() {
                                 cursor: "pointer",
                                 fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
                                 display: "flex", alignItems: "center", justifyContent: "center", gap: "7px",
-                                transition: "background 0.2s, border-color 0.2s",
+                                transition: "background 0.2s, border-color 0.2s, transform 0.15s",
                               } as React.CSSProperties}
-                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(80,220,140,0.24)"; }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(80,220,140,0.15)"; }}
+                              onMouseEnter={e => {
+                                (e.currentTarget as HTMLButtonElement).style.background = "rgba(80,220,140,0.24)";
+                                (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
+                              }}
+                              onMouseLeave={e => {
+                                (e.currentTarget as HTMLButtonElement).style.background = "rgba(80,220,140,0.15)";
+                                (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                              }}
+                              onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
+                              onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"; }}
                             >
                               <IconCheck size={14} color="rgba(80,220,140,0.90)" strokeWidth={2.2} />
                               Approve
@@ -316,10 +346,18 @@ export default function ContractDetailPage() {
                                 cursor: "pointer",
                                 fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
                                 display: "flex", alignItems: "center", justifyContent: "center", gap: "7px",
-                                transition: "background 0.2s, border-color 0.2s",
+                                transition: "background 0.2s, border-color 0.2s, transform 0.15s",
                               } as React.CSSProperties}
-                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,80,80,0.16)"; }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,80,80,0.08)"; }}
+                              onMouseEnter={e => {
+                                (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,80,80,0.16)";
+                                (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
+                              }}
+                              onMouseLeave={e => {
+                                (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,80,80,0.08)";
+                                (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                              }}
+                              onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
+                              onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"; }}
                             >
                               <IconX size={14} color="rgba(255,120,120,0.90)" strokeWidth={2.2} />
                               Request Revision
@@ -339,10 +377,18 @@ export default function ContractDetailPage() {
                               fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
                               boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
                               display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                              transition: "background 0.2s",
+                              transition: "background 0.2s, transform 0.15s",
                             } as React.CSSProperties}
-                            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.16)"; }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.10)"; }}
+                            onMouseEnter={e => {
+                              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.16)";
+                              (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
+                            }}
+                            onMouseLeave={e => {
+                              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.10)";
+                              (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                            }}
+                            onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
+                            onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"; }}
                           >
                             <IconUpload size={15} color="rgba(255,255,255,0.80)" strokeWidth={1.8} />
                             Submit Evidence
@@ -376,6 +422,7 @@ export default function ContractDetailPage() {
               <div style={{
                 ...glass, padding: "28px 30px",
                 border: "1px solid rgba(255,255,255,0.22)",
+                animation: "fadeSlideUp 0.32s cubic-bezier(0.16,1,0.3,1) both",
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                   <h3 style={{ fontSize: "16px", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>
@@ -384,7 +431,11 @@ export default function ContractDetailPage() {
                   <button onClick={() => setSubmitMode(false)} style={{
                     background: "transparent", border: "none", cursor: "pointer",
                     color: "rgba(255,255,255,0.40)", padding: "4px",
-                  }}>
+                    transition: "color 0.2s",
+                  }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.75)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.40)"; }}
+                  >
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                       <line x1="2" y1="2" x2="12" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                       <line x1="12" y1="2" x2="2" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -396,7 +447,17 @@ export default function ContractDetailPage() {
                   border: "1px dashed rgba(255,255,255,0.16)",
                   borderRadius: "10px", padding: "32px",
                   textAlign: "center", marginBottom: "16px", cursor: "pointer",
-                }}>
+                  transition: "border-color 0.2s, background 0.2s",
+                }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.28)";
+                    (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.05)";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.16)";
+                    (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)";
+                  }}
+                >
                   <div style={{ fontSize: "14px", fontWeight: 600, color: "rgba(255,255,255,0.50)", marginBottom: "6px" }}>
                     Upload photos / documents
                   </div>
@@ -520,12 +581,25 @@ export default function ContractDetailPage() {
                 </div>
               ))}
               <a href="#" style={{
-                display: "block", textAlign: "center", marginTop: "14px",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "5px",
+                marginTop: "14px",
                 fontSize: "12.5px", color: "rgba(255,255,255,0.35)",
                 textDecoration: "none",
-                transition: "color 0.2s",
-              }}>
-                View on Solana Explorer ↗
+                transition: "color 0.2s, transform 0.2s",
+              }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.65)";
+                  (e.currentTarget as HTMLAnchorElement).style.transform = "translateX(2px)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.35)";
+                  (e.currentTarget as HTMLAnchorElement).style.transform = "translateX(0)";
+                }}
+              >
+                View on Solana Explorer
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 10 L10 2 M10 2 H5 M10 2 V7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </a>
             </div>
 

@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -113,14 +114,54 @@ function CheckIcon({ included }: { included: boolean }) {
   );
 }
 
+/* ── Accordion FAQ ── */
 function FAQ({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div style={{
-      ...glass, padding: "22px 26px",
-      borderRadius: "12px",
-    }}>
-      <h3 style={{ fontSize: "15px", fontWeight: 700, color: "white", marginBottom: "10px", letterSpacing: "-0.02em" }}>{q}</h3>
-      <p style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.48)", lineHeight: 1.68, margin: 0 }}>{a}</p>
+    <div
+      style={{
+        ...glass,
+        padding: "20px 26px",
+        borderRadius: "12px",
+        cursor: "pointer",
+        transition: "background 0.2s ease, border-color 0.2s ease",
+      }}
+      onClick={() => setOpen(o => !o)}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.075)";
+        (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.20)";
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.055)";
+        (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.13)";
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
+        <h3 style={{ fontSize: "15px", fontWeight: 700, color: "white", letterSpacing: "-0.02em", margin: 0, flex: 1 }}>{q}</h3>
+        <svg
+          width="16" height="16" viewBox="0 0 16 16" fill="none"
+          style={{
+            flexShrink: 0,
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 0.30s cubic-bezier(0.16,1,0.3,1)",
+          }}
+        >
+          <path d="M3 6 L8 11 L13 6" stroke="rgba(255,255,255,0.45)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+      {/* Smooth height animation via CSS grid trick */}
+      <div style={{
+        display: "grid",
+        gridTemplateRows: open ? "1fr" : "0fr",
+        transition: "grid-template-rows 0.32s cubic-bezier(0.16,1,0.3,1)",
+      }}>
+        <div style={{ overflow: "hidden" }}>
+          <p style={{
+            fontSize: "13.5px", color: "rgba(255,255,255,0.50)",
+            lineHeight: 1.70, margin: "12px 0 2px 0",
+          }}>{a}</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -142,7 +183,7 @@ export default function PricingPage() {
 
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "72px" }}>
-          <div style={{
+          <div className="page-in p0" style={{
             display: "inline-flex", alignItems: "center",
             border: "1px solid rgba(255,255,255,0.14)", borderRadius: "999px",
             padding: "4px 14px", fontSize: "11px",
@@ -153,23 +194,29 @@ export default function PricingPage() {
           }}>
             PRICING
           </div>
-          <h1 style={{
+          <h1 className="page-in p1" style={{
             fontSize: "clamp(36px,4.2vw,58px)", fontWeight: 900,
             letterSpacing: "-0.045em", color: "white",
             lineHeight: 1.0, marginBottom: "18px",
           }}>
             Simple, transparent pricing.
           </h1>
-          <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.44)", maxWidth: "480px", margin: "0 auto", lineHeight: 1.75 }}>
+          <p className="page-in p2" style={{
+            fontSize: "15px", color: "rgba(255,255,255,0.44)",
+            maxWidth: "480px", margin: "0 auto", lineHeight: 1.75,
+          }}>
             Start free. Pay only when your contract closes.
             No subscriptions — just a small platform fee.
           </p>
         </div>
 
         {/* Pricing cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.08fr 1fr", gap: "16px", marginBottom: "80px", alignItems: "start" }}>
+        <div className="page-in p3" style={{
+          display: "grid", gridTemplateColumns: "1fr 1.08fr 1fr",
+          gap: "16px", marginBottom: "80px", alignItems: "start",
+        }}>
           {PLANS.map((plan) => (
-            <div key={plan.name} style={{
+            <div key={plan.name} className="card-lift" style={{
               ...glass,
               padding: plan.featured ? "36px 32px" : "30px 28px",
               border: plan.featured ? "1px solid rgba(255,255,255,0.22)" : "1px solid rgba(255,255,255,0.10)",
@@ -215,7 +262,7 @@ export default function PricingPage() {
                 padding: "13px 0", borderRadius: "8px",
                 fontSize: "14px", fontWeight: 700, textDecoration: "none",
                 marginBottom: "28px",
-                transition: "opacity 0.2s, transform 0.15s",
+                transition: "transform 0.22s ease, box-shadow 0.22s ease, background 0.2s, border-color 0.2s",
                 ...(plan.featured ? {
                   background: "white", color: "#080808",
                   boxShadow: "0 0 0 1px rgba(255,255,255,0.22), 0 4px 14px rgba(255,255,255,0.14)",
@@ -226,10 +273,28 @@ export default function PricingPage() {
                   boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10)",
                 }),
               }}
-                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = "0.82"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = "1"; }}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLAnchorElement;
+                  el.style.transform = "translateY(-2px)";
+                  if (plan.featured) {
+                    el.style.boxShadow = "0 0 0 1px rgba(255,255,255,0.28), 0 8px 24px rgba(255,255,255,0.20)";
+                  } else {
+                    el.style.background = "rgba(255,255,255,0.12)";
+                    (el.style as CSSStyleDeclaration & { borderColor: string }).borderColor = "rgba(255,255,255,0.22)";
+                  }
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLAnchorElement;
+                  el.style.transform = "translateY(0)";
+                  if (plan.featured) {
+                    el.style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 4px 14px rgba(255,255,255,0.14)";
+                  } else {
+                    el.style.background = "rgba(255,255,255,0.07)";
+                    (el.style as CSSStyleDeclaration & { borderColor: string }).borderColor = "rgba(255,255,255,0.14)";
+                  }
+                }}
                 onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
-                onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(1)"; }}
+                onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
               >
                 {plan.cta}
               </Link>
@@ -257,7 +322,7 @@ export default function PricingPage() {
         </div>
 
         {/* Trust strip */}
-        <div style={{ ...glass, padding: "28px 36px", marginBottom: "80px" }}>
+        <div className="page-in p4" style={{ ...glass, padding: "28px 36px", marginBottom: "80px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "24px" }}>
             {[
               { Icon: IconShield,  title: "Non-custodial",      desc: "We never hold your funds. Escrow is a Solana PDA." },
@@ -265,7 +330,20 @@ export default function PricingPage() {
               { Icon: IconSparkle, title: "Claude AI",           desc: "Powered by Anthropic's most capable model." },
               { Icon: IconGlobe,   title: "Built for Indonesia", desc: "Optimized for Indonesian contract law & pricing." },
             ].map(({ Icon, title, desc }, i) => (
-              <div key={i} style={{ textAlign: "center" }}>
+              <div key={i} style={{
+                textAlign: "center", padding: "14px 8px", borderRadius: "12px",
+                transition: "background 0.2s ease, transform 0.22s ease",
+                cursor: "default",
+              }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.04)";
+                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLDivElement).style.background = "transparent";
+                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+                }}
+              >
                 <div style={{
                   width: "44px", height: "44px", borderRadius: "12px", margin: "0 auto 12px",
                   background: "rgba(255,255,255,0.07)",
@@ -301,8 +379,7 @@ export default function PricingPage() {
         {/* Bottom CTA */}
         <div style={{
           background: "rgba(255,255,255,0.058)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
+          backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
           border: "1px solid rgba(255,255,255,0.14)",
           boxShadow: "0 8px 40px rgba(0,0,0,0.60), inset 0 1px 0 rgba(255,255,255,0.20)",
           borderRadius: "20px", padding: "52px", textAlign: "center",
@@ -322,12 +399,20 @@ export default function PricingPage() {
               fontSize: "14px", padding: "14px 36px", borderRadius: "8px",
               textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "9px",
               boxShadow: "0 0 0 1px rgba(255,255,255,0.22), 0 4px 18px rgba(255,255,255,0.14)",
-              transition: "opacity 0.2s, transform 0.15s",
+              transition: "transform 0.22s ease, box-shadow 0.22s ease",
             }}
-              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = "1"; }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = "translateY(-2px)";
+                el.style.boxShadow = "0 0 0 1px rgba(255,255,255,0.28), 0 8px 28px rgba(255,255,255,0.22)";
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.transform = "translateY(0)";
+                el.style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 4px 18px rgba(255,255,255,0.14)";
+              }}
               onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
-              onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(1)"; }}
+              onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
             >
               Start Free Audit
               <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
@@ -339,7 +424,23 @@ export default function PricingPage() {
               fontSize: "14px", fontWeight: 600, padding: "14px 30px", borderRadius: "8px",
               border: "1px solid rgba(255,255,255,0.14)", textDecoration: "none",
               boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12)",
-            }}>
+              transition: "background 0.2s, border-color 0.2s, transform 0.22s ease",
+            }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.background = "rgba(255,255,255,0.10)";
+                el.style.borderColor = "rgba(255,255,255,0.22)";
+                el.style.transform = "translateY(-2px)";
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.background = "rgba(255,255,255,0.06)";
+                el.style.borderColor = "rgba(255,255,255,0.14)";
+                el.style.transform = "translateY(0)";
+              }}
+              onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
+              onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
+            >
               Create Contract
             </Link>
           </div>

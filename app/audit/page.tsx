@@ -165,7 +165,7 @@ export default function AuditPage() {
 
         {/* Page header */}
         <div style={{ marginBottom: "56px" }}>
-          <div style={{
+          <div className="page-in p0" style={{
             display: "inline-flex", alignItems: "center",
             border: "1px solid rgba(255,255,255,0.14)", borderRadius: "999px",
             padding: "4px 14px", fontSize: "11px",
@@ -176,21 +176,21 @@ export default function AuditPage() {
           }}>
             AI CONTRACT REVIEW
           </div>
-          <h1 style={{
+          <h1 className="page-in p1" style={{
             fontSize: "clamp(36px,4vw,54px)", fontWeight: 900,
             letterSpacing: "-0.04em", color: "white", lineHeight: 1.0,
             marginBottom: "14px",
           }}>
             Upload your contract.<br />Get the truth in seconds.
           </h1>
-          <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.44)", maxWidth: "480px", lineHeight: 1.75 }}>
+          <p className="page-in p2" style={{ fontSize: "15px", color: "rgba(255,255,255,0.44)", maxWidth: "480px", lineHeight: 1.75 }}>
             AI reads every clause, detects price markups, flags risky terms,
             and gives you a fairness score — before you sign anything.
           </p>
         </div>
 
         {/* Two-column layout */}
-        <div style={{ display: "grid", gridTemplateColumns: fileState === "done" ? "1fr 1.4fr" : "1fr 1fr", gap: "24px", transition: "grid-template-columns 0.4s ease" }}>
+        <div className="page-in p3" style={{ display: "grid", gridTemplateColumns: fileState === "done" ? "1fr 1.4fr" : "1fr 1fr", gap: "24px", transition: "grid-template-columns 0.4s ease" }}>
 
           {/* LEFT: Upload */}
           <div>
@@ -296,9 +296,21 @@ export default function AuditPage() {
               ].map(({ Icon, label }, i) => (
                 <div key={i} style={{
                   display: "flex", alignItems: "center", gap: "12px",
-                  padding: "10px 0",
+                  padding: "10px 8px",
                   borderBottom: i < 3 ? "1px solid rgba(255,255,255,0.06)" : "none",
-                }}>
+                  borderRadius: "8px",
+                  cursor: "default",
+                  transition: "transform 0.2s ease, background 0.2s ease",
+                }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLDivElement).style.transform = "translateX(4px)";
+                    (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLDivElement).style.transform = "translateX(0)";
+                    (e.currentTarget as HTMLDivElement).style.background = "transparent";
+                  }}
+                >
                   <div style={{
                     width: "32px", height: "32px", borderRadius: "8px", flexShrink: 0,
                     background: "rgba(255,255,255,0.06)",
@@ -391,7 +403,17 @@ export default function AuditPage() {
                           background: "rgba(255,255,255,0.03)",
                           border: "1px solid rgba(255,255,255,0.07)",
                           borderRadius: "10px", padding: "14px 16px",
-                        }}>
+                          transition: "border-color 0.2s, background 0.2s",
+                        }}
+                          onMouseEnter={e => {
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.13)";
+                            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.05)";
+                          }}
+                          onMouseLeave={e => {
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)";
+                            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)";
+                          }}
+                        >
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                             <div style={{ fontSize: "13.5px", fontWeight: 600, color: "white", flex: 1 }}>{item.item}</div>
                             <RiskBadge risk={item.risk} />
@@ -421,7 +443,17 @@ export default function AuditPage() {
                           background: "rgba(255,255,255,0.03)",
                           border: "1px solid rgba(255,255,255,0.07)",
                           borderRadius: "10px", padding: "16px 18px",
-                        }}>
+                          transition: "border-color 0.2s, background 0.2s",
+                        }}
+                          onMouseEnter={e => {
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.13)";
+                            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.05)";
+                          }}
+                          onMouseLeave={e => {
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)";
+                            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)";
+                          }}
+                        >
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                             <div style={{ fontSize: "13.5px", fontWeight: 700, color: "white" }}>{item.clause}</div>
                             <RiskBadge risk={item.risk} />
@@ -439,7 +471,17 @@ export default function AuditPage() {
                           background: "rgba(255,255,255,0.03)",
                           border: "1px solid rgba(255,255,255,0.07)",
                           borderRadius: "10px", padding: "14px 16px",
-                        }}>
+                          transition: "border-color 0.2s, background 0.2s",
+                        }}
+                          onMouseEnter={e => {
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.13)";
+                            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.05)";
+                          }}
+                          onMouseLeave={e => {
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)";
+                            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)";
+                          }}
+                        >
                           <div style={{
                             width: "24px", height: "24px", borderRadius: "50%", flexShrink: 0,
                             background: "rgba(255,255,255,0.08)",
@@ -475,7 +517,21 @@ export default function AuditPage() {
                   textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px",
                   boxShadow: "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)",
                   whiteSpace: "nowrap",
-                }}>
+                  transition: "opacity 0.2s, transform 0.2s, box-shadow 0.2s",
+                }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88";
+                    (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
+                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 8px 22px rgba(255,255,255,0.18)";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
+                    (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)";
+                  }}
+                  onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
+                  onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
+                >
                   Create Contract
                   <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                     <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
