@@ -1,0 +1,151 @@
+"use client";
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const NAV_LINKS = [
+  { label: "Features", href: "/#features" },
+  { label: "How It Works", href: "/#how-it-works" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "Dashboard", href: "/dashboard" },
+];
+
+export default function Navbar() {
+  const pathname = usePathname();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setScrolled(window.scrollY > 48);
+    window.addEventListener("scroll", handler, { passive: true });
+    handler();
+    return () => window.removeEventListener("scroll", handler);
+  }, []);
+
+  return (
+    <nav style={{
+      position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
+      height: scrolled ? "56px" : "62px",
+      backdropFilter: scrolled ? "blur(32px)" : "blur(24px)",
+      WebkitBackdropFilter: scrolled ? "blur(32px)" : "blur(24px)",
+      background: scrolled ? "rgba(8,8,8,0.92)" : "rgba(8,8,8,0.80)",
+      borderBottom: `1px solid ${scrolled ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)"}`,
+      boxShadow: scrolled
+        ? "0 1px 0 rgba(255,255,255,0.06), 0 8px 32px rgba(0,0,0,0.70)"
+        : "0 1px 0 rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.55)",
+      transition: "height 0.3s ease, background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease",
+    }}>
+      <div style={{
+        maxWidth: "1400px", margin: "0 auto", padding: "0 48px",
+        height: "100%", display: "flex", alignItems: "center",
+        justifyContent: "space-between",
+      }}>
+        {/* Logo */}
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: "11px", textDecoration: "none" }}>
+          <Image
+            src="/contract-guard.png"
+            alt="ContractGuard AI"
+            width={300}
+            height={300}
+            style={{ width: "54px", height: "54px", borderRadius: "9px", objectFit: "contain", display: "block", transform: "scale(1.9) translateX(6px)", transformOrigin: "center" }}
+          />
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+            <span style={{
+              fontWeight: 800, fontSize: "14.5px",
+              letterSpacing: "-0.03em", color: "white",
+              lineHeight: 1.1,
+            }}>
+              ContractGuard
+            </span>
+            <span style={{
+              fontSize: "9px", letterSpacing: "2.2px",
+              color: "rgba(255,255,255,0.30)", fontWeight: 500,
+              textTransform: "uppercase" as const,
+              lineHeight: 1,
+            }}>
+              AI · Secured
+            </span>
+          </div>
+        </Link>
+
+        {/* Nav links */}
+        <div style={{ display: "flex", gap: "36px" }}>
+          {NAV_LINKS.map(({ label, href }) => {
+            const isActive = href === pathname || (href !== "/" && pathname.startsWith(href.split("#")[0]) && href.split("#")[0] !== "/");
+            return (
+              <Link key={label} href={href} style={{
+                color: isActive ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.46)",
+                fontSize: "14px", textDecoration: "none",
+                transition: "color 0.2s ease",
+                fontWeight: isActive ? 600 : 400,
+                position: "relative",
+              }}
+                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.80)"; }}
+                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.46)"; }}
+              >
+                {label}
+                {isActive && (
+                  <span style={{
+                    position: "absolute", bottom: "-4px", left: 0, right: 0,
+                    height: "1px", background: "rgba(255,255,255,0.55)",
+                    borderRadius: "999px",
+                  }} />
+                )}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* CTA buttons */}
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <Link href="/audit" style={{
+            background: "rgba(255,255,255,0.06)",
+            color: "rgba(255,255,255,0.75)",
+            fontWeight: 600, fontSize: "13.5px",
+            padding: "9px 20px", borderRadius: "6px",
+            border: "1px solid rgba(255,255,255,0.12)",
+            cursor: "pointer", textDecoration: "none",
+            backdropFilter: "blur(8px)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10)",
+            transition: "background 0.2s, border-color 0.2s",
+          }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.10)";
+              (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.20)";
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.06)";
+              (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.12)";
+            }}
+          >
+            Audit Contract
+          </Link>
+          <button style={{
+            background: "white", color: "#080808", fontWeight: 700, fontSize: "13.5px",
+            padding: "9px 22px", borderRadius: "6px", border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", gap: "8px", letterSpacing: "-0.01em",
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.15), 0 3px 12px rgba(255,255,255,0.10)",
+            transition: "transform 0.2s, box-shadow 0.2s, opacity 0.2s",
+          }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.opacity = "0.88";
+              (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 6px 20px rgba(255,255,255,0.18)";
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.opacity = "1";
+              (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.15), 0 3px 12px rgba(255,255,255,0.10)";
+            }}
+            onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
+            onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)"; }}
+          >
+            Connect Wallet
+            <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+              <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </nav>
+  );
+}
