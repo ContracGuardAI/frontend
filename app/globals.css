@@ -82,8 +82,8 @@ body {
   50%     { opacity: 1; }
 }
 @keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(24px) scale(0.98); filter: blur(3px); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0);   }
 }
 
 .iso-node { animation: nodeGlow 3s ease-in-out infinite; }
@@ -98,14 +98,14 @@ body {
 
 /* scroll reveal */
 @keyframes fadeUp {
-  from { opacity:0; transform:translateY(24px); }
-  to   { opacity:1; transform:translateY(0); }
+  from { opacity:0; transform:translateY(32px) scale(0.97); filter: blur(3px); }
+  to   { opacity:1; transform:translateY(0)    scale(1);    filter: blur(0);   }
 }
-.fade-up { animation: fadeUp 0.7s ease forwards; opacity: 0; }
-.delay-1 { animation-delay: 0.1s; }
-.delay-2 { animation-delay: 0.2s; }
-.delay-3 { animation-delay: 0.3s; }
-.delay-4 { animation-delay: 0.4s; }
+.fade-up { animation: fadeUp 0.78s cubic-bezier(0.16,1,0.3,1) forwards; opacity: 0; }
+.delay-1 { animation-delay: 0.12s; }
+.delay-2 { animation-delay: 0.26s; }
+.delay-3 { animation-delay: 0.42s; }
+.delay-4 { animation-delay: 0.60s; }
 
 /* spinning rings for hero image */
 @keyframes spinRing {
@@ -192,38 +192,48 @@ body::before {
 /* ── text selection ── */
 ::selection { background: rgba(255,255,255,0.16); color: white; }
 
-/* ── scroll reveal (triggered via IntersectionObserver adding .is-visible) ── */
+/* ── scroll reveal — animation-based so it re-fires every viewport entry ── */
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(40px) scale(0.96); filter: blur(3px); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0px); }
+}
+
 .reveal {
   opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.72s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.72s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(40px) scale(0.96);
+  filter: blur(3px);
+  /* smooth exit when leaving viewport */
+  transition: opacity 0.28s ease-out, filter 0.28s ease-out;
 }
-.reveal.is-visible { opacity: 1; transform: translateY(0); }
-.reveal.d1 { transition-delay: 0.08s; }
-.reveal.d2 { transition-delay: 0.18s; }
-.reveal.d3 { transition-delay: 0.28s; }
-.reveal.d4 { transition-delay: 0.40s; }
+.reveal.is-visible {
+  animation: revealUp 0.80s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+/* stagger: delay lives on the is-visible state so it applies on every re-entry */
+.reveal.d1.is-visible { animation-delay: 0.06s; }
+.reveal.d2.is-visible { animation-delay: 0.14s; }
+.reveal.d3.is-visible { animation-delay: 0.24s; }
+.reveal.d4.is-visible { animation-delay: 0.36s; }
+.reveal.d5.is-visible { animation-delay: 0.50s; }
+.reveal.d6.is-visible { animation-delay: 0.64s; }
 
 /* ── card hover lift ── */
 .card-lift {
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
               box-shadow 0.28s ease,
-              border-color 0.28s ease;
+              border-color 0.28s ease,
+              filter 0.28s ease;
 }
 .card-lift:hover {
-  transform: translateY(-6px) !important;
-  border-color: rgba(255,255,255,0.22) !important;
-  box-shadow: 0 28px 60px rgba(0,0,0,0.68),
-              0 0 0 1px rgba(255,255,255,0.10),
-              inset 0 1px 0 rgba(255,255,255,0.26) !important;
+  transform: translateY(-8px) !important;
+  border-color: rgba(201,168,76,0.28) !important;
+  box-shadow: 0 32px 64px rgba(0,0,0,0.72),
+              0 0 0 1px rgba(201,168,76,0.12),
+              0 0 28px rgba(201,168,76,0.06),
+              inset 0 1px 0 rgba(255,255,255,0.24) !important;
 }
-/* once revealed, snap hover back to fast 0.28s (override reveal's slower transition) */
+/* once revealed: clear blur, let .card-lift handle hover (0.28s) after .reveal is removed */
 .card-lift.is-visible {
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.28s ease,
-              border-color 0.28s ease;
-  transition-delay: 0s !important;
+  filter: blur(0px);
 }
 
 /* ── animated shimmer text (for hero headline) ── */
@@ -315,41 +325,52 @@ input:focus, textarea:focus {
 
 /* ── hero entrance stagger ── */
 @keyframes heroIn {
-  from { opacity: 0; transform: translateY(26px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(30px) scale(0.97); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0);   }
 }
 .hero-in {
   opacity: 0;
-  animation: heroIn 0.72s cubic-bezier(0.16,1,0.3,1) forwards;
+  animation: heroIn 0.82s cubic-bezier(0.16,1,0.3,1) forwards;
 }
 .hero-in.h0 { animation-delay: 0.05s; }
 .hero-in.h1 { animation-delay: 0.18s; }
 .hero-in.h2 { animation-delay: 0.32s; }
 .hero-in.h3 { animation-delay: 0.46s; }
-.hero-in.h4 { animation-delay: 0.60s; }
+.hero-in.h4 { animation-delay: 0.62s; }
 
-/* ── reveal from sides (for variety) ── */
-.reveal-left {
-  opacity: 0; transform: translateX(-28px);
-  transition: opacity 0.72s cubic-bezier(0.16,1,0.3,1),
-              transform 0.72s cubic-bezier(0.16,1,0.3,1);
+/* ── reveal from sides — animation-based ── */
+@keyframes revealFromLeft {
+  from { opacity: 0; transform: translateX(-36px) scale(0.97); filter: blur(3px); }
+  to   { opacity: 1; transform: translateX(0)     scale(1);    filter: blur(0px); }
 }
-.reveal-left.is-visible { opacity: 1; transform: translateX(0); }
+@keyframes revealFromRight {
+  from { opacity: 0; transform: translateX(36px) scale(0.97); filter: blur(3px); }
+  to   { opacity: 1; transform: translateX(0)    scale(1);    filter: blur(0px); }
+}
+
+.reveal-left {
+  opacity: 0; transform: translateX(-36px) scale(0.97); filter: blur(3px);
+  transition: opacity 0.28s ease-out, filter 0.28s ease-out;
+}
+.reveal-left.is-visible {
+  animation: revealFromLeft 0.80s cubic-bezier(0.16,1,0.3,1) forwards;
+}
 
 .reveal-right {
-  opacity: 0; transform: translateX(28px);
-  transition: opacity 0.72s cubic-bezier(0.16,1,0.3,1),
-              transform 0.72s cubic-bezier(0.16,1,0.3,1);
+  opacity: 0; transform: translateX(36px) scale(0.97); filter: blur(3px);
+  transition: opacity 0.28s ease-out, filter 0.28s ease-out;
 }
-.reveal-right.is-visible { opacity: 1; transform: translateX(0); }
+.reveal-right.is-visible {
+  animation: revealFromRight 0.80s cubic-bezier(0.16,1,0.3,1) forwards;
+}
 
 /* ── inner-page entrance (header + content stagger) ── */
 .page-in {
   opacity: 0;
-  animation: fadeSlideUp 0.55s cubic-bezier(0.16,1,0.3,1) forwards;
+  animation: fadeSlideUp 0.70s cubic-bezier(0.16,1,0.3,1) forwards;
 }
-.page-in.p0 { animation-delay: 0.04s; }
-.page-in.p1 { animation-delay: 0.14s; }
-.page-in.p2 { animation-delay: 0.24s; }
-.page-in.p3 { animation-delay: 0.34s; }
-.page-in.p4 { animation-delay: 0.46s; }
+.page-in.p0 { animation-delay: 0.05s; }
+.page-in.p1 { animation-delay: 0.18s; }
+.page-in.p2 { animation-delay: 0.32s; }
+.page-in.p3 { animation-delay: 0.48s; }
+.page-in.p4 { animation-delay: 0.64s; }

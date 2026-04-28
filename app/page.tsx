@@ -729,16 +729,59 @@ function Stats() {
           {STATS_DATA.map((s, i) => (
             <div key={i} style={{
               background: "rgba(255,255,255,0.045)",
-              padding: "44px 28px", textAlign: "center",
+              padding: "36px 24px", textAlign: "center",
               borderRight: i < 3 ? "1px solid rgba(255,255,255,0.09)" : "none",
               transition: "background 0.28s ease",
               cursor: "default",
             }}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.075)"; }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "rgba(201,168,76,0.06)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.045)"; }}
             >
+              {/* Gold icon box */}
               <div style={{
-                fontSize: "clamp(26px,2.8vw,38px)", fontWeight: 900,
+                width: "46px", height: "46px", borderRadius: "13px", margin: "0 auto 20px",
+                background: "rgba(201,168,76,0.08)",
+                border: "1px solid rgba(201,168,76,0.30)",
+                boxShadow: "inset 0 1px 0 rgba(201,168,76,0.18), 0 0 14px rgba(201,168,76,0.08)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <svg width="24" height="24" viewBox="-12 -12 24 24" fill="none">
+                  {i === 0 && (
+                    // SOL / low-fee: 3 diagonal bars
+                    <g>
+                      <path d="M-9,-7 L5,-7 L9,-3 L-5,-3 Z" fill="#C9A84C"/>
+                      <path d="M-9,-1 L5,-1 L9,3 L-5,3 Z" fill="#C9A84C" fillOpacity={0.72}/>
+                      <path d="M-9,5 L5,5 L9,9 L-5,9 Z" fill="#C9A84C" fillOpacity={0.50}/>
+                    </g>
+                  )}
+                  {i === 1 && (
+                    // Lightning bolt: speed
+                    <path d="M3,-11 L-5,1 L2,1 L-3,11 L5,-1 L-2,-1 Z" fill="#C9A84C"/>
+                  )}
+                  {i === 2 && (
+                    // Shield + checkmark: immutable
+                    <g>
+                      <path d="M0,-10 C3,-10 9,-8 9,-3 L9,2 C9,7 4.5,10 0,12 C-4.5,10 -9,7 -9,2 L-9,-3 C-9,-8 -3,-10 0,-10 Z" fill="none" stroke="#C9A84C" strokeWidth="1.7" strokeLinejoin="round"/>
+                      <path d="M-4,1 L-1,4.5 L5.5,-3" stroke="#C9A84C" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/>
+                    </g>
+                  )}
+                  {i === 3 && (
+                    // Claude logo: 8 rounded petals radiating from center
+                    <g>
+                      {([0,45,90,135,180,225,270,315] as number[]).map((deg, idx) => (
+                        <rect key={idx} x="-1.15" y="-9.5" width="2.3" height="6.5" rx="1.15"
+                          fill="#C9A84C"
+                          fillOpacity={[0,2,4,6].includes(idx) ? 1 : 0.58}
+                          transform={`rotate(${deg})`}
+                        />
+                      ))}
+                    </g>
+                  )}
+                </svg>
+              </div>
+
+              <div style={{
+                fontSize: "clamp(24px,2.6vw,36px)", fontWeight: 900,
                 letterSpacing: "-0.04em", marginBottom: "8px",
                 background: "linear-gradient(135deg, #E8C470 0%, #C9A84C 50%, #F5DEB3 100%)",
                 WebkitBackgroundClip: "text", backgroundClip: "text",
@@ -760,7 +803,7 @@ function Stats() {
 }
 
 /* ══════════════════════════════════════════════════════
-   CTA — added hover effects to both buttons
+   CTA
 ══════════════════════════════════════════════════════ */
 function CTA() {
   return (
@@ -770,12 +813,27 @@ function CTA() {
       borderTop: "1px solid rgba(255,255,255,0.07)",
       position: "relative", overflow: "hidden",
     }}>
+      {/* Gold center glow */}
       <div style={{
         position: "absolute", pointerEvents: "none", zIndex: 0,
         top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-        width: "75%", height: "100%",
-        background: "radial-gradient(ellipse, rgba(255,255,255,0.038) 0%, transparent 60%)",
-        filter: "blur(70px)",
+        width: "65%", height: "85%",
+        background: "radial-gradient(ellipse, rgba(201,168,76,0.10) 0%, transparent 65%)",
+        filter: "blur(60px)",
+      }} />
+      {/* Ambient orb left */}
+      <div style={{
+        position: "absolute", pointerEvents: "none", zIndex: 0,
+        top: "15%", left: "10%", width: "240px", height: "240px",
+        background: "radial-gradient(circle, rgba(201,168,76,0.055) 0%, transparent 70%)",
+        filter: "blur(48px)",
+      }} />
+      {/* Ambient orb right */}
+      <div style={{
+        position: "absolute", pointerEvents: "none", zIndex: 0,
+        bottom: "15%", right: "10%", width: "240px", height: "240px",
+        background: "radial-gradient(circle, rgba(201,168,76,0.055) 0%, transparent 70%)",
+        filter: "blur(48px)",
       }} />
 
       <div style={{
@@ -783,91 +841,126 @@ function CTA() {
         padding: "0 40px", textAlign: "center",
         position: "relative", zIndex: 1,
       }}>
-        <div className="reveal border-glow-pulse" style={{
-          background: "rgba(255,255,255,0.058)",
-          backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
-          border: "1px solid rgba(255,255,255,0.15)",
-          borderRadius: "24px", padding: "64px 56px",
+        <div className="reveal" style={{
+          background: "rgba(14,12,8,0.72)",
+          backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)",
+          border: "1px solid rgba(201,168,76,0.22)",
+          borderRadius: "28px", padding: "68px 60px",
+          position: "relative", overflow: "hidden",
+          boxShadow: "0 32px 80px rgba(0,0,0,0.70), 0 0 0 1px rgba(201,168,76,0.08), inset 0 1px 0 rgba(255,255,255,0.10)",
         }}>
+          {/* Top gold accent line */}
           <div style={{
-            display: "inline-flex", alignItems: "center",
-            border: "1px solid rgba(201,168,76,0.38)", borderRadius: "999px",
-            padding: "4px 14px", fontSize: "11px",
-            color: "rgba(201,168,76,0.85)", background: "rgba(201,168,76,0.06)",
-            backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-            boxShadow: "inset 0 1px 0 rgba(201,168,76,0.16), 0 0 14px rgba(201,168,76,0.08)",
-            marginBottom: "28px", letterSpacing: "1.5px",
-          }}>
-            GET STARTED
-          </div>
+            position: "absolute", top: 0, left: 0, right: 0, height: "1px", pointerEvents: "none",
+            background: "linear-gradient(to right, transparent 5%, rgba(201,168,76,0.55) 50%, transparent 95%)",
+          }} />
+          {/* Inner top glow */}
+          <div style={{
+            position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
+            width: "55%", height: "55%", pointerEvents: "none",
+            background: "radial-gradient(ellipse at top, rgba(201,168,76,0.07) 0%, transparent 70%)",
+          }} />
+          {/* Corner dots */}
+          {[
+            { top: "20px", left: "22px" }, { top: "20px", right: "22px" },
+            { bottom: "20px", left: "22px" }, { bottom: "20px", right: "22px" },
+          ].map((pos, i) => (
+            <div key={i} style={{
+              position: "absolute", ...pos,
+              width: "4px", height: "4px", borderRadius: "50%",
+              background: "rgba(201,168,76,0.35)",
+              boxShadow: "0 0 6px rgba(201,168,76,0.40)",
+            }} />
+          ))}
 
-          <h2 style={{
-            fontSize: "clamp(30px,4vw,48px)", fontWeight: 900,
-            letterSpacing: "-0.045em", color: "white",
-            lineHeight: 1.05, marginBottom: "22px",
-          }}>
-            Secure your next contract<br />with AI + blockchain.
-          </h2>
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <div style={{
+              display: "inline-flex", alignItems: "center",
+              border: "1px solid rgba(201,168,76,0.38)", borderRadius: "999px",
+              padding: "4px 14px", fontSize: "11px",
+              color: "rgba(201,168,76,0.85)", background: "rgba(201,168,76,0.06)",
+              backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+              boxShadow: "inset 0 1px 0 rgba(201,168,76,0.16), 0 0 14px rgba(201,168,76,0.08)",
+              marginBottom: "28px", letterSpacing: "1.5px",
+            }}>
+              GET STARTED
+            </div>
 
-          <p style={{
-            fontSize: "15px", color: "rgba(255,255,255,0.44)",
-            marginBottom: "44px", lineHeight: 1.75,
-          }}>
-            Upload your contract PDF, get an AI audit in seconds,
-            and lock every milestone on-chain — for free.
-          </p>
+            <h2 style={{
+              fontSize: "clamp(30px,4vw,48px)", fontWeight: 900,
+              letterSpacing: "-0.045em", color: "white",
+              lineHeight: 1.08, marginBottom: "22px",
+            }}>
+              Secure your next contract<br />
+              <span className="text-shimmer">with AI + blockchain.</span>
+            </h2>
 
-          <div style={{ display: "flex", gap: "14px", justifyContent: "center" }}>
-            <a href="/audit" style={{
-              background: "white", color: "#080808", fontWeight: 700,
-              fontSize: "15px", padding: "15px 36px", borderRadius: "8px",
-              textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "10px",
-              boxShadow: "0 0 0 1px rgba(255,255,255,0.22), 0 4px 18px rgba(255,255,255,0.14)",
-              transition: "transform 0.22s ease, box-shadow 0.22s ease",
-            }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLAnchorElement;
-                el.style.transform = "translateY(-2px)";
-                el.style.boxShadow = "0 0 0 1px rgba(255,255,255,0.28), 0 8px 28px rgba(255,255,255,0.22)";
+            <p style={{
+              fontSize: "15px", color: "rgba(255,255,255,0.46)",
+              marginBottom: "48px", lineHeight: 1.78,
+            }}>
+              Upload your contract PDF, get an AI audit in seconds,
+              and lock every milestone on-chain — for free.
+            </p>
+
+            <div style={{ display: "flex", gap: "14px", justifyContent: "center" }}>
+              <a href="/audit" style={{
+                background: "linear-gradient(135deg, #C9A84C 0%, #E8C470 50%, #C9A84C 100%)",
+                backgroundSize: "200% 100%",
+                color: "#1a1200", fontWeight: 800,
+                fontSize: "15px", padding: "15px 36px", borderRadius: "8px",
+                textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "10px",
+                boxShadow: "0 0 0 1px rgba(201,168,76,0.40), 0 4px 22px rgba(201,168,76,0.28)",
+                transition: "transform 0.22s ease, box-shadow 0.22s ease, background-position 0.4s ease",
               }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLAnchorElement;
-                el.style.transform = "translateY(0)";
-                el.style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 4px 18px rgba(255,255,255,0.14)";
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLAnchorElement;
+                  el.style.transform = "translateY(-2px)";
+                  el.style.boxShadow = "0 0 0 1px rgba(201,168,76,0.55), 0 8px 32px rgba(201,168,76,0.42)";
+                  el.style.backgroundPosition = "100% 0";
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLAnchorElement;
+                  el.style.transform = "translateY(0)";
+                  el.style.boxShadow = "0 0 0 1px rgba(201,168,76,0.40), 0 4px 22px rgba(201,168,76,0.28)";
+                  el.style.backgroundPosition = "0% 0";
+                }}
+                onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
+                onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
+              >
+                Audit Contract
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                  <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor"
+                    strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </a>
+              <a href="/pricing" style={{
+                background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.62)",
+                fontSize: "15px", padding: "15px 30px", borderRadius: "8px",
+                border: "1px solid rgba(255,255,255,0.14)", textDecoration: "none",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10)",
+                transition: "background 0.2s, border-color 0.2s, color 0.2s, transform 0.22s ease",
               }}
-              onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
-              onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
-            >
-              Audit Contract
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor"
-                  strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </a>
-            <a href="/pricing" style={{
-              background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.65)",
-              fontSize: "15px", padding: "15px 30px", borderRadius: "8px",
-              border: "1px solid rgba(255,255,255,0.15)", textDecoration: "none",
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
-              transition: "background 0.2s, border-color 0.2s, transform 0.22s ease",
-            }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLAnchorElement;
-                el.style.background = "rgba(255,255,255,0.10)";
-                el.style.borderColor = "rgba(255,255,255,0.24)";
-                el.style.transform = "translateY(-2px)";
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLAnchorElement;
-                el.style.background = "rgba(255,255,255,0.06)";
-                el.style.borderColor = "rgba(255,255,255,0.15)";
-                el.style.transform = "translateY(0)";
-              }}
-              onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
-              onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
-            >
-              View Pricing
-            </a>
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLAnchorElement;
+                  el.style.background = "rgba(201,168,76,0.08)";
+                  el.style.borderColor = "rgba(201,168,76,0.30)";
+                  el.style.color = "rgba(201,168,76,0.85)";
+                  el.style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLAnchorElement;
+                  el.style.background = "rgba(255,255,255,0.05)";
+                  el.style.borderColor = "rgba(255,255,255,0.14)";
+                  el.style.color = "rgba(255,255,255,0.62)";
+                  el.style.transform = "translateY(0)";
+                }}
+                onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
+                onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
+              >
+                View Pricing
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -889,18 +982,21 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const els = document.querySelectorAll<Element>('.reveal');
+    const els = document.querySelectorAll<HTMLElement>('.reveal, .reveal-left, .reveal-right');
     const observer = new IntersectionObserver(
       entries => entries.forEach(e => {
+        const el = e.target as HTMLElement;
         if (e.isIntersecting) {
-          e.target.classList.add('is-visible');
-          setTimeout(() => {
-            e.target.classList.remove('reveal');
-            observer.unobserve(e.target);
-          }, 1250);
+          // Remove + reflow so animation restarts cleanly on every re-entry
+          el.classList.remove('is-visible');
+          void el.offsetWidth;
+          el.classList.add('is-visible');
+        } else {
+          // Let the CSS exit transition (0.28s) play, then snap to hidden
+          el.classList.remove('is-visible');
         }
       }),
-      { threshold: 0.08, rootMargin: "0px 0px -60px 0px" }
+      { threshold: 0.04, rootMargin: "0px 0px 120px 0px" }
     );
     els.forEach(el => observer.observe(el));
     return () => observer.disconnect();
