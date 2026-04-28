@@ -19,6 +19,12 @@ const nextConfig = {
       ...(config.resolve.modules || []),
       path.resolve(__dirname, ".."),
     ];
+    // Suppress optional peer deps yang tidak dipakai
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      "pino-pretty": false,
+      encoding: false,
+    };
     return config;
   },
 };
