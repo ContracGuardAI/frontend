@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import WalletButton from "./WalletButton";
 
 const NAV_LINKS = [
   { label: "Features", href: "/#features" },
@@ -133,30 +134,7 @@ export default function Navbar() {
           >
             Audit Contract
           </Link>
-          <button style={{
-            background: "white", color: "#080808", fontWeight: 700, fontSize: "13.5px",
-            padding: "9px 22px", borderRadius: "6px", border: "none", cursor: "pointer",
-            display: "flex", alignItems: "center", gap: "8px", letterSpacing: "-0.01em",
-            boxShadow: "0 0 0 1px rgba(255,255,255,0.15), 0 3px 12px rgba(255,255,255,0.10)",
-            transition: "transform 0.2s, box-shadow 0.2s, opacity 0.2s",
-          }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.opacity = "0.88";
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 6px 20px rgba(255,255,255,0.18)";
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.opacity = "1";
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.15), 0 3px 12px rgba(255,255,255,0.10)";
-            }}
-            onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
-            onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)"; }}
-          >
-            Connect Wallet
-            <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
-              <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor"
-                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+          <WalletButton />
         </div>
       </div>
     </nav>

@@ -1,9 +1,12 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { IconDollar, IconAlertTriangle, IconFileText, IconShield, IconLoader, IconCheckCircle, IconX, IconArrowRight } from "../components/Icons";
+import { IconDollar, IconAlertTriangle, IconFileText, IconShield } from "../components/Icons";
 import { toast } from "../components/Toast";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import type { ContractReviewResult } from "../../../contractguard-agent/contractAgent";
 
 /* ── shared glass style ── */
 const glass = {
@@ -15,30 +18,8 @@ const glass = {
   borderRadius: "16px",
 } as const;
 
-/* ── mock AI result ── */
-const MOCK_RESULT = {
-  fairness_score: 6,
-  price_analysis: [
-    { item: "Material — Besi Hollow 40×40", contract: "Rp 185.000/batang", market: "Rp 95.000/batang", markup: "+95%", risk: "high" },
-    { item: "Upah Tukang per Hari", contract: "Rp 450.000/hari", market: "Rp 280.000/hari", markup: "+61%", risk: "high" },
-    { item: "Cat Tembok Dulux 5L", contract: "Rp 320.000/kaleng", market: "Rp 285.000/kaleng", markup: "+12%", risk: "medium" },
-    { item: "Semen Portland 50kg", contract: "Rp 78.000/sak", market: "Rp 72.000/sak", markup: "+8%", risk: "low" },
-  ],
-  risky_clauses: [
-    { clause: "Pasal 4.2 — Perubahan Scope", detail: "Kontraktor dapat menambah biaya tanpa batas untuk perubahan scope apapun tanpa persetujuan klien terlebih dahulu.", risk: "high" },
-    { clause: "Pasal 7.1 — Penyelesaian Sengketa", detail: "Sengketa diselesaikan secara musyawarah. Tidak ada mekanisme jelas jika musyawarah gagal — tidak ada arbitrase atau hukum yang mengatur.", risk: "high" },
-    { clause: "Pasal 3.5 — Pembayaran Uang Muka", detail: "Uang muka 50% tidak dilindungi escrow dan tidak ada syarat pengembalian jika proyek gagal.", risk: "medium" },
-  ],
-  revision_suggestions: [
-    "Minta rincian harga material dengan bukti invoice supplier. Harga besi hollow dan upah tukang 2× lipat harga pasar.",
-    "Tambahkan klausul: setiap perubahan scope di atas 5% total kontrak harus disetujui tertulis oleh kedua pihak sebelum dikerjakan.",
-    "Ganti mekanisme sengketa dengan arbitrase BANI atau setidaknya tetapkan yurisdiksi pengadilan negeri yang jelas.",
-    "Gunakan smart contract escrow untuk uang muka. Dana baru cair ke kontraktor setelah milestone pertama selesai diverifikasi.",
-  ],
-};
-
 type Tab = "price" | "clauses" | "suggestions";
-type FileState = "idle" | "dragging" | "loading" | "done";
+type FileState = "idle" | "dragging" | "uploading" | "analyzing" | "done" | "error";
 
 /* ── risk badge ── */
 function RiskBadge({ risk }: { risk: string }) {
@@ -59,39 +40,18 @@ function RiskBadge({ risk }: { risk: string }) {
   );
 }
 
-/* ── fairness score arc — animates from 0 on mount ── */
+/* ── fairness score arc ── */
 function ScoreArc({ score }: { score: number }) {
-  const [animated, setAnimated] = useState(false);
-  const [displayScore, setDisplayScore] = useState(0);
-
-  useEffect(() => {
-    const t = setTimeout(() => setAnimated(true), 180);
-    return () => clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    if (!animated) return;
-    let cur = 0;
-    const timer = setInterval(() => {
-      cur++;
-      setDisplayScore(cur);
-      if (cur >= score) clearInterval(timer);
-    }, 110);
-    return () => clearInterval(timer);
-  }, [animated, score]);
-
   const r = 48;
   const circumference = Math.PI * r;
-  const dash = animated ? (score / 10) * circumference : 0;
+  const dash = (score / 10) * circumference;
   const color = score >= 7 ? "rgba(80,220,140,0.9)" : score >= 5 ? "rgba(255,210,80,0.9)" : "rgba(255,100,100,0.9)";
 
   return (
     <div style={{ textAlign: "center", marginBottom: "32px" }}>
       <svg width="130" height="72" viewBox="0 0 130 72" style={{ overflow: "visible" }}>
-        {/* track */}
         <path d="M 17 65 A 48 48 0 0 1 113 65" fill="none"
           stroke="rgba(255,255,255,0.08)" strokeWidth="8" strokeLinecap="round" />
-        {/* fill */}
         <path d="M 17 65 A 48 48 0 0 1 113 65" fill="none"
           stroke={color} strokeWidth="8" strokeLinecap="round"
           strokeDasharray={`${dash} ${circumference}`}
@@ -101,10 +61,9 @@ function ScoreArc({ score }: { score: number }) {
       <div style={{ marginTop: "-20px" }}>
         <div style={{
           fontSize: "52px", fontWeight: 900, color, letterSpacing: "-0.04em", lineHeight: 1,
-          transition: "color 0.6s ease",
-          filter: animated ? `drop-shadow(0 0 16px ${color.replace("0.9", "0.35")})` : "none",
+          filter: `drop-shadow(0 0 16px ${color.replace("0.9", "0.35")})`,
         }}>
-          {displayScore}
+          {score}
         </div>
         <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "rgba(255,255,255,0.40)", marginTop: "4px" }}>
           FAIRNESS SCORE / 10
@@ -114,22 +73,89 @@ function ScoreArc({ score }: { score: number }) {
   );
 }
 
+/* ── format number as IDR ── */
+function formatIDR(num: number): string {
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(num);
+}
+
+/* ── map API risk_level / status to UI risk string ── */
+function toRisk(val: string): "high" | "medium" | "low" {
+  if (val === "high" || val === "overpriced") return "high";
+  if (val === "medium" || val === "underpriced") return "medium";
+  return "low";
+}
+
 export default function AuditPage() {
   const [fileState, setFileState] = useState<FileState>("idle");
   const [fileName, setFileName] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("price");
+  const [result, setResult] = useState<ContractReviewResult | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [fileHash, setFileHash] = useState("");
+  const [analysisHash, setAnalysisHash] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const r = MOCK_RESULT;
 
-  const handleFile = (file: File) => {
+  const { connected } = useWallet();
+  const { setVisible } = useWalletModal();
+
+  const handleFile = async (file: File) => {
     if (!file) return;
+    if (file.type !== "application/pdf") {
+      toast.error("Invalid file", "Only PDF files are accepted.");
+      return;
+    }
+
     setFileName(file.name);
-    setFileState("loading");
+    setErrorMsg("");
+    setResult(null);
+
+    // Step 1: Upload PDF
+    setFileState("uploading");
+    toast.info("Uploading contract...", "Extracting text from PDF");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    let contractText = "";
+    let fHash = "";
+
+    try {
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+      const uploadJson = await uploadRes.json();
+      if (!uploadJson.success) throw new Error(uploadJson.error);
+      contractText = uploadJson.data.contract_text;
+      fHash = uploadJson.data.file_hash;
+      setFileHash(fHash);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Upload failed.";
+      setErrorMsg(msg);
+      setFileState("error");
+      toast.error("Upload failed", msg);
+      return;
+    }
+
+    // Step 2: Analyze with AI
+    setFileState("analyzing");
     toast.info("Analyzing contract...", "AI is reading every clause");
-    setTimeout(() => {
+
+    try {
+      const auditRes = await fetch("/api/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contractText }),
+      });
+      const auditJson = await auditRes.json();
+      if (!auditJson.success) throw new Error(auditJson.error);
+      setResult(auditJson.data);
+      setAnalysisHash(auditJson.meta.analysis_hash);
       setFileState("done");
       toast.success("Review complete", file.name);
-    }, 2200);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "AI analysis failed.";
+      setErrorMsg(msg);
+      setFileState("error");
+      toast.error("Analysis failed", msg);
+    }
   };
 
   const onDrop = (e: React.DragEvent) => {
@@ -139,11 +165,14 @@ export default function AuditPage() {
     if (file) handleFile(file);
   };
 
-  const tabs: { id: Tab; label: string; count: number }[] = [
-    { id: "price",       label: "Price Analysis",    count: r.price_analysis.length },
-    { id: "clauses",     label: "Risky Clauses",     count: r.risky_clauses.length },
-    { id: "suggestions", label: "Suggestions",        count: r.revision_suggestions.length },
-  ];
+  const isLoading = fileState === "uploading" || fileState === "analyzing";
+  const loadingLabel = fileState === "uploading" ? "Extracting PDF text..." : "AI is analyzing every clause...";
+
+  const tabs: { id: Tab; label: string; count: number }[] = result ? [
+    { id: "price",       label: "Price Analysis",    count: result.price_analysis.length },
+    { id: "clauses",     label: "Risky Clauses",     count: result.risky_clauses.length },
+    { id: "suggestions", label: "Suggestions",        count: result.revision_suggestions.length },
+  ] : [];
 
   return (
     <main style={{ background: "#080808", minHeight: "100vh", color: "white" }}>
@@ -190,35 +219,41 @@ export default function AuditPage() {
         </div>
 
         {/* Two-column layout */}
-        <div className="page-in p3" style={{ display: "grid", gridTemplateColumns: fileState === "done" ? "1fr 1.4fr" : "1fr 1fr", gap: "24px", transition: "grid-template-columns 0.4s ease" }}>
+        <div className="page-in p3" style={{
+          display: "grid",
+          gridTemplateColumns: fileState === "done" ? "1fr 1.4fr" : "1fr 1fr",
+          gap: "24px",
+          transition: "grid-template-columns 0.4s ease",
+        }}>
 
           {/* LEFT: Upload */}
           <div>
             {/* Drop zone */}
             <div
-              onDragOver={e => { e.preventDefault(); setFileState("dragging"); }}
-              onDragLeave={() => setFileState("idle")}
-              onDrop={onDrop}
-              onClick={() => inputRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); if (!isLoading) setFileState("dragging"); }}
+              onDragLeave={() => { if (!isLoading) setFileState("idle"); }}
+              onDrop={e => { if (!isLoading) onDrop(e); }}
+              onClick={() => { if (!isLoading) inputRef.current?.click(); }}
               style={{
                 ...glass,
                 padding: "48px 32px",
-                cursor: "pointer",
+                cursor: isLoading ? "wait" : "pointer",
                 textAlign: "center",
                 marginBottom: "16px",
                 border: fileState === "dragging"
                   ? "1px solid rgba(255,255,255,0.40)"
                   : fileState === "done"
                   ? "1px solid rgba(80,220,140,0.30)"
+                  : fileState === "error"
+                  ? "1px solid rgba(255,80,80,0.30)"
                   : "1px dashed rgba(255,255,255,0.18)",
-                background: fileState === "dragging" ? "rgba(255,255,255,0.09)" : glass.background,
                 transition: "border 0.2s, background 0.2s",
               }}
             >
               <input ref={inputRef} type="file" accept=".pdf" style={{ display: "none" }}
                 onChange={e => e.target.files && handleFile(e.target.files[0])} />
 
-              {fileState === "loading" ? (
+              {isLoading && (
                 <>
                   <div style={{ marginBottom: "20px" }}>
                     <svg width="44" height="44" viewBox="0 0 44 44" fill="none"
@@ -228,13 +263,13 @@ export default function AuditPage() {
                     </svg>
                   </div>
                   <div style={{ fontSize: "15px", fontWeight: 600, color: "white", marginBottom: "8px" }}>
-                    Analyzing contract...
+                    {fileState === "uploading" ? "Uploading..." : "Analyzing contract..."}
                   </div>
-                  <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.40)" }}>
-                    AI is reading every clause
-                  </div>
+                  <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.40)" }}>{loadingLabel}</div>
                 </>
-              ) : fileState === "done" ? (
+              )}
+
+              {fileState === "done" && (
                 <>
                   <div style={{ marginBottom: "20px" }}>
                     <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
@@ -245,9 +280,41 @@ export default function AuditPage() {
                   <div style={{ fontSize: "14px", fontWeight: 600, color: "rgba(80,220,140,0.90)", marginBottom: "6px" }}>
                     Review complete
                   </div>
-                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.38)" }}>{fileName}</div>
+                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.38)", marginBottom: "12px" }}>{fileName}</div>
+                  <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.22)", wordBreak: "break-all", padding: "0 8px" }}>
+                    hash: {fileHash.slice(0, 16)}...
+                  </div>
+                  <div style={{ marginTop: "16px" }}>
+                    <button onClick={() => { setFileState("idle"); setResult(null); }} style={{
+                      fontSize: "12px", color: "rgba(255,255,255,0.45)",
+                      background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)",
+                      borderRadius: "6px", padding: "6px 14px", cursor: "pointer",
+                      fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
+                    }}>
+                      Analyze another
+                    </button>
+                  </div>
                 </>
-              ) : (
+              )}
+
+              {fileState === "error" && (
+                <>
+                  <div style={{ marginBottom: "16px", color: "rgba(255,100,100,0.80)", fontSize: "14px", fontWeight: 600 }}>
+                    Analysis failed
+                  </div>
+                  <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.40)", marginBottom: "16px" }}>{errorMsg}</div>
+                  <button onClick={() => setFileState("idle")} style={{
+                    fontSize: "12px", color: "rgba(255,255,255,0.55)",
+                    background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: "6px", padding: "6px 14px", cursor: "pointer",
+                    fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
+                  }}>
+                    Try again
+                  </button>
+                </>
+              )}
+
+              {(fileState === "idle" || fileState === "dragging") && (
                 <>
                   <div style={{ marginBottom: "20px" }}>
                     <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
@@ -298,8 +365,7 @@ export default function AuditPage() {
                   display: "flex", alignItems: "center", gap: "12px",
                   padding: "10px 8px",
                   borderBottom: i < 3 ? "1px solid rgba(255,255,255,0.06)" : "none",
-                  borderRadius: "8px",
-                  cursor: "default",
+                  borderRadius: "8px", cursor: "default",
                   transition: "transform 0.2s ease, background 0.2s ease",
                 }}
                   onMouseEnter={e => {
@@ -326,7 +392,7 @@ export default function AuditPage() {
           </div>
 
           {/* RIGHT: Results */}
-          {fileState !== "done" ? (
+          {fileState !== "done" || !result ? (
             <div style={{
               ...glass, padding: "48px 36px",
               display: "flex", flexDirection: "column",
@@ -350,30 +416,31 @@ export default function AuditPage() {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
               {/* Score card */}
               <div style={{ ...glass, padding: "32px 36px", animation: "fadeSlideUp 0.48s cubic-bezier(0.16,1,0.3,1) forwards", opacity: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "rgba(255,255,255,0.40)", marginBottom: "8px" }}>
                       AI REVIEW RESULT
                     </div>
                     <div style={{ fontSize: "15px", fontWeight: 700, color: "white", marginBottom: "4px" }}>
                       Contract analysis complete
                     </div>
-                    <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.40)" }}>
-                      {r.price_analysis.filter(p => p.risk === "high").length} high-risk items found
+                    <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.40)", marginBottom: "12px" }}>
+                      {result.price_analysis.filter(p => p.status === "overpriced").length} overpriced items · {result.risky_clauses.filter(c => c.risk_level === "high").length} high-risk clauses
                     </div>
+                    <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.50)", lineHeight: 1.65, maxWidth: "280px" }}>
+                      {result.overall_summary}
+                    </p>
                   </div>
-                  <ScoreArc score={r.fairness_score} />
+                  <ScoreArc score={result.fairness_score} />
                 </div>
               </div>
 
               {/* Tabs */}
               <div style={{ ...glass, overflow: "hidden", animation: "fadeSlideUp 0.48s cubic-bezier(0.16,1,0.3,1) forwards", animationDelay: "0.10s", opacity: 0 }}>
-                <div style={{
-                  display: "flex",
-                  borderBottom: "1px solid rgba(255,255,255,0.08)",
-                }}>
+                <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                   {tabs.map(t => (
                     <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
                       flex: 1, padding: "14px 16px", background: "transparent",
@@ -396,9 +463,11 @@ export default function AuditPage() {
                 </div>
 
                 <div style={{ padding: "24px 28px", maxHeight: "340px", overflowY: "auto" }}>
+
+                  {/* Price Analysis */}
                   {activeTab === "price" && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                      {r.price_analysis.map((item, i) => (
+                      {result.price_analysis.map((item, i) => (
                         <div key={i} style={{
                           background: "rgba(255,255,255,0.03)",
                           border: "1px solid rgba(255,255,255,0.07)",
@@ -416,29 +485,34 @@ export default function AuditPage() {
                         >
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                             <div style={{ fontSize: "13.5px", fontWeight: 600, color: "white", flex: 1 }}>{item.item}</div>
-                            <RiskBadge risk={item.risk} />
+                            <RiskBadge risk={toRisk(item.status)} />
                           </div>
-                          <div style={{ display: "flex", gap: "24px" }}>
+                          <div style={{ display: "flex", gap: "24px", marginBottom: "8px" }}>
                             <div>
                               <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)", letterSpacing: "1px" }}>CONTRACT</div>
-                              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.70)" }}>{item.contract}</div>
+                              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.70)" }}>{formatIDR(item.contract_price)}</div>
                             </div>
                             <div>
-                              <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)", letterSpacing: "1px" }}>MARKET</div>
-                              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.70)" }}>{item.market}</div>
+                              <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)", letterSpacing: "1px" }}>MARKET EST.</div>
+                              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.70)" }}>{item.market_estimate}</div>
                             </div>
                             <div>
-                              <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)", letterSpacing: "1px" }}>MARKUP</div>
-                              <div style={{ fontSize: "13px", fontWeight: 700, color: item.risk === "high" ? "rgba(255,100,100,0.90)" : "rgba(255,210,80,0.90)" }}>{item.markup}</div>
+                              <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)", letterSpacing: "1px" }}>STATUS</div>
+                              <div style={{ fontSize: "13px", fontWeight: 700, color: toRisk(item.status) === "high" ? "rgba(255,100,100,0.90)" : toRisk(item.status) === "medium" ? "rgba(255,210,80,0.90)" : "rgba(80,220,140,0.90)" }}>
+                                {item.status.toUpperCase()}
+                              </div>
                             </div>
                           </div>
+                          <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.38)", lineHeight: 1.55, margin: 0 }}>{item.notes}</p>
                         </div>
                       ))}
                     </div>
                   )}
+
+                  {/* Risky Clauses */}
                   {activeTab === "clauses" && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                      {r.risky_clauses.map((item, i) => (
+                      {result.risky_clauses.map((item, i) => (
                         <div key={i} style={{
                           background: "rgba(255,255,255,0.03)",
                           border: "1px solid rgba(255,255,255,0.07)",
@@ -456,16 +530,28 @@ export default function AuditPage() {
                         >
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                             <div style={{ fontSize: "13.5px", fontWeight: 700, color: "white" }}>{item.clause}</div>
-                            <RiskBadge risk={item.risk} />
+                            <RiskBadge risk={item.risk_level} />
                           </div>
-                          <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.50)", lineHeight: 1.65, margin: 0 }}>{item.detail}</p>
+                          <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.50)", lineHeight: 1.65, margin: "0 0 8px" }}>{item.issue}</p>
+                          {item.potential_impact && (
+                            <p style={{ fontSize: "12px", color: "rgba(255,150,100,0.55)", lineHeight: 1.55, margin: "0 0 8px" }}>
+                              ⚠ {item.potential_impact}
+                            </p>
+                          )}
+                          {item.suggestion && (
+                            <p style={{ fontSize: "12px", color: "rgba(80,220,140,0.55)", lineHeight: 1.55, margin: 0 }}>
+                              ✓ {item.suggestion}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
                   )}
+
+                  {/* Suggestions */}
                   {activeTab === "suggestions" && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                      {r.revision_suggestions.map((s, i) => (
+                      {result.revision_suggestions.map((s, i) => (
                         <div key={i} style={{
                           display: "flex", gap: "14px",
                           background: "rgba(255,255,255,0.03)",
@@ -507,36 +593,53 @@ export default function AuditPage() {
                   <div style={{ fontSize: "14px", fontWeight: 700, color: "white", marginBottom: "4px" }}>
                     Ready to create on-chain contract?
                   </div>
-                  <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.40)" }}>
-                    Lock this review hash to Solana blockchain
+                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.35)", fontFamily: "monospace", wordBreak: "break-all" }}>
+                    hash: {analysisHash.slice(0, 24)}...
                   </div>
                 </div>
-                <a href="/create" style={{
-                  background: "white", color: "#080808", fontWeight: 700,
-                  fontSize: "13.5px", padding: "12px 28px", borderRadius: "7px",
-                  textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px",
-                  boxShadow: "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)",
-                  whiteSpace: "nowrap",
-                  transition: "opacity 0.2s, transform 0.2s, box-shadow 0.2s",
-                }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88";
-                    (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
-                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 8px 22px rgba(255,255,255,0.18)";
+                {connected ? (
+                  <a href="/create" style={{
+                    background: "white", color: "#080808", fontWeight: 700,
+                    fontSize: "13.5px", padding: "12px 28px", borderRadius: "7px",
+                    textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px",
+                    boxShadow: "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)",
+                    whiteSpace: "nowrap", transition: "opacity 0.2s, transform 0.2s",
                   }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
-                    (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
-                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)";
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88";
+                      (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
+                      (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+                    }}
+                  >
+                    Create Contract
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                      <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </a>
+                ) : (
+                  <button onClick={() => setVisible(true)} style={{
+                    background: "rgba(201,168,76,0.12)", color: "rgba(201,168,76,0.90)",
+                    fontWeight: 700, fontSize: "13.5px", padding: "12px 24px",
+                    borderRadius: "7px", border: "1px solid rgba(201,168,76,0.35)",
+                    cursor: "pointer", whiteSpace: "nowrap",
+                    fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
+                    transition: "background 0.2s, transform 0.2s",
                   }}
-                  onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
-                  onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
-                >
-                  Create Contract
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                    <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </a>
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLButtonElement).style.background = "rgba(201,168,76,0.20)";
+                      (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLButtonElement).style.background = "rgba(201,168,76,0.12)";
+                      (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                    }}
+                  >
+                    Connect Wallet First
+                  </button>
+                )}
               </div>
             </div>
           )}

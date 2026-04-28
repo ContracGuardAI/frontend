@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { ToastContainer } from "./components/Toast";
+import SolanaWalletProvider from "./components/WalletProvider";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -19,8 +20,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={dmSans.variable}>
       <body>
-        {children}
-        <ToastContainer />
+        <SolanaWalletProvider>
+          {children}
+          <ToastContainer />
+        </SolanaWalletProvider>
       </body>
     </html>
   );

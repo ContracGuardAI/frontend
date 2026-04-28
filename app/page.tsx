@@ -1014,8 +1014,8 @@ export default function Home() {
       }} />
       <Navbar />
       <Hero />
-      <HowItWorks />
       <Features />
+      <HowItWorks />
       <Stats />
       <CTA />
       <Footer />
