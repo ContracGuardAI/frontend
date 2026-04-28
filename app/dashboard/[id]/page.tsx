@@ -206,8 +206,8 @@ export default function ContractDetailPage() {
               borderRadius: "12px", padding: "20px 24px", minWidth: "220px",
               boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
             }}>
-              <div style={{ fontSize: "10px", letterSpacing: "1.5px", color: "rgba(255,255,255,0.35)", marginBottom: "6px" }}>ESCROW STATUS</div>
-              <div style={{ fontSize: "26px", fontWeight: 900, color: "white", letterSpacing: "-0.04em", marginBottom: "12px" }}>
+              <div style={{ fontSize: "10px", letterSpacing: "1.5px", color: "rgba(201,168,76,0.70)", marginBottom: "6px" }}>ESCROW STATUS</div>
+              <div style={{ fontSize: "26px", fontWeight: 900, letterSpacing: "-0.04em", marginBottom: "12px", background: "linear-gradient(135deg, #E8C470, #C9A84C)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 {contract.totalAmount} {contract.currency}
               </div>
               {/* Escrow bar */}
@@ -233,7 +233,7 @@ export default function ContractDetailPage() {
 
           {/* LEFT: Checkpoint timeline */}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "rgba(255,255,255,0.35)", marginBottom: "4px", paddingLeft: "4px" }}>
+            <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "rgba(201,168,76,0.70)", marginBottom: "4px", paddingLeft: "4px" }}>
               CHECKPOINTS
             </div>
             {contract.checkpoints.map((cp, i) => {
@@ -504,7 +504,7 @@ export default function ContractDetailPage() {
             {/* AI Report card */}
             {currentCP?.aiReport ? (
               <div style={{ ...glass, padding: "24px 28px" }}>
-                <div style={{ fontSize: "10.5px", letterSpacing: "1.5px", color: "rgba(255,255,255,0.35)", marginBottom: "14px" }}>
+                <div style={{ fontSize: "10.5px", letterSpacing: "1.5px", color: "rgba(201,168,76,0.70)", marginBottom: "14px" }}>
                   AI REVIEW — {currentCP.name}
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
@@ -558,7 +558,7 @@ export default function ContractDetailPage() {
 
             {/* Contract on-chain info */}
             <div style={{ ...glass, padding: "22px 26px" }}>
-              <div style={{ fontSize: "10.5px", letterSpacing: "1.5px", color: "rgba(255,255,255,0.35)", marginBottom: "16px" }}>
+              <div style={{ fontSize: "10.5px", letterSpacing: "1.5px", color: "rgba(201,168,76,0.70)", marginBottom: "16px" }}>
                 ON-CHAIN RECORD
               </div>
               {[
@@ -575,7 +575,8 @@ export default function ContractDetailPage() {
                   <span style={{ fontSize: "11px", letterSpacing: "1px", color: "rgba(255,255,255,0.32)" }}>{row.label}</span>
                   <span style={{
                     fontSize: "12px", fontFamily: row.label.includes("HASH") ? "monospace" : "inherit",
-                    color: "rgba(255,255,255,0.58)",
+                    color: row.label === "FAIRNESS SCORE" ? "#C9A84C" : "rgba(255,255,255,0.58)",
+                    fontWeight: row.label === "FAIRNESS SCORE" ? 700 : 400,
                     maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                   }}>{row.value}</span>
                 </div>

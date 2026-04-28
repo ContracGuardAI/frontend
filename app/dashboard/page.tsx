@@ -159,11 +159,11 @@ export default function DashboardPage() {
           <div>
             <div className="page-in p0" style={{
               display: "inline-flex", alignItems: "center",
-              border: "1px solid rgba(255,255,255,0.14)", borderRadius: "999px",
+              border: "1px solid rgba(201,168,76,0.38)", borderRadius: "999px",
               padding: "4px 14px", fontSize: "11px",
-              color: "rgba(255,255,255,0.55)", background: "rgba(255,255,255,0.05)",
+              color: "rgba(201,168,76,0.85)", background: "rgba(201,168,76,0.06)",
               backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
+              boxShadow: "inset 0 1px 0 rgba(201,168,76,0.16), 0 0 14px rgba(201,168,76,0.08)",
               marginBottom: "14px", letterSpacing: "1.5px",
             }}>
               DASHBOARD
@@ -211,7 +211,7 @@ export default function DashboardPage() {
           {stats.map((s, i) => (
             <div key={i} className="card-lift" style={{ ...glass, padding: "22px 24px" }}>
               <div style={{ fontSize: "10px", letterSpacing: "1.6px", color: "rgba(255,255,255,0.40)", marginBottom: "8px" }}>{s.label}</div>
-              <div className="num-glow" style={{ fontSize: "28px", fontWeight: 900, color: "white", letterSpacing: "-0.04em" }}>
+              <div className="num-glow" style={{ fontSize: "28px", fontWeight: 900, letterSpacing: "-0.04em", background: "linear-gradient(135deg, #E8C470 0%, #C9A84C 50%, #F5DEB3 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 {typeof s.value === "number" ? <CountUp end={s.value} /> : s.value}
               </div>
             </div>
@@ -224,12 +224,12 @@ export default function DashboardPage() {
             <button key={f} onClick={() => setFilter(f)} style={{
               padding: "8px 18px", borderRadius: "8px", cursor: "pointer",
               fontSize: "13px", fontWeight: filter === f ? 700 : 400,
-              background: filter === f ? "rgba(255,255,255,0.12)" : "transparent",
-              color: filter === f ? "white" : "rgba(255,255,255,0.40)",
-              border: filter === f ? "1px solid rgba(255,255,255,0.18)" : "1px solid transparent",
+              background: filter === f ? "rgba(201,168,76,0.10)" : "transparent",
+              color: filter === f ? "rgba(201,168,76,0.90)" : "rgba(255,255,255,0.40)",
+              border: filter === f ? "1px solid rgba(201,168,76,0.32)" : "1px solid transparent",
               fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
               transition: "all 0.2s",
-              boxShadow: filter === f ? "inset 0 1px 0 rgba(255,255,255,0.14)" : "none",
+              boxShadow: filter === f ? "inset 0 1px 0 rgba(201,168,76,0.16)" : "none",
             } as React.CSSProperties}>
               {f}
               {f !== "All" && (
@@ -313,7 +313,7 @@ export default function DashboardPage() {
 
                 {/* Right: amount + caret */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
-                  <div style={{ fontSize: "18px", fontWeight: 900, color: "white", letterSpacing: "-0.03em" }}>
+                  <div style={{ fontSize: "18px", fontWeight: 900, letterSpacing: "-0.03em", background: "linear-gradient(135deg, #E8C470, #C9A84C)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                     {contract.totalAmount}
                   </div>
                   <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.30)" }}>

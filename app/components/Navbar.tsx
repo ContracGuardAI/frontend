@@ -59,7 +59,7 @@ export default function Navbar() {
             </span>
             <span style={{
               fontSize: "9px", letterSpacing: "2.2px",
-              color: "rgba(255,255,255,0.30)", fontWeight: 500,
+              color: "rgba(201,168,76,0.60)", fontWeight: 600,
               textTransform: "uppercase" as const,
               lineHeight: 1,
             }}>
@@ -74,21 +74,34 @@ export default function Navbar() {
             const isActive = href === pathname || (href !== "/" && pathname.startsWith(href.split("#")[0]) && href.split("#")[0] !== "/");
             return (
               <Link key={label} href={href} style={{
-                color: isActive ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.46)",
+                color: isActive ? "#C9A84C" : "rgba(255,255,255,0.46)",
                 fontSize: "14px", textDecoration: "none",
-                transition: "color 0.2s ease",
-                fontWeight: isActive ? 600 : 400,
+                transition: "color 0.2s ease, text-shadow 0.2s ease",
+                fontWeight: isActive ? 700 : 400,
                 position: "relative",
+                textShadow: isActive ? "0 0 18px rgba(201,168,76,0.45)" : "none",
               }}
-                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.80)"; }}
-                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.46)"; }}
+                onMouseEnter={e => {
+                  if (!isActive) {
+                    (e.currentTarget as HTMLAnchorElement).style.color = "rgba(201,168,76,0.80)";
+                    (e.currentTarget as HTMLAnchorElement).style.textShadow = "0 0 14px rgba(201,168,76,0.30)";
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isActive) {
+                    (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.46)";
+                    (e.currentTarget as HTMLAnchorElement).style.textShadow = "none";
+                  }
+                }}
               >
                 {label}
                 {isActive && (
                   <span style={{
                     position: "absolute", bottom: "-4px", left: 0, right: 0,
-                    height: "1px", background: "rgba(255,255,255,0.55)",
+                    height: "1.5px",
+                    background: "linear-gradient(to right, transparent, #C9A84C 30%, #E8C470 50%, #C9A84C 70%, transparent)",
                     borderRadius: "999px",
+                    boxShadow: "0 0 8px rgba(201,168,76,0.50)",
                   }} />
                 )}
               </Link>

@@ -167,11 +167,11 @@ export default function AuditPage() {
         <div style={{ marginBottom: "56px" }}>
           <div className="page-in p0" style={{
             display: "inline-flex", alignItems: "center",
-            border: "1px solid rgba(255,255,255,0.14)", borderRadius: "999px",
+            border: "1px solid rgba(201,168,76,0.38)", borderRadius: "999px",
             padding: "4px 14px", fontSize: "11px",
-            color: "rgba(255,255,255,0.55)", background: "rgba(255,255,255,0.05)",
+            color: "rgba(201,168,76,0.85)", background: "rgba(201,168,76,0.06)",
             backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
+            boxShadow: "inset 0 1px 0 rgba(201,168,76,0.16), 0 0 14px rgba(201,168,76,0.08)",
             marginBottom: "18px", letterSpacing: "1.5px",
           }}>
             AI CONTRACT REVIEW
@@ -285,7 +285,7 @@ export default function AuditPage() {
 
             {/* What AI checks */}
             <div style={{ ...glass, padding: "24px 28px" }}>
-              <div style={{ fontSize: "12px", letterSpacing: "1.5px", color: "rgba(255,255,255,0.35)", marginBottom: "16px" }}>
+              <div style={{ fontSize: "12px", letterSpacing: "1.5px", color: "rgba(201,168,76,0.70)", marginBottom: "16px" }}>
                 WHAT AI CHECKS
               </div>
               {[
@@ -380,7 +380,7 @@ export default function AuditPage() {
                       border: "none", cursor: "pointer", fontSize: "13px",
                       color: activeTab === t.id ? "white" : "rgba(255,255,255,0.42)",
                       fontWeight: activeTab === t.id ? 700 : 400,
-                      borderBottom: activeTab === t.id ? "2px solid rgba(255,255,255,0.70)" : "2px solid transparent",
+                      borderBottom: activeTab === t.id ? "2px solid rgba(201,168,76,0.85)" : "2px solid transparent",
                       transition: "color 0.2s",
                       display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
                       fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
@@ -388,8 +388,8 @@ export default function AuditPage() {
                       {t.label}
                       <span style={{
                         fontSize: "10px", padding: "2px 7px", borderRadius: "999px",
-                        background: "rgba(255,255,255,0.10)",
-                        color: "rgba(255,255,255,0.60)",
+                        background: activeTab === t.id ? "rgba(201,168,76,0.15)" : "rgba(255,255,255,0.10)",
+                        color: activeTab === t.id ? "rgba(201,168,76,0.85)" : "rgba(255,255,255,0.60)",
                       }}>{t.count}</span>
                     </button>
                   ))}
@@ -484,10 +484,10 @@ export default function AuditPage() {
                         >
                           <div style={{
                             width: "24px", height: "24px", borderRadius: "50%", flexShrink: 0,
-                            background: "rgba(255,255,255,0.08)",
-                            border: "1px solid rgba(255,255,255,0.14)",
+                            background: "rgba(201,168,76,0.10)",
+                            border: "1px solid rgba(201,168,76,0.30)",
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.55)",
+                            fontSize: "11px", fontWeight: 700, color: "rgba(201,168,76,0.80)",
                           }}>{i + 1}</div>
                           <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.55)", lineHeight: 1.65, margin: 0 }}>{s}</p>
                         </div>

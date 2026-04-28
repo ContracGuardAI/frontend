@@ -113,11 +113,11 @@ export default function CreatePage() {
         <div style={{ marginBottom: "48px", textAlign: "center" }}>
           <div className="page-in p0" style={{
             display: "inline-flex", alignItems: "center",
-            border: "1px solid rgba(255,255,255,0.14)", borderRadius: "999px",
+            border: "1px solid rgba(201,168,76,0.38)", borderRadius: "999px",
             padding: "4px 14px", fontSize: "11px",
-            color: "rgba(255,255,255,0.55)", background: "rgba(255,255,255,0.05)",
+            color: "rgba(201,168,76,0.85)", background: "rgba(201,168,76,0.06)",
             backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
+            boxShadow: "inset 0 1px 0 rgba(201,168,76,0.16), 0 0 14px rgba(201,168,76,0.08)",
             marginBottom: "18px", letterSpacing: "1.5px",
           }}>
             CREATE CONTRACT
@@ -147,10 +147,10 @@ export default function CreatePage() {
                   width: "32px", height: "32px", borderRadius: "50%",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: "13px", fontWeight: 700,
-                  background: step === s.num ? "white" : step > s.num ? "rgba(80,220,140,0.15)" : "rgba(255,255,255,0.06)",
+                  background: step === s.num ? "linear-gradient(135deg, #C9A84C, #E8C470)" : step > s.num ? "rgba(80,220,140,0.15)" : "rgba(255,255,255,0.06)",
                   border: step === s.num ? "none" : step > s.num ? "1px solid rgba(80,220,140,0.40)" : "1px solid rgba(255,255,255,0.12)",
                   color: step === s.num ? "#080808" : step > s.num ? "rgba(80,220,140,0.90)" : "rgba(255,255,255,0.40)",
-                  boxShadow: step === s.num ? "0 0 0 4px rgba(255,255,255,0.10)" : "none",
+                  boxShadow: step === s.num ? "0 0 0 4px rgba(201,168,76,0.20), 0 0 16px rgba(201,168,76,0.18)" : "none",
                   transition: "all 0.3s ease",
                 }}>
                   {step > s.num ? (
@@ -307,10 +307,10 @@ export default function CreatePage() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
                       <div style={{
                         width: "26px", height: "26px", borderRadius: "50%",
-                        background: "rgba(255,255,255,0.08)",
-                        border: "1px solid rgba(255,255,255,0.14)",
+                        background: "rgba(201,168,76,0.10)",
+                        border: "1px solid rgba(201,168,76,0.30)",
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: "12px", fontWeight: 700, color: "rgba(255,255,255,0.60)",
+                        fontSize: "12px", fontWeight: 700, color: "rgba(201,168,76,0.80)",
                       }}>
                         {String(i + 1).padStart(2, "0")}
                       </div>

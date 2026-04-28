@@ -7,6 +7,9 @@
   --green: #14F195;
   --blue: #38BDF8;
   --bg: #0A0A0A;
+  --gold:      #C9A84C;
+  --gold-light: #E8C470;
+  --gold-dim:  rgba(201,168,76,0.55);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -231,10 +234,11 @@ body::before {
 .text-shimmer {
   background: linear-gradient(
     90deg,
-    rgba(255,255,255,1.0) 0%,
-    rgba(255,255,255,0.40) 40%,
-    rgba(255,255,255,1.0) 60%,
-    rgba(255,255,255,0.40) 100%
+    #C9A84C  0%,
+    #F5DEB3 30%,
+    #E8C470 50%,
+    #F5DEB3 70%,
+    #C9A84C 100%
   );
   background-size: 200% auto;
   -webkit-background-clip: text;
@@ -255,10 +259,10 @@ body::before {
 }
 .marquee-track:hover { animation-play-state: paused; }
 
-/* ── pulsing badge dot ── */
+/* ── pulsing badge dot (gold) ── */
 @keyframes pulseDot {
-  0%, 100% { opacity: 0.55; transform: scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,0.4); }
-  50%       { opacity: 1; transform: scale(1.2); box-shadow: 0 0 0 5px rgba(255,255,255,0); }
+  0%, 100% { opacity: 0.65; transform: scale(1); box-shadow: 0 0 0 0 rgba(201,168,76,0.6); }
+  50%       { opacity: 1;    transform: scale(1.2); box-shadow: 0 0 0 5px rgba(201,168,76,0); }
 }
 .pulse-dot { animation: pulseDot 2.2s ease-in-out infinite; }
 
@@ -279,18 +283,18 @@ body::before {
   border-radius: 6px;
 }
 
-/* ── CTA border glow pulse ── */
+/* ── CTA border glow pulse (gold tint) ── */
 @keyframes borderPulse {
   0%, 100% {
     box-shadow: 0 8px 40px rgba(0,0,0,0.65),
                 inset 0 1px 0 rgba(255,255,255,0.22),
-                0 0 0 1px rgba(255,255,255,0.15);
+                0 0 0 1px rgba(201,168,76,0.18);
   }
   50% {
     box-shadow: 0 8px 40px rgba(0,0,0,0.65),
                 inset 0 1px 0 rgba(255,255,255,0.22),
-                0 0 40px rgba(255,255,255,0.07),
-                0 0 0 1px rgba(255,255,255,0.30);
+                0 0 50px rgba(201,168,76,0.12),
+                0 0 0 1px rgba(201,168,76,0.38);
   }
 }
 .border-glow-pulse { animation: borderPulse 4s ease-in-out infinite; }

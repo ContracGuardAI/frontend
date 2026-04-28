@@ -14,7 +14,7 @@ const glass = {
 } as const;
 
 function StepIcon({ type }: { type: "review" | "monitor" | "record" }) {
-  const c = "rgba(255,255,255,0.90)";
+  const c = "#C9A84C";
   if (type === "review") return (
     <g>
       <rect x={-8} y={-12} width={16} height={22} rx={3} fill="none" stroke={c} strokeWidth={1.7} />
@@ -39,7 +39,7 @@ function StepIcon({ type }: { type: "review" | "monitor" | "record" }) {
 }
 
 function FeatureIcon({ type }: { type: string }) {
-  const c = "rgba(255,255,255,0.90)";
+  const c = "#C9A84C";
   switch (type) {
     case "audit": return (
       <g>
@@ -80,9 +80,9 @@ function IconBox({ type, size = 52 }: { type: string; size?: number }) {
   return (
     <div style={{
       width: size, height: size, borderRadius: "13px", flexShrink: 0,
-      background: "rgba(255,255,255,0.07)",
-      border: "1px solid rgba(255,255,255,0.14)",
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16)",
+      background: "rgba(201,168,76,0.08)",
+      border: "1px solid rgba(201,168,76,0.30)",
+      boxShadow: "inset 0 1px 0 rgba(201,168,76,0.18), 0 0 14px rgba(201,168,76,0.08)",
       display: "flex", alignItems: "center", justifyContent: "center",
     }}>
       <svg width="28" height="28" viewBox="-13 -13 26 26" fill="none">
@@ -90,6 +90,48 @@ function IconBox({ type, size = 52 }: { type: string; size?: number }) {
       </svg>
     </div>
   );
+}
+
+function BrandLogo({ name }: { name: string }) {
+  const c = "#C9A84C";
+  const s = { flexShrink: 0 as const, display: "block" as const };
+  if (name === "Solana") return (
+    <svg width="19" height="15" viewBox="0 0 20 17" fill="none" style={s}>
+      <path d="M0,0 L13,0 L16,4 L3,4 Z" fill={c} />
+      <path d="M2,6.5 L15,6.5 L18,10.5 L5,10.5 Z" fill={c} fillOpacity={0.80} />
+      <path d="M4,13 L17,13 L20,17 L7,17 Z" fill={c} fillOpacity={0.60} />
+    </svg>
+  );
+  if (name === "Anthropic") return (
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style={s}>
+      <path d="M10,2 L18.5,18 L14.5,18 L10,8.5 L5.5,18 L1.5,18 Z" fill={c} />
+    </svg>
+  );
+  if (name === "Phantom") return (
+    <svg width="15" height="17" viewBox="0 0 20 22" fill="none" style={s}>
+      <path d="M3.5,11 A6.5,6.5 0 0,1 16.5,11 L16.5,19.5 L14.5,17.5 L12,19.5 L9.5,17.5 L7,19.5 L4.5,17.5 L3.5,11 Z" fill={c} />
+    </svg>
+  );
+  if (name === "Metaplex") return (
+    <svg width="17" height="15" viewBox="0 0 20 20" fill="none" style={s}>
+      <path d="M1.5,17 L1.5,4 L10,12 L18.5,4 L18.5,17" stroke={c} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+  if (name === "Colosseum") return (
+    <svg width="17" height="14" viewBox="0 0 20 18" fill="none" style={s}>
+      <path d="M1,17 L1,11 A9,8 0 0,1 19,11 L19,17" stroke={c} strokeWidth="2.2" fill="none" />
+      <line x1="1" y1="17" x2="19" y2="17" stroke={c} strokeWidth="2" />
+      <line x1="5.5" y1="17" x2="5.5" y2="12" stroke={c} strokeWidth="1.8" />
+      <line x1="10" y1="17" x2="10" y2="11" stroke={c} strokeWidth="1.8" />
+      <line x1="14.5" y1="17" x2="14.5" y2="12" stroke={c} strokeWidth="1.8" />
+    </svg>
+  );
+  if (name === "Superteam") return (
+    <svg width="17" height="17" viewBox="0 0 20 20" fill="none" style={s}>
+      <polygon points="10,1 12.5,7.5 19.5,7.5 14,11.5 16,18 10,14 4,18 6,11.5 0.5,7.5 7.5,7.5" fill={c} />
+    </svg>
+  );
+  return null;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -149,7 +191,7 @@ function Hero() {
           }}>
             <span className="pulse-dot" style={{
               width: "6px", height: "6px", borderRadius: "50%",
-              background: "rgba(255,255,255,0.72)", flexShrink: 0,
+              background: "#C9A84C", flexShrink: 0,
             }} />
             2,847+ Contracts audited monthly with ContractGuard AI
           </div>
@@ -227,27 +269,59 @@ function Hero() {
           </div>
 
           <div className="hero-in h4">
-            <p style={{
-              fontSize: "12px", color: "rgba(255,255,255,0.28)",
-              letterSpacing: "1.4px", marginBottom: "16px", textTransform: "uppercase" as const,
-            }}>
-              Trusted by builders across the ecosystem
-            </p>
-            <div style={{
-              overflow: "hidden", maxWidth: "320px",
-              WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
-              maskImage: "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
-            }}>
-              <div className="marquee-track">
-                {["Superteam", "Colosseum", "Solana", "Anthropic", "Phantom", "Metaplex",
-                  "Superteam", "Colosseum", "Solana", "Anthropic", "Phantom", "Metaplex"].map((n, i) => (
-                  <span key={i} style={{
-                    fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap",
-                    color: "rgba(255,255,255,0.18)", letterSpacing: "-0.01em",
-                    marginRight: "36px",
+            {/* Divider with label */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>
+              <div style={{
+                height: "1px", width: "36px", flexShrink: 0,
+                background: "linear-gradient(to right, transparent, rgba(201,168,76,0.50))",
+              }} />
+              <p style={{
+                fontSize: "9.5px", color: "rgba(201,168,76,0.65)",
+                letterSpacing: "2.2px", fontWeight: 700,
+                textTransform: "uppercase" as const, whiteSpace: "nowrap", margin: 0,
+              }}>
+                Trusted by builders
+              </p>
+              <div style={{
+                height: "1px", flex: 1,
+                background: "linear-gradient(to right, rgba(201,168,76,0.30), transparent)",
+              }} />
+            </div>
+
+            {/* Brand chips — static grid */}
+            <div style={{ display: "flex", flexWrap: "wrap" as const, gap: "8px", maxWidth: "360px" }}>
+              {["Solana", "Anthropic", "Phantom", "Metaplex", "Colosseum", "Superteam"].map((n, i) => (
+                <div key={i} style={{
+                  display: "inline-flex", alignItems: "center", gap: "8px",
+                  background: "rgba(201,168,76,0.07)",
+                  border: "1px solid rgba(201,168,76,0.28)",
+                  borderRadius: "999px",
+                  padding: "7px 14px 7px 10px",
+                  backdropFilter: "blur(10px)",
+                  boxShadow: "inset 0 1px 0 rgba(201,168,76,0.14), 0 0 12px rgba(201,168,76,0.05)",
+                  transition: "background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s",
+                  cursor: "default",
+                }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLDivElement).style.background = "rgba(201,168,76,0.13)";
+                    (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(201,168,76,0.48)";
+                    (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
+                    (e.currentTarget as HTMLDivElement).style.boxShadow = "inset 0 1px 0 rgba(201,168,76,0.20), 0 6px 18px rgba(201,168,76,0.12)";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLDivElement).style.background = "rgba(201,168,76,0.07)";
+                    (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(201,168,76,0.28)";
+                    (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+                    (e.currentTarget as HTMLDivElement).style.boxShadow = "inset 0 1px 0 rgba(201,168,76,0.14), 0 0 12px rgba(201,168,76,0.05)";
+                  }}
+                >
+                  <BrandLogo name={n} />
+                  <span style={{
+                    fontSize: "13px", fontWeight: 700,
+                    color: "rgba(201,168,76,0.90)", letterSpacing: "-0.01em",
                   }}>{n}</span>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -379,11 +453,11 @@ function HowItWorks() {
         <div className="reveal" style={{ textAlign: "center", marginBottom: "80px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center",
-            border: "1px solid rgba(255,255,255,0.14)", borderRadius: "999px",
+            border: "1px solid rgba(201,168,76,0.38)", borderRadius: "999px",
             padding: "4px 14px", fontSize: "11px",
-            color: "rgba(255,255,255,0.58)", background: "rgba(255,255,255,0.05)",
+            color: "rgba(201,168,76,0.85)", background: "rgba(201,168,76,0.06)",
             backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
+            boxShadow: "inset 0 1px 0 rgba(201,168,76,0.16), 0 0 14px rgba(201,168,76,0.08)",
             marginBottom: "20px", letterSpacing: "1.5px",
           }}>
             HOW IT WORKS
@@ -419,7 +493,7 @@ function HowItWorks() {
             >
               <div style={{
                 position: "absolute", top: 0, left: 0, right: 0, height: "1px",
-                background: "linear-gradient(to right, transparent 5%, rgba(255,255,255,0.22) 40%, rgba(255,255,255,0.22) 60%, transparent 95%)",
+                background: "linear-gradient(to right, transparent 5%, rgba(201,168,76,0.45) 40%, rgba(201,168,76,0.45) 60%, transparent 95%)",
                 pointerEvents: "none",
               }} />
 
@@ -427,7 +501,7 @@ function HowItWorks() {
                 position: "absolute", top: "10px", right: "18px",
                 fontSize: "96px", fontWeight: 900, fontFamily: "monospace",
                 letterSpacing: "-0.07em", lineHeight: 1,
-                background: "linear-gradient(175deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.03) 75%)",
+                background: "linear-gradient(175deg, rgba(201,168,76,0.50) 0%, rgba(201,168,76,0.04) 75%)",
                 WebkitBackgroundClip: "text", backgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 userSelect: "none", pointerEvents: "none",
@@ -441,9 +515,9 @@ function HowItWorks() {
 
               <div style={{
                 width: "52px", height: "52px", borderRadius: "13px",
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(255,255,255,0.14)",
-                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16)",
+                background: "rgba(201,168,76,0.08)",
+                border: "1px solid rgba(201,168,76,0.30)",
+                boxShadow: "inset 0 1px 0 rgba(201,168,76,0.18), 0 0 14px rgba(201,168,76,0.08)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 marginBottom: "24px",
               }}>
@@ -511,11 +585,11 @@ function Features() {
         <div className="reveal" style={{ marginBottom: "64px" }}>
           <div style={{
             display: "inline-flex", alignItems: "center",
-            border: "1px solid rgba(255,255,255,0.14)", borderRadius: "999px",
+            border: "1px solid rgba(201,168,76,0.38)", borderRadius: "999px",
             padding: "4px 14px", fontSize: "11px",
-            color: "rgba(255,255,255,0.58)", background: "rgba(255,255,255,0.05)",
+            color: "rgba(201,168,76,0.85)", background: "rgba(201,168,76,0.06)",
             backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
+            boxShadow: "inset 0 1px 0 rgba(201,168,76,0.16), 0 0 14px rgba(201,168,76,0.08)",
             marginBottom: "20px", letterSpacing: "1.5px",
           }}>
             FEATURES
@@ -539,15 +613,21 @@ function Features() {
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           {items.map((f, i) => (
-            <div key={i} className={`card-lift reveal d${i + 1}`} style={{ ...glass, padding: "40px 36px" }}
+            <div key={i} className={`card-lift reveal d${i + 1}`} style={{ ...glass, padding: "40px 36px", position: "relative", overflow: "hidden" }}
               onMouseMove={e => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
-                e.currentTarget.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.085) 0%, rgba(255,255,255,0.055) 55%)`;
+                e.currentTarget.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(201,168,76,0.07) 0%, rgba(255,255,255,0.055) 60%)`;
               }}
               onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.055)"; }}
             >
+              {/* gold top accent line */}
+              <div style={{
+                position: "absolute", top: 0, left: 0, right: 0, height: "1px",
+                background: "linear-gradient(to right, transparent 5%, rgba(201,168,76,0.45) 40%, rgba(201,168,76,0.45) 60%, transparent 95%)",
+                pointerEvents: "none",
+              }} />
               <div style={{
                 display: "flex", justifyContent: "space-between",
                 alignItems: "flex-start", marginBottom: "28px",
@@ -555,11 +635,11 @@ function Features() {
                 <IconBox type={f.type} />
                 <div style={{
                   fontSize: "9.5px", letterSpacing: "1.8px",
-                  color: "rgba(255,255,255,0.38)",
-                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "rgba(201,168,76,0.80)",
+                  border: "1px solid rgba(201,168,76,0.30)",
                   borderRadius: "999px", padding: "4px 10px",
-                  background: "rgba(255,255,255,0.04)",
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10)",
+                  background: "rgba(201,168,76,0.07)",
+                  boxShadow: "inset 0 1px 0 rgba(201,168,76,0.15)",
                 }}>{f.tag}</div>
               </div>
               <h3 style={{
@@ -659,7 +739,10 @@ function Stats() {
             >
               <div style={{
                 fontSize: "clamp(26px,2.8vw,38px)", fontWeight: 900,
-                letterSpacing: "-0.04em", color: "white", marginBottom: "8px",
+                letterSpacing: "-0.04em", marginBottom: "8px",
+                background: "linear-gradient(135deg, #E8C470 0%, #C9A84C 50%, #F5DEB3 100%)",
+                WebkitBackgroundClip: "text", backgroundClip: "text",
+                WebkitTextFillColor: "transparent",
               }}>
                 {s.countTo !== null ? `${counts[i]}${s.suffix}` : s.display}
               </div>
@@ -708,11 +791,11 @@ function CTA() {
         }}>
           <div style={{
             display: "inline-flex", alignItems: "center",
-            border: "1px solid rgba(255,255,255,0.15)", borderRadius: "999px",
+            border: "1px solid rgba(201,168,76,0.38)", borderRadius: "999px",
             padding: "4px 14px", fontSize: "11px",
-            color: "rgba(255,255,255,0.58)", background: "rgba(255,255,255,0.05)",
+            color: "rgba(201,168,76,0.85)", background: "rgba(201,168,76,0.06)",
             backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
+            boxShadow: "inset 0 1px 0 rgba(201,168,76,0.16), 0 0 14px rgba(201,168,76,0.08)",
             marginBottom: "28px", letterSpacing: "1.5px",
           }}>
             GET STARTED
@@ -829,7 +912,7 @@ export default function Home() {
       <div style={{
         position: "fixed", top: 0, left: 0, height: "1.5px",
         width: `${scrollProgress}%`,
-        background: "linear-gradient(to right, rgba(255,255,255,0.70), rgba(255,255,255,0.25))",
+        background: "linear-gradient(to right, #C9A84C, #E8C470, #C9A84C)",
         zIndex: 200, pointerEvents: "none",
         transition: "width 0.08s linear",
       }} />

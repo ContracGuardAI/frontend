@@ -185,11 +185,11 @@ export default function PricingPage() {
         <div style={{ textAlign: "center", marginBottom: "72px" }}>
           <div className="page-in p0" style={{
             display: "inline-flex", alignItems: "center",
-            border: "1px solid rgba(255,255,255,0.14)", borderRadius: "999px",
+            border: "1px solid rgba(201,168,76,0.38)", borderRadius: "999px",
             padding: "4px 14px", fontSize: "11px",
-            color: "rgba(255,255,255,0.55)", background: "rgba(255,255,255,0.05)",
+            color: "rgba(201,168,76,0.85)", background: "rgba(201,168,76,0.06)",
             backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
+            boxShadow: "inset 0 1px 0 rgba(201,168,76,0.16), 0 0 14px rgba(201,168,76,0.08)",
             marginBottom: "20px", letterSpacing: "1.5px",
           }}>
             PRICING
@@ -219,20 +219,20 @@ export default function PricingPage() {
             <div key={plan.name} className="card-lift" style={{
               ...glass,
               padding: plan.featured ? "36px 32px" : "30px 28px",
-              border: plan.featured ? "1px solid rgba(255,255,255,0.22)" : "1px solid rgba(255,255,255,0.10)",
-              background: plan.featured ? "rgba(255,255,255,0.075)" : "rgba(255,255,255,0.045)",
+              border: plan.featured ? "1px solid rgba(201,168,76,0.35)" : "1px solid rgba(255,255,255,0.10)",
+              background: plan.featured ? "rgba(201,168,76,0.06)" : "rgba(255,255,255,0.045)",
               boxShadow: plan.featured
-                ? "0 8px 40px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.24)"
+                ? "0 8px 40px rgba(0,0,0,0.65), inset 0 1px 0 rgba(201,168,76,0.22), 0 0 40px rgba(201,168,76,0.06)"
                 : "0 4px 24px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.12)",
               position: "relative",
             }}>
               {plan.featured && (
                 <div style={{
                   position: "absolute", top: "-13px", left: "50%", transform: "translateX(-50%)",
-                  background: "white", color: "#080808",
+                  background: "linear-gradient(135deg, #C9A84C, #E8C470)", color: "#080808",
                   fontSize: "10.5px", fontWeight: 800, letterSpacing: "1px",
                   padding: "4px 14px", borderRadius: "999px",
-                  boxShadow: "0 0 0 1px rgba(255,255,255,0.15), 0 4px 10px rgba(255,255,255,0.15)",
+                  boxShadow: "0 0 0 1px rgba(201,168,76,0.40), 0 4px 14px rgba(201,168,76,0.35)",
                   whiteSpace: "nowrap",
                 }}>
                   MOST POPULAR
@@ -300,7 +300,7 @@ export default function PricingPage() {
               </Link>
 
               <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "22px" }}>
-                <div style={{ fontSize: "11px", letterSpacing: "1.2px", color: "rgba(255,255,255,0.30)", marginBottom: "14px" }}>
+                <div style={{ fontSize: "11px", letterSpacing: "1.2px", color: "rgba(201,168,76,0.65)", marginBottom: "14px" }}>
                   INCLUDED
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -346,12 +346,12 @@ export default function PricingPage() {
               >
                 <div style={{
                   width: "44px", height: "44px", borderRadius: "12px", margin: "0 auto 12px",
-                  background: "rgba(255,255,255,0.07)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
+                  background: "rgba(201,168,76,0.08)",
+                  border: "1px solid rgba(201,168,76,0.25)",
+                  boxShadow: "inset 0 1px 0 rgba(201,168,76,0.18), 0 0 10px rgba(201,168,76,0.06)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
-                  <Icon size={18} color="rgba(255,255,255,0.70)" strokeWidth={1.7} />
+                  <Icon size={18} color="#C9A84C" strokeWidth={1.7} />
                 </div>
                 <div style={{ fontSize: "14px", fontWeight: 700, color: "white", marginBottom: "5px" }}>{title}</div>
                 <div style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.38)", lineHeight: 1.55 }}>{desc}</div>
