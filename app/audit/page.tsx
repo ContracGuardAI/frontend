@@ -5,7 +5,7 @@ import Footer from "../components/Footer";
 import { IconDollar, IconAlertTriangle, IconFileText, IconShield } from "../components/Icons";
 import { toast } from "../components/Toast";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { useWalletModal } from "../components/WalletProvider";
 import type { ContractReviewResult } from "../../../contractguard-agent/contractAgent";
 
 /* ── shared glass style ── */

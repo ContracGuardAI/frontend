@@ -1,6 +1,6 @@
 "use client";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { useWalletModal } from "./WalletProvider";
 
 function shortAddress(addr: string) {
   return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
