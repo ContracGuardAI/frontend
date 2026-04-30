@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { analyzeContract } from "../../../../contractguard-agent/contractAgent";
+import { analyzeContract } from "../../lib/contractAgent";
 import { createHash } from "crypto";
 
 export const runtime = "nodejs";
@@ -8,7 +8,7 @@ export const maxDuration = 120; // 2 menit (cukup untuk Claude Code)
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { contractText, model } = body as { contractText?: string; model?: string };
+    const { contractText, model, lang } = body as { contractText?: string; model?: string; lang?: "en" | "id" };
 
     if (!contractText || contractText.trim().length < 50) {
       return NextResponse.json(
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await analyzeContract(contractText.trim(), model);
+    const result = await analyzeContract(contractText.trim(), model, lang ?? "id");
 
     // Hash hasil analisis untuk disimpan on-chain
     const analysisHash = createHash("sha256")

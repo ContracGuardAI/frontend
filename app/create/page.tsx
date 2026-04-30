@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { toast } from "../components/Toast";
@@ -71,6 +71,19 @@ export default function CreatePage() {
     { name: "Roofing & Walls", description: "Atap dan dinding selesai", payment: "40" },
     { name: "Finishing", description: "Pengecatan, lantai, dan finishing", payment: "30" },
   ]);
+
+  /* Pre-fill dari hasil audit */
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("contractguard_prefill");
+      if (!raw) return;
+      sessionStorage.removeItem("contractguard_prefill");
+      const data = JSON.parse(raw) as { title?: string; description?: string; checkpoints?: Checkpoint[] };
+      if (data.title) setTitle(data.title);
+      if (data.description) setDescription(data.description);
+      if (data.checkpoints?.length) setCheckpoints(data.checkpoints);
+    } catch {}
+  }, []);
 
   const addCheckpoint = () => {
     setCheckpoints([...checkpoints, { name: "", description: "", payment: "" }]);

@@ -1,12 +1,13 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { IconDollar, IconAlertTriangle, IconFileText, IconShield } from "../components/Icons";
 import { toast } from "../components/Toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "../components/WalletProvider";
-import type { ContractReviewResult } from "../../../contractguard-agent/contractAgent";
+import type { ContractReviewResult } from "../lib/contractAgent";
 import { useLanguage } from "../components/LanguageProvider";
 
 const glass = {
@@ -25,7 +26,7 @@ type AuditChatMsg =
   | { role: "ai"; kind: "text"; text: string; variant?: "normal" | "error" | "success" }
   | { role: "ai"; kind: "score"; result: ContractReviewResult }
   | { role: "ai"; kind: "risks"; result: ContractReviewResult }
-  | { role: "ai"; kind: "cta"; analysisHash: string };
+  | { role: "ai"; kind: "cta"; analysisHash: string; result: ContractReviewResult; suggestedTitle: string };
 
 // GREETING is created inside component so it can be translated
 const GREETING_ID = "Halo! Upload kontrak PDF kamu di panel kiri dan saya akan mengaudit setiap klausanya secara mendetail.";
@@ -262,6 +263,34 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
   }
 
   if (msg.kind === "cta") {
+    const handlePrefill = () => {
+      const items = msg.result.price_analysis;
+      let checkpoints: { name: string; description: string; payment: string }[];
+      if (items.length >= 2) {
+        const total = items.reduce((s, x) => s + x.contract_price, 0);
+        checkpoints = items.map(p => ({
+          name: p.item,
+          description: p.notes.slice(0, 64),
+          payment: String(total > 0 ? Math.round((p.contract_price / total) * 100) : Math.round(100 / items.length)),
+        }));
+        // Fix rounding so total = 100
+        const sum = checkpoints.reduce((s, c) => s + Number(c.payment), 0);
+        if (sum !== 100) {
+          checkpoints[checkpoints.length - 1].payment = String(Number(checkpoints[checkpoints.length - 1].payment) + (100 - sum));
+        }
+      } else {
+        checkpoints = [
+          { name: "Deliverable 1", description: "Tahap pertama", payment: "50" },
+          { name: "Deliverable 2", description: "Tahap kedua", payment: "50" },
+        ];
+      }
+      sessionStorage.setItem("contractguard_prefill", JSON.stringify({
+        title: msg.suggestedTitle,
+        description: msg.result.overall_summary,
+        checkpoints,
+      }));
+    };
+
     return (
       <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", marginBottom: "12px", ...anim }}>
         <AiAvatar />
@@ -273,7 +302,7 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
             {lang === "en" ? "Audit complete! Want to lock this contract on-chain with Solana smart escrow?" : "Audit selesai! Mau mengunci kontrak ini on-chain dengan Solana smart escrow?"}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" as const }}>
-            <a href="/create" style={{
+            <Link href="/create" onClick={handlePrefill} style={{
               background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)",
               fontWeight: 700, fontSize: "12.5px", padding: "8px 18px", borderRadius: "6px",
               textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "7px",
@@ -286,7 +315,7 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
               <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
                 <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-            </a>
+            </Link>
             <span style={{ fontSize: "10.5px", color: "var(--text-4)", fontFamily: "monospace" }}>
               hash: {msg.analysisHash.slice(0, 14)}...
             </span>
@@ -323,8 +352,14 @@ export default function AuditPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang]);
 
-  const chatRef  = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const chatRef         = useRef<HTMLDivElement>(null);
+  const inputRef        = useRef<HTMLInputElement>(null);
+  const abortCtrlRef    = useRef<AbortController | null>(null);
+
+  // Abort any in-flight request when user navigates away
+  useEffect(() => {
+    return () => { abortCtrlRef.current?.abort(); };
+  }, []);
 
   const { connected } = useWallet();
   const { setVisible } = useWalletModal();
@@ -343,9 +378,14 @@ export default function AuditPage() {
   const handleFile = async (file: File) => {
     if (!file) return;
     if (file.type !== "application/pdf") {
-      toast.error("Invalid file", "Only PDF files are accepted.");
+      toast.error("Invalid file", lang === "en" ? "Only PDF files are accepted." : "Hanya file PDF yang diterima.");
       return;
     }
+
+    // Cancel any in-flight request from a previous upload
+    abortCtrlRef.current?.abort();
+    const abort = new AbortController();
+    abortCtrlRef.current = abort;
 
     setFileName(file.name);
     setChatMsgs([greeting]);
@@ -354,17 +394,20 @@ export default function AuditPage() {
     // ── Step 1: Upload PDF ────────────────────────────────────
     setFileState("uploading");
     setChatTyping(true);
-    toast.info("Uploading contract...", "Extracting text from PDF");
+    toast.info(
+      lang === "en" ? "Uploading contract..." : "Mengupload kontrak...",
+      lang === "en" ? "Extracting text from PDF" : "Mengekstrak teks dari PDF"
+    );
 
     const formData = new FormData();
     formData.append("file", file);
 
     let contractText = "";
-    let fHash = "";
-    let charCount = 0;
+    let fHash        = "";
+    let charCount    = 0;
 
     try {
-      const uploadRes  = await fetch("/api/upload", { method: "POST", body: formData });
+      const uploadRes  = await fetch("/api/upload", { method: "POST", body: formData, signal: abort.signal });
       const uploadJson = await uploadRes.json();
       if (!uploadJson.success) throw new Error(uploadJson.error);
       contractText = uploadJson.data.contract_text;
@@ -372,11 +415,17 @@ export default function AuditPage() {
       charCount    = uploadJson.data.char_count;
       setFileHash(fHash);
     } catch (err) {
+      if ((err as Error).name === "AbortError") { setChatTyping(false); setFileState("idle"); return; }
       const msg = err instanceof Error ? err.message : "Upload failed.";
       setChatTyping(false);
-      addMsg({ role: "ai", kind: "text", text: `Upload gagal: ${msg}\n\nCoba lagi dengan file PDF yang valid.`, variant: "error" });
+      addMsg({
+        role: "ai", kind: "text", variant: "error",
+        text: lang === "en"
+          ? `Upload failed: ${msg}\n\nPlease try again with a valid PDF file.`
+          : `Upload gagal: ${msg}\n\nCoba lagi dengan file PDF yang valid.`,
+      });
       setFileState("error");
-      toast.error("Upload failed", msg);
+      toast.error(lang === "en" ? "Upload failed" : "Upload gagal", msg);
       return;
     }
 
@@ -384,16 +433,28 @@ export default function AuditPage() {
     setChatTyping(false);
     setFileState("analyzing");
     setChatTyping(true);
-    toast.info("Analyzing contract...", "AI is reading every clause");
+    toast.info(
+      lang === "en" ? "Analyzing contract..." : "Menganalisis kontrak...",
+      lang === "en" ? "AI is reading every clause" : "AI sedang membaca setiap klausul"
+    );
+
+    // 90s client-side timeout (server has 85s, so this is a safety net)
+    let timedOut = false;
+    const timeoutId = setTimeout(() => { timedOut = true; abort.abort(); }, 90_000);
 
     try {
       const res = await fetch("/api/audit-stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contractText, charCount }),
+        body: JSON.stringify({ contractText, charCount, lang }),
+        signal: abort.signal,
       });
 
-      if (!res.ok || !res.body) throw new Error("Stream tidak tersedia.");
+      if (!res.ok || !res.body) {
+        let errMsg = lang === "en" ? "Stream unavailable." : "Stream tidak tersedia.";
+        try { const j = await res.json(); if (j.error) errMsg = j.error; } catch {}
+        throw new Error(errMsg);
+      }
 
       const reader  = res.body.getReader();
       const decoder = new TextDecoder();
@@ -413,22 +474,26 @@ export default function AuditPage() {
           try { event = JSON.parse(line.slice(6)); } catch { continue; }
 
           if (event.type === "progress" && event.message) {
-            // Replace typing indicator with real agent progress message,
-            // then re-show typing for next stage
             setChatTyping(false);
             addMsg({ role: "ai", kind: "text", text: event.message });
             setChatTyping(true);
           }
 
           if (event.type === "result" && event.data && event.meta) {
+            clearTimeout(timeoutId);
             setChatTyping(false);
             setFileState("done");
-            toast.success("Review complete", file.name);
+            toast.success(lang === "en" ? "Review complete" : "Review selesai", file.name);
 
-            const result = event.data as import("../../../contractguard-agent/contractAgent").ContractReviewResult;
+            const result = event.data as import("../lib/contractAgent").ContractReviewResult;
             addMsg({ role: "ai", kind: "score", result });
             setTimeout(() => addMsg({ role: "ai", kind: "risks", result }), 500);
-            setTimeout(() => addMsg({ role: "ai", kind: "cta", analysisHash: event.meta!.analysis_hash }), 1000);
+            setTimeout(() => addMsg({
+              role: "ai", kind: "cta",
+              analysisHash: event.meta!.analysis_hash,
+              result,
+              suggestedTitle: file.name.replace(/\.pdf$/i, "").replace(/[-_]/g, " "),
+            }), 1000);
           }
 
           if (event.type === "error" && event.message) {
@@ -438,11 +503,44 @@ export default function AuditPage() {
       }
 
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "AI analysis failed.";
+      clearTimeout(timeoutId);
       setChatTyping(false);
-      addMsg({ role: "ai", kind: "text", text: `Analisis gagal: ${msg}`, variant: "error" });
+
+      // User navigated away or changed file — abort silently
+      if ((err as Error).name === "AbortError") {
+        if (timedOut) {
+          addMsg({
+            role: "ai", kind: "text", variant: "error",
+            text: lang === "en"
+              ? "Analysis timed out after 90 seconds. The contract may be too long or the AI service is busy. Please try again."
+              : "Analisis timeout setelah 90 detik. Kontrak mungkin terlalu panjang atau AI sedang sibuk. Coba lagi.",
+          });
+          setFileState("error");
+          toast.error("Timeout", lang === "en" ? "Analysis took too long" : "Analisis terlalu lama");
+        } else {
+          setFileState("idle");
+        }
+        return;
+      }
+
+      const raw = err instanceof Error ? err.message : "AI analysis failed.";
+      const isNetwork  = /failed to fetch|networkerror|network/i.test(raw);
+      const isSecurity = /suspicious|mencurigakan/i.test(raw);
+
+      let displayMsg: string;
+      if (isSecurity) {
+        displayMsg = raw; // already localised from server
+      } else if (isNetwork) {
+        displayMsg = lang === "en"
+          ? "Connection lost during analysis. Please check your network and try again."
+          : "Koneksi terputus saat analisis. Periksa jaringan Anda dan coba lagi.";
+      } else {
+        displayMsg = lang === "en" ? `Analysis failed: ${raw}` : `Analisis gagal: ${raw}`;
+      }
+
+      addMsg({ role: "ai", kind: "text", text: displayMsg, variant: "error" });
       setFileState("error");
-      toast.error("Analysis failed", msg);
+      toast.error(lang === "en" ? "Analysis failed" : "Analisis gagal", raw.slice(0, 80));
     }
   };
 
@@ -567,6 +665,7 @@ export default function AuditPage() {
                   <div style={{ marginTop: "16px" }}>
                     <button onClick={e => {
                       e.stopPropagation();
+                      abortCtrlRef.current?.abort();
                       setFileState("idle");
                       setChatMsgs([greeting]);
                       setChatTyping(false);

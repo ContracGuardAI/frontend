@@ -29,8 +29,9 @@ export async function POST(req: NextRequest) {
     const fileHash = createHash("sha256").update(buffer).digest("hex");
 
     // Extract teks dari PDF
+    // Require ke lib langsung untuk bypass bug test file pdf-parse@1.x
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require("pdf-parse");
+    const pdfParse = require("pdf-parse/lib/pdf-parse");
     const pdfData = await pdfParse(buffer);
     const extractedText = pdfData.text?.trim() ?? "";
 

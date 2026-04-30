@@ -97,7 +97,8 @@ function ThemeToggle() {
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [scrolled, setScrolled] = useState(false);
+  const [scrolled, setScrolled]         = useState(false);
+  const [activeSection, setActiveSection] = useState("");
   const { t } = useLanguage();
 
   const NAV_LINKS = [
@@ -106,6 +107,34 @@ export default function Navbar() {
     { labelKey: "nav.pricing",    href: "/pricing" },
     { labelKey: "nav.dashboard",  href: "/dashboard" },
   ];
+
+  // Scroll spy: highlight Features / How it Works as sections enter viewport
+  useEffect(() => {
+    if (pathname !== "/") { setActiveSection(""); return; }
+
+    const HASH_SECTIONS = ["features", "how-it-works"];
+    const observers: IntersectionObserver[] = [];
+
+    HASH_SECTIONS.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([entry]) => { if (entry.isIntersecting) setActiveSection(id); },
+        { rootMargin: "-30% 0px -55% 0px", threshold: 0 }
+      );
+      obs.observe(el);
+      observers.push(obs);
+    });
+
+    // Reset when scrolled back to very top
+    const onScroll = () => { if (window.scrollY < 80) setActiveSection(""); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      observers.forEach(o => o.disconnect());
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 48);
@@ -162,7 +191,10 @@ export default function Navbar() {
         <div style={{ display: "flex", gap: "36px" }}>
           {NAV_LINKS.map(({ labelKey, href }) => {
             const label = t(labelKey);
-            const isActive = href === pathname || (href !== "/" && pathname.startsWith(href.split("#")[0]) && href.split("#")[0] !== "/");
+            const sectionId = href.includes("#") ? href.split("#")[1] : "";
+            const isActive = href === pathname
+              || (pathname === "/" && !!sectionId && activeSection === sectionId)
+              || (href !== "/" && !href.includes("#") && pathname.startsWith(href) && href !== "/");
             return (
               <Link key={labelKey} href={href} style={{
                 color: isActive ? "var(--accent)" : "var(--nav-text)",

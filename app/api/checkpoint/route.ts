@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { reviewCheckpoint } from "../../../../contractguard-agent/contractAgent";
+import { reviewCheckpoint } from "../../lib/contractAgent";
 import { createHash } from "crypto";
 
 export const runtime = "nodejs";
@@ -8,10 +8,11 @@ export const maxDuration = 120;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { contractSpec, evidenceText, model } = body as {
+    const { contractSpec, evidenceText, model, lang } = body as {
       contractSpec?: string;
       evidenceText?: string;
       model?: string;
+      lang?: "en" | "id";
     };
 
     if (!contractSpec || contractSpec.trim().length < 20) {
@@ -31,7 +32,8 @@ export async function POST(req: NextRequest) {
     const result = await reviewCheckpoint(
       contractSpec.trim(),
       evidenceText.trim(),
-      model
+      model,
+      lang ?? "id"
     );
 
     const reportHash = createHash("sha256")
