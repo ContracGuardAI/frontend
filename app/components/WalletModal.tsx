@@ -31,12 +31,10 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
       select(wallet.adapter.name as any);
       onClose();
     } else {
-      // Phantom not installed — open install page
       window.open("https://phantom.app/", "_blank");
     }
   }, [wallets, select, onClose]);
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -44,7 +42,6 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
-  // Lock body scroll
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -70,18 +67,18 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
         onClick={e => e.stopPropagation()}
         style={{
           width: "420px", maxWidth: "calc(100vw - 32px)",
-          background: "rgba(10,9,6,0.96)",
-          border: "1px solid rgba(201,168,76,0.28)",
+          background: "var(--bg)",
+          border: "1px solid var(--accent-border)",
           borderRadius: "24px",
-          boxShadow: "0 32px 80px rgba(0,0,0,0.80), 0 0 0 1px rgba(201,168,76,0.08), inset 0 1px 0 rgba(255,255,255,0.08)",
+          boxShadow: "0 32px 80px rgba(0,0,0,0.50), 0 0 0 1px var(--accent-glow), inset 0 1px 0 var(--border)",
           overflow: "hidden",
           animation: "slideUp 0.24s cubic-bezier(0.16,1,0.3,1)",
         }}
       >
-        {/* Top gold line */}
+        {/* Top accent line */}
         <div style={{
           height: "1px",
-          background: "linear-gradient(to right, transparent 5%, rgba(201,168,76,0.60) 50%, transparent 95%)",
+          background: "linear-gradient(to right, transparent 5%, var(--accent-border-hover) 50%, transparent 95%)",
         }} />
 
         {/* Header */}
@@ -92,28 +89,28 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
           <div>
             <h2 style={{
               fontSize: "18px", fontWeight: 800,
-              color: "white", letterSpacing: "-0.03em",
+              color: "var(--text)", letterSpacing: "-0.03em",
               marginBottom: "6px",
             }}>Connect Wallet</h2>
-            <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.40)", lineHeight: 1.5 }}>
+            <p style={{ fontSize: "13px", color: "var(--text-3)", lineHeight: 1.5 }}>
               Choose a wallet to connect to ContractGuard AI
             </p>
           </div>
           <button onClick={onClose} style={{
             width: "32px", height: "32px", borderRadius: "8px",
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.10)",
+            background: "var(--surface-2)",
+            border: "1px solid var(--border)",
             cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-            color: "rgba(255,255,255,0.50)", flexShrink: 0,
+            color: "var(--text-3)", flexShrink: 0,
             transition: "background 0.15s, color 0.15s",
           }}
             onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.10)";
-              (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.80)";
+              (e.currentTarget as HTMLButtonElement).style.background = "var(--surface)";
+              (e.currentTarget as HTMLButtonElement).style.color = "var(--text)";
             }}
             onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)";
-              (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.50)";
+              (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)";
+              (e.currentTarget as HTMLButtonElement).style.color = "var(--text-3)";
             }}
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -132,8 +129,8 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
               style={{
                 width: "100%", display: "flex", alignItems: "center", gap: "16px",
                 padding: "16px 16px", borderRadius: "14px",
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.09)",
+                background: "var(--surface-2)",
+                border: "1px solid var(--border)",
                 cursor: connecting ? "wait" : "pointer",
                 textAlign: "left",
                 transition: "background 0.2s, border-color 0.2s, transform 0.18s",
@@ -143,14 +140,14 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
               }}
               onMouseEnter={e => {
                 const el = e.currentTarget;
-                el.style.background = "rgba(201,168,76,0.08)";
-                el.style.borderColor = "rgba(201,168,76,0.35)";
+                el.style.background = "var(--accent-bg)";
+                el.style.borderColor = "var(--accent-border-strong)";
                 el.style.transform = "translateY(-1px)";
               }}
               onMouseLeave={e => {
                 const el = e.currentTarget;
-                el.style.background = "rgba(255,255,255,0.04)";
-                el.style.borderColor = "rgba(255,255,255,0.09)";
+                el.style.background = "var(--surface-2)";
+                el.style.borderColor = "var(--border)";
                 el.style.transform = "translateY(0)";
               }}
             >
@@ -160,26 +157,26 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
               {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
-                  <span style={{ fontSize: "15px", fontWeight: 700, color: "white" }}>
+                  <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)" }}>
                     {wallet.name}
                   </span>
                   {wallet.recommended && (
                     <span style={{
                       fontSize: "9.5px", letterSpacing: "1.2px",
-                      color: "rgba(201,168,76,0.85)",
-                      border: "1px solid rgba(201,168,76,0.30)",
+                      color: "var(--accent-text)",
+                      border: "1px solid var(--accent-border)",
                       borderRadius: "999px", padding: "2px 8px",
-                      background: "rgba(201,168,76,0.08)",
+                      background: "var(--accent-bg)",
                     }}>RECOMMENDED</span>
                   )}
                 </div>
-                <p style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.38)", margin: 0 }}>
+                <p style={{ fontSize: "12.5px", color: "var(--text-3)", margin: 0 }}>
                   {phantomInstalled ? wallet.description : "Not installed — click to install"}
                 </p>
               </div>
 
               {/* Arrow */}
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, color: "rgba(255,255,255,0.25)" }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, color: "var(--text-4)" }}>
                 <path d="M3 8H13M13 8L8 3M13 8L8 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
@@ -189,15 +186,15 @@ export default function WalletModal({ open, onClose }: WalletModalProps) {
         {/* Footer */}
         <div style={{
           padding: "16px 28px 24px",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
+          borderTop: "1px solid var(--border-light)",
           display: "flex", alignItems: "center", gap: "8px",
         }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="7" cy="7" r="6" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" />
-            <line x1="7" y1="6" x2="7" y2="10" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" strokeLinecap="round" />
-            <circle cx="7" cy="4.2" r="0.7" fill="rgba(255,255,255,0.25)" />
+            <circle cx="7" cy="7" r="6" stroke="var(--text-4)" strokeWidth="1.2" />
+            <line x1="7" y1="6" x2="7" y2="10" stroke="var(--text-4)" strokeWidth="1.2" strokeLinecap="round" />
+            <circle cx="7" cy="4.2" r="0.7" fill="var(--text-4)" />
           </svg>
-          <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.28)", margin: 0, lineHeight: 1.5 }}>
+          <p style={{ fontSize: "12px", color: "var(--text-4)", margin: 0, lineHeight: 1.5 }}>
             By connecting, you agree to let ContractGuard read your wallet address. No transaction will be made without your approval.
           </p>
         </div>

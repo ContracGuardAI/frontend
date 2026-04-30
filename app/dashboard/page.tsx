@@ -6,11 +6,11 @@ import Footer from "../components/Footer";
 import { IconDocument } from "../components/Icons";
 
 const glass = {
-  background: "rgba(255,255,255,0.055)",
+  background: "var(--surface)",
   backdropFilter: "blur(20px)",
   WebkitBackdropFilter: "blur(20px)",
-  border: "1px solid rgba(255,255,255,0.13)",
-  boxShadow: "0 4px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18)",
+  border: "1px solid var(--border)",
+  boxShadow: "var(--glass-shadow)",
   borderRadius: "16px",
 } as const;
 
@@ -18,7 +18,7 @@ type Status = "Active" | "Draft" | "Completed" | "Disputed";
 
 const STATUS_STYLES: Record<Status, { bg: string; text: string; border: string }> = {
   Active:    { bg: "rgba(80,220,140,0.10)", text: "rgba(80,220,140,0.90)",  border: "rgba(80,220,140,0.28)" },
-  Draft:     { bg: "rgba(255,255,255,0.06)", text: "rgba(255,255,255,0.55)", border: "rgba(255,255,255,0.14)" },
+  Draft:     { bg: "var(--surface-2)",      text: "var(--text-2)",          border: "var(--border)" },
   Completed: { bg: "rgba(100,160,255,0.10)", text: "rgba(130,180,255,0.90)", border: "rgba(100,160,255,0.28)" },
   Disputed:  { bg: "rgba(255,80,80,0.10)",  text: "rgba(255,120,120,0.90)", border: "rgba(255,80,80,0.28)" },
 };
@@ -89,21 +89,21 @@ function ProgressBar({ completed, total }: { completed: number; total: number })
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-        <span style={{ fontSize: "11.5px", color: "rgba(255,255,255,0.40)" }}>
+        <span style={{ fontSize: "11.5px", color: "var(--text-3)" }}>
           {completed}/{total} checkpoints
         </span>
-        <span style={{ fontSize: "11.5px", color: "rgba(255,255,255,0.55)", fontWeight: 600 }}>
+        <span style={{ fontSize: "11.5px", color: "var(--text-2)", fontWeight: 600 }}>
           {Math.round(pct)}%
         </span>
       </div>
       <div style={{
         height: "4px", borderRadius: "999px",
-        background: "rgba(255,255,255,0.08)", overflow: "hidden",
+        background: "var(--border-light)", overflow: "hidden",
       }}>
         <div style={{
           height: "100%", borderRadius: "999px",
           width: `${pct}%`,
-          background: pct === 100 ? "rgba(80,220,140,0.80)" : "rgba(255,255,255,0.55)",
+          background: pct === 100 ? "rgba(80,220,140,0.80)" : "var(--accent)",
           transition: "width 0.5s ease",
         }} />
       </div>
@@ -141,14 +141,14 @@ export default function DashboardPage() {
   ];
 
   return (
-    <main style={{ background: "#080808", minHeight: "100vh", color: "white" }}>
+    <main style={{ background: "var(--bg)", minHeight: "100vh", color: "var(--text)" }}>
       <Navbar />
 
       <div style={{
         position: "fixed", pointerEvents: "none", zIndex: 0,
         top: "30%", left: "50%", transform: "translate(-50%, -50%)",
         width: "70%", height: "60%",
-        background: "radial-gradient(ellipse, rgba(255,255,255,0.024) 0%, transparent 65%)",
+        background: "radial-gradient(ellipse, var(--orb) 0%, transparent 65%)",
         filter: "blur(70px)",
       }} />
 
@@ -159,38 +159,36 @@ export default function DashboardPage() {
           <div>
             <div className="page-in p0" style={{
               display: "inline-flex", alignItems: "center",
-              border: "1px solid rgba(201,168,76,0.38)", borderRadius: "999px",
+              border: "1px solid var(--accent-border-strong)", borderRadius: "999px",
               padding: "4px 14px", fontSize: "11px",
-              color: "rgba(201,168,76,0.85)", background: "rgba(201,168,76,0.06)",
+              color: "var(--accent-text)", background: "var(--accent-bg)",
               backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-              boxShadow: "inset 0 1px 0 rgba(201,168,76,0.16), 0 0 14px rgba(201,168,76,0.08)",
+              boxShadow: "inset 0 1px 0 var(--accent-glow), 0 0 14px var(--accent-glow)",
               marginBottom: "14px", letterSpacing: "1.5px",
             }}>
               DASHBOARD
             </div>
             <h1 className="page-in p1" style={{
               fontSize: "clamp(30px,3.5vw,44px)", fontWeight: 900,
-              letterSpacing: "-0.04em", color: "white", lineHeight: 1.0,
+              letterSpacing: "-0.04em", color: "var(--text)", lineHeight: 1.0,
             }}>
               Your Contracts
             </h1>
           </div>
           <Link href="/create" className="page-in p2" style={{
-            background: "white", color: "#080808", fontWeight: 700,
+            background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)", fontWeight: 700,
             fontSize: "13.5px", padding: "12px 26px", borderRadius: "7px",
             textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px",
-            boxShadow: "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)",
+            boxShadow: "var(--glass-shadow)",
             transition: "opacity 0.2s, transform 0.2s, box-shadow 0.2s",
           }}
             onMouseEnter={e => {
               (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88";
               (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
-              (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 8px 22px rgba(255,255,255,0.18)";
             }}
             onMouseLeave={e => {
               (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
               (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
-              (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)";
             }}
             onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
             onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
@@ -210,8 +208,8 @@ export default function DashboardPage() {
         }}>
           {stats.map((s, i) => (
             <div key={i} className="card-lift" style={{ ...glass, padding: "22px 24px" }}>
-              <div style={{ fontSize: "10px", letterSpacing: "1.6px", color: "rgba(255,255,255,0.40)", marginBottom: "8px" }}>{s.label}</div>
-              <div className="num-glow" style={{ fontSize: "28px", fontWeight: 900, letterSpacing: "-0.04em", background: "linear-gradient(135deg, #E8C470 0%, #C9A84C 50%, #F5DEB3 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              <div style={{ fontSize: "10px", letterSpacing: "1.6px", color: "var(--text-3)", marginBottom: "8px" }}>{s.label}</div>
+              <div className="num-glow" style={{ fontSize: "28px", fontWeight: 900, letterSpacing: "-0.04em", background: "linear-gradient(135deg, var(--accent-2) 0%, var(--accent) 50%, var(--shimmer-mid) 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 {typeof s.value === "number" ? <CountUp end={s.value} /> : s.value}
               </div>
             </div>
@@ -224,12 +222,12 @@ export default function DashboardPage() {
             <button key={f} onClick={() => setFilter(f)} style={{
               padding: "8px 18px", borderRadius: "8px", cursor: "pointer",
               fontSize: "13px", fontWeight: filter === f ? 700 : 400,
-              background: filter === f ? "rgba(201,168,76,0.10)" : "transparent",
-              color: filter === f ? "rgba(201,168,76,0.90)" : "rgba(255,255,255,0.40)",
-              border: filter === f ? "1px solid rgba(201,168,76,0.32)" : "1px solid transparent",
+              background: filter === f ? "var(--accent-bg)" : "transparent",
+              color: filter === f ? "var(--accent-text)" : "var(--text-3)",
+              border: filter === f ? "1px solid var(--accent-border)" : "1px solid transparent",
               fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
               transition: "all 0.2s",
-              boxShadow: filter === f ? "inset 0 1px 0 rgba(201,168,76,0.16)" : "none",
+              boxShadow: filter === f ? "inset 0 1px 0 var(--accent-glow)" : "none",
             } as React.CSSProperties}>
               {f}
               {f !== "All" && (
@@ -254,16 +252,16 @@ export default function DashboardPage() {
                 animation: `fadeSlideUp 0.5s cubic-bezier(0.16,1,0.3,1) ${i * 0.07}s both`,
               }}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.22)";
-                  (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.075)";
+                  (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-strong)";
+                  (e.currentTarget as HTMLDivElement).style.background = "var(--surface-2)";
                   (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)";
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 16px 44px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.22)";
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--glass-shadow)";
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.13)";
-                  (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.055)";
+                  (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
+                  (e.currentTarget as HTMLDivElement).style.background = "var(--surface)";
                   (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18)";
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--glass-shadow)";
                 }}
               >
                 {/* Left: title + contractor */}
@@ -277,23 +275,23 @@ export default function DashboardPage() {
                       }} />
                     )}
                     <StatusPill status={contract.status} />
-                    <span style={{ fontSize: "10.5px", color: "rgba(255,255,255,0.30)" }}>{contract.createdAt}</span>
+                    <span style={{ fontSize: "10.5px", color: "var(--text-4)" }}>{contract.createdAt}</span>
                   </div>
                   <h3 style={{
-                    fontSize: "16px", fontWeight: 700, color: "white",
+                    fontSize: "16px", fontWeight: 700, color: "var(--text)",
                     marginBottom: "6px", letterSpacing: "-0.02em",
                   }}>{contract.title}</h3>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <div style={{
                       width: "6px", height: "6px", borderRadius: "50%",
-                      background: "rgba(255,255,255,0.25)",
+                      background: "var(--text-4)",
                     }} />
-                    <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.45)" }}>
+                    <span style={{ fontSize: "13px", color: "var(--text-3)" }}>
                       {contract.contractor}
                     </span>
                     <span style={{
                       fontSize: "11px", fontFamily: "monospace",
-                      color: "rgba(255,255,255,0.22)",
+                      color: "var(--text-4)",
                     }}>
                       {contract.contractorWallet}
                     </span>
@@ -302,8 +300,8 @@ export default function DashboardPage() {
 
                 {/* Middle: progress */}
                 <div>
-                  <div style={{ fontSize: "11.5px", color: "rgba(255,255,255,0.35)", marginBottom: "10px" }}>
-                    Current: <span style={{ color: "rgba(255,255,255,0.60)", fontWeight: 600 }}>{contract.checkpoints.current}</span>
+                  <div style={{ fontSize: "11.5px", color: "var(--text-4)", marginBottom: "10px" }}>
+                    Current: <span style={{ color: "var(--text-2)", fontWeight: 600 }}>{contract.checkpoints.current}</span>
                   </div>
                   <ProgressBar
                     completed={contract.checkpoints.completed}
@@ -313,14 +311,14 @@ export default function DashboardPage() {
 
                 {/* Right: amount + caret */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
-                  <div style={{ fontSize: "18px", fontWeight: 900, letterSpacing: "-0.03em", background: "linear-gradient(135deg, #E8C470, #C9A84C)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                  <div style={{ fontSize: "18px", fontWeight: 900, letterSpacing: "-0.03em", background: "linear-gradient(135deg, var(--accent-2), var(--accent))", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                     {contract.totalAmount}
                   </div>
-                  <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.30)" }}>
+                  <div style={{ fontSize: "11px", color: "var(--text-4)" }}>
                     Fairness: {contract.fairnessScore}/10
                   </div>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.35 }}>
-                    <path d="M4 8H12M12 8L8 4M12 8L8 12" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M4 8H12M12 8L8 4M12 8L8 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
               </div>
@@ -333,28 +331,28 @@ export default function DashboardPage() {
               textAlign: "center",
             }}>
               <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px", opacity: 0.20 }}>
-                <IconDocument size={52} color="white" strokeWidth={1.4} />
+                <IconDocument size={52} color="currentColor" strokeWidth={1.4} />
               </div>
-              <div style={{ fontSize: "16px", fontWeight: 700, color: "rgba(255,255,255,0.40)", marginBottom: "8px" }}>
+              <div style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-3)", marginBottom: "8px" }}>
                 No {filter.toLowerCase()} contracts
               </div>
-              <div style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.25)", marginBottom: "24px" }}>
+              <div style={{ fontSize: "13.5px", color: "var(--text-4)", marginBottom: "24px" }}>
                 Create your first contract to get started
               </div>
               <Link href="/create" style={{
-                background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.65)",
+                background: "var(--btn-ghost-bg)", color: "var(--btn-ghost-text)",
                 fontSize: "14px", fontWeight: 600, padding: "12px 26px", borderRadius: "7px",
-                border: "1px solid rgba(255,255,255,0.14)", textDecoration: "none",
+                border: "1px solid var(--btn-ghost-border)", textDecoration: "none",
                 display: "inline-flex", alignItems: "center", gap: "8px",
                 transition: "background 0.2s, border-color 0.2s",
               }}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.13)";
-                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.22)";
+                  (e.currentTarget as HTMLAnchorElement).style.background = "var(--surface)";
+                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--border-strong)";
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.08)";
-                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.14)";
+                  (e.currentTarget as HTMLAnchorElement).style.background = "var(--btn-ghost-bg)";
+                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--btn-ghost-border)";
                 }}
               >
                 Create Contract

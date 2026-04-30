@@ -2,21 +2,155 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Dark theme (default) ── */
 :root {
   --purple: #9945FF;
   --green: #14F195;
   --blue: #38BDF8;
-  --bg: #0A0A0A;
-  --gold:      #C9A84C;
+
+  /* Backgrounds */
+  --bg: #080808;
+  --bg-2: #0a0c0f;
+  --footer-bg: #050505;
+  --footer-border: rgba(201,168,76,0.14);
+
+  /* Surfaces */
+  --surface: rgba(255,255,255,0.055);
+  --surface-2: rgba(255,255,255,0.04);
+  --glass-shadow: 0 4px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18);
+
+  /* Borders */
+  --border: rgba(255,255,255,0.13);
+  --border-light: rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.22);
+
+  /* Text */
+  --text: #ffffff;
+  --text-2: rgba(255,255,255,0.60);
+  --text-3: rgba(255,255,255,0.44);
+  --text-4: rgba(255,255,255,0.28);
+  --text-5: rgba(255,255,255,0.16);
+
+  /* Accent (gold in dark) */
+  --accent: #C9A84C;
+  --accent-2: #E8C470;
+  --accent-text: rgba(201,168,76,0.90);
+  --accent-text-dim: rgba(201,168,76,0.65);
+  --accent-bg: rgba(201,168,76,0.08);
+  --accent-bg-hover: rgba(201,168,76,0.14);
+  --accent-border: rgba(201,168,76,0.30);
+  --accent-border-strong: rgba(201,168,76,0.45);
+  --accent-border-hover: rgba(201,168,76,0.58);
+  --accent-glow: rgba(201,168,76,0.15);
+
+  /* Navbar */
+  --nav-bg: rgba(8,8,8,0.80);
+  --nav-bg-scroll: rgba(8,8,8,0.92);
+  --nav-border: rgba(255,255,255,0.08);
+  --nav-border-scroll: rgba(255,255,255,0.12);
+  --nav-text: rgba(255,255,255,0.46);
+  --nav-text-hover: rgba(201,168,76,0.80);
+
+  /* Buttons */
+  --btn-primary-bg: #ffffff;
+  --btn-primary-text: #080808;
+  --btn-ghost-bg: rgba(255,255,255,0.06);
+  --btn-ghost-border: rgba(255,255,255,0.12);
+  --btn-ghost-text: rgba(255,255,255,0.75);
+
+  /* Inputs */
+  --input-bg: rgba(255,255,255,0.04);
+  --input-border: rgba(255,255,255,0.12);
+  --input-text: #ffffff;
+
+  /* Cards */
+  --card-bg: rgba(255,255,255,0.03);
+  --card-border: rgba(255,255,255,0.08);
+  --card-hover-border: rgba(153,69,255,0.30);
+  --card-hover-bg: rgba(153,69,255,0.06);
+
+  /* Shimmer (heading gradient) */
+  --shimmer-from: #C9A84C;
+  --shimmer-mid: #F5DEB3;
+  --shimmer-to: #E8C470;
+
+  /* Misc */
+  --orb: rgba(255,255,255,0.028);
+  --grid-line: rgba(153,69,255,0.04);
+
+  /* Legacy compat */
+  --gold: #C9A84C;
   --gold-light: #E8C470;
-  --gold-dim:  rgba(201,168,76,0.55);
+  --gold-dim: rgba(201,168,76,0.55);
+}
+
+/* ── Light theme ── */
+html.light {
+  --bg: #F4F7FF;
+  --bg-2: #EEF2FF;
+  --footer-bg: #EEF2FF;
+  --footer-border: rgba(37,99,235,0.15);
+
+  --surface: rgba(255,255,255,0.92);
+  --surface-2: rgba(255,255,255,0.75);
+  --glass-shadow: 0 2px 16px rgba(37,99,235,0.07), 0 1px 3px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.98);
+
+  --border: rgba(37,99,235,0.15);
+  --border-light: rgba(37,99,235,0.08);
+  --border-strong: rgba(37,99,235,0.30);
+
+  --text: #0F172A;
+  --text-2: rgba(15,23,42,0.68);
+  --text-3: rgba(15,23,42,0.52);
+  --text-4: rgba(15,23,42,0.38);
+  --text-5: rgba(15,23,42,0.22);
+
+  --accent: #2563EB;
+  --accent-2: #3B82F6;
+  --accent-text: rgba(37,99,235,0.92);
+  --accent-text-dim: rgba(37,99,235,0.68);
+  --accent-bg: rgba(37,99,235,0.08);
+  --accent-bg-hover: rgba(37,99,235,0.14);
+  --accent-border: rgba(37,99,235,0.28);
+  --accent-border-strong: rgba(37,99,235,0.48);
+  --accent-border-hover: rgba(37,99,235,0.62);
+  --accent-glow: rgba(37,99,235,0.15);
+
+  --nav-bg: rgba(244,247,255,0.85);
+  --nav-bg-scroll: rgba(244,247,255,0.97);
+  --nav-border: rgba(37,99,235,0.10);
+  --nav-border-scroll: rgba(37,99,235,0.18);
+  --nav-text: rgba(15,23,42,0.52);
+  --nav-text-hover: rgba(37,99,235,0.80);
+
+  --btn-primary-bg: #0F172A;
+  --btn-primary-text: #ffffff;
+  --btn-ghost-bg: rgba(37,99,235,0.06);
+  --btn-ghost-border: rgba(37,99,235,0.18);
+  --btn-ghost-text: rgba(15,23,42,0.72);
+
+  --input-bg: rgba(255,255,255,0.95);
+  --input-border: rgba(37,99,235,0.20);
+  --input-text: #0F172A;
+
+  --card-bg: rgba(255,255,255,0.80);
+  --card-border: rgba(37,99,235,0.10);
+  --card-hover-border: rgba(37,99,235,0.38);
+  --card-hover-bg: rgba(37,99,235,0.05);
+
+  --shimmer-from: #2563EB;
+  --shimmer-mid: #93C5FD;
+  --shimmer-to: #3B82F6;
+
+  --orb: rgba(37,99,235,0.04);
+  --grid-line: rgba(37,99,235,0.04);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   background: var(--bg);
-  color: #fff;
+  color: var(--text);
   font-family: var(--font-dm), 'DM Sans', sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -26,8 +160,8 @@ body {
 /* grid background */
 .grid-bg {
   background-image:
-    linear-gradient(rgba(153,69,255,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(153,69,255,0.04) 1px, transparent 1px);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
@@ -54,14 +188,14 @@ body {
 
 /* card */
 .card {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 16px;
   transition: border-color 0.3s, background 0.3s;
 }
 .card:hover {
-  border-color: rgba(153,69,255,0.3);
-  background: rgba(153,69,255,0.06);
+  border-color: var(--card-hover-border);
+  background: var(--card-hover-bg);
 }
 
 /* isometric node animation */
@@ -131,11 +265,9 @@ html { scroll-behavior: smooth; }
   transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
 }
 .glass:hover {
-  background: rgba(255,255,255,0.042) !important;
-  border-color: rgba(255,255,255,0.16) !important;
-  box-shadow: 0 12px 44px rgba(0,0,0,0.55),
-              0 0 32px rgba(255,255,255,0.04),
-              inset 0 1px 0 rgba(255,255,255,0.13) !important;
+  background: var(--surface-2) !important;
+  border-color: var(--border-strong) !important;
+  box-shadow: var(--glass-shadow) !important;
 }
 
 /* ── button transitions ── */
@@ -147,15 +279,13 @@ html { scroll-behavior: smooth; }
               0 4px 20px rgba(0,0,0,0.35) !important;
 }
 .btn-ghost:hover {
-  background: rgba(255,255,255,0.10) !important;
-  border-color: rgba(255,255,255,0.22) !important;
-  box-shadow: 0 0 14px rgba(255,255,255,0.05),
-              inset 0 1px 0 rgba(255,255,255,0.14) !important;
+  background: var(--btn-ghost-bg) !important;
+  border-color: var(--border-strong) !important;
 }
 
 /* ── nav link hover ── */
 .nav-link { transition: color 0.2s ease; }
-.nav-link:hover { color: rgba(255,255,255,0.88) !important; }
+.nav-link:hover { color: var(--text) !important; }
 
 /* step connector */
 .step-line {
@@ -186,11 +316,11 @@ body::before {
 /* ── custom scrollbar ── */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
 
 /* ── text selection ── */
-::selection { background: rgba(255,255,255,0.16); color: white; }
+::selection { background: var(--accent-bg-hover); color: var(--text); }
 
 /* ── scroll reveal — animation-based so it re-fires every viewport entry ── */
 @keyframes revealUp {
@@ -225,11 +355,11 @@ body::before {
 }
 .card-lift:hover {
   transform: translateY(-8px) !important;
-  border-color: rgba(201,168,76,0.28) !important;
-  box-shadow: 0 32px 64px rgba(0,0,0,0.72),
-              0 0 0 1px rgba(201,168,76,0.12),
-              0 0 28px rgba(201,168,76,0.06),
-              inset 0 1px 0 rgba(255,255,255,0.24) !important;
+  border-color: var(--accent-border) !important;
+  box-shadow: 0 32px 64px rgba(0,0,0,0.40),
+              0 0 0 1px var(--accent-bg),
+              0 0 28px var(--accent-bg),
+              inset 0 1px 0 var(--surface) !important;
 }
 /* once revealed: clear blur, let .card-lift handle hover (0.28s) after .reveal is removed */
 .card-lift.is-visible {
@@ -244,11 +374,11 @@ body::before {
 .text-shimmer {
   background: linear-gradient(
     90deg,
-    #C9A84C  0%,
-    #F5DEB3 30%,
-    #E8C470 50%,
-    #F5DEB3 70%,
-    #C9A84C 100%
+    var(--shimmer-from)  0%,
+    var(--shimmer-mid)  30%,
+    var(--shimmer-to)   50%,
+    var(--shimmer-mid)  70%,
+    var(--shimmer-from) 100%
   );
   background-size: 200% auto;
   -webkit-background-clip: text;
@@ -284,9 +414,9 @@ body::before {
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(255,255,255,0.04) 0%,
-    rgba(255,255,255,0.09) 50%,
-    rgba(255,255,255,0.04) 100%
+    var(--surface-2) 0%,
+    var(--border-light) 50%,
+    var(--surface-2) 100%
   );
   background-size: 400% 100%;
   animation: shimmer 2.4s ease-in-out infinite;
@@ -319,8 +449,8 @@ body::before {
 
 /* ── input focus glow ── */
 input:focus, textarea:focus {
-  border-color: rgba(255,255,255,0.30) !important;
-  box-shadow: 0 0 0 3px rgba(255,255,255,0.06) !important;
+  border-color: var(--accent-border-strong) !important;
+  box-shadow: 0 0 0 3px var(--accent-bg) !important;
 }
 
 /* ── hero entrance stagger ── */

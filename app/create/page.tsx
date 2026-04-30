@@ -5,21 +5,21 @@ import Footer from "../components/Footer";
 import { toast } from "../components/Toast";
 
 const glass = {
-  background: "rgba(255,255,255,0.055)",
+  background: "var(--surface)",
   backdropFilter: "blur(20px)",
   WebkitBackdropFilter: "blur(20px)",
-  border: "1px solid rgba(255,255,255,0.13)",
-  boxShadow: "0 4px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18)",
+  border: "1px solid var(--border)",
+  boxShadow: "var(--glass-shadow)",
   borderRadius: "16px",
 } as const;
 
 const inputStyle = {
   width: "100%",
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.12)",
+  background: "var(--input-bg)",
+  border: "1px solid var(--input-border)",
   borderRadius: "8px",
   padding: "12px 16px",
-  color: "white",
+  color: "var(--input-text)",
   fontSize: "14px",
   outline: "none",
   fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
@@ -30,7 +30,7 @@ const inputStyle = {
 const labelStyle = {
   fontSize: "12px",
   letterSpacing: "0.8px",
-  color: "rgba(255,255,255,0.45)",
+  color: "var(--text-3)",
   marginBottom: "8px",
   display: "block",
 } as const;
@@ -96,14 +96,14 @@ export default function CreatePage() {
   const stepAnim = { animation: "fadeSlideUp 0.38s cubic-bezier(0.16,1,0.3,1) 0.04s both" };
 
   return (
-    <main style={{ background: "#080808", minHeight: "100vh", color: "white" }}>
+    <main style={{ background: "var(--bg)", minHeight: "100vh", color: "var(--text)" }}>
       <Navbar />
 
       <div style={{
         position: "fixed", pointerEvents: "none", zIndex: 0,
         top: "40%", left: "50%", transform: "translate(-50%, -50%)",
         width: "65%", height: "65%",
-        background: "radial-gradient(ellipse, rgba(255,255,255,0.026) 0%, transparent 65%)",
+        background: "radial-gradient(ellipse, var(--orb) 0%, transparent 65%)",
         filter: "blur(70px)",
       }} />
 
@@ -113,22 +113,22 @@ export default function CreatePage() {
         <div style={{ marginBottom: "48px", textAlign: "center" }}>
           <div className="page-in p0" style={{
             display: "inline-flex", alignItems: "center",
-            border: "1px solid rgba(201,168,76,0.38)", borderRadius: "999px",
+            border: "1px solid var(--accent-border-strong)", borderRadius: "999px",
             padding: "4px 14px", fontSize: "11px",
-            color: "rgba(201,168,76,0.85)", background: "rgba(201,168,76,0.06)",
+            color: "var(--accent-text)", background: "var(--accent-bg)",
             backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-            boxShadow: "inset 0 1px 0 rgba(201,168,76,0.16), 0 0 14px rgba(201,168,76,0.08)",
+            boxShadow: "inset 0 1px 0 var(--accent-glow), 0 0 14px var(--accent-glow)",
             marginBottom: "18px", letterSpacing: "1.5px",
           }}>
             CREATE CONTRACT
           </div>
           <h1 className="page-in p1" style={{
             fontSize: "clamp(32px,3.5vw,48px)", fontWeight: 900,
-            letterSpacing: "-0.04em", color: "white", marginBottom: "12px",
+            letterSpacing: "-0.04em", color: "var(--text)", marginBottom: "12px",
           }}>
             Deploy your contract to Solana.
           </h1>
-          <p className="page-in p2" style={{ fontSize: "14px", color: "rgba(255,255,255,0.42)", lineHeight: 1.7 }}>
+          <p className="page-in p2" style={{ fontSize: "14px", color: "var(--text-3)", lineHeight: 1.7 }}>
             Set up milestones, define payments, and lock everything on-chain.
           </p>
         </div>
@@ -147,10 +147,10 @@ export default function CreatePage() {
                   width: "32px", height: "32px", borderRadius: "50%",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: "13px", fontWeight: 700,
-                  background: step === s.num ? "linear-gradient(135deg, #C9A84C, #E8C470)" : step > s.num ? "rgba(80,220,140,0.15)" : "rgba(255,255,255,0.06)",
-                  border: step === s.num ? "none" : step > s.num ? "1px solid rgba(80,220,140,0.40)" : "1px solid rgba(255,255,255,0.12)",
-                  color: step === s.num ? "#080808" : step > s.num ? "rgba(80,220,140,0.90)" : "rgba(255,255,255,0.40)",
-                  boxShadow: step === s.num ? "0 0 0 4px rgba(201,168,76,0.20), 0 0 16px rgba(201,168,76,0.18)" : "none",
+                  background: step === s.num ? "linear-gradient(135deg, var(--accent), var(--accent-2))" : step > s.num ? "rgba(80,220,140,0.15)" : "var(--surface-2)",
+                  border: step === s.num ? "none" : step > s.num ? "1px solid rgba(80,220,140,0.40)" : "1px solid var(--border)",
+                  color: step === s.num ? "var(--btn-primary-text)" : step > s.num ? "rgba(80,220,140,0.90)" : "var(--text-3)",
+                  boxShadow: step === s.num ? `0 0 0 4px var(--accent-glow), 0 0 16px var(--accent-glow)` : "none",
                   transition: "all 0.3s ease",
                 }}>
                   {step > s.num ? (
@@ -161,7 +161,7 @@ export default function CreatePage() {
                 </div>
                 <span style={{
                   fontSize: "13px", fontWeight: step === s.num ? 700 : 400,
-                  color: step === s.num ? "white" : step > s.num ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.30)",
+                  color: step === s.num ? "var(--text)" : step > s.num ? "var(--text-2)" : "var(--text-4)",
                 }}>
                   {s.label}
                 </span>
@@ -169,7 +169,7 @@ export default function CreatePage() {
               {i < STEPS.length - 1 && (
                 <div style={{
                   width: "60px", height: "1px", margin: "0 12px",
-                  background: step > s.num ? "rgba(80,220,140,0.35)" : "rgba(255,255,255,0.10)",
+                  background: step > s.num ? "rgba(80,220,140,0.35)" : "var(--border-light)",
                   transition: "background 0.3s ease",
                 }} />
               )}
@@ -180,7 +180,7 @@ export default function CreatePage() {
         {/* ── STEP 1 ── */}
         {step === 1 && (
           <div key="step1" style={{ ...glass, padding: "40px 44px", ...stepAnim }}>
-            <h2 style={{ fontSize: "20px", fontWeight: 700, color: "white", marginBottom: "32px", letterSpacing: "-0.025em" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: 700, color: "var(--text)", marginBottom: "32px", letterSpacing: "-0.025em" }}>
               Contract Details
             </h2>
 
@@ -203,7 +203,7 @@ export default function CreatePage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 <div>
                   <label style={labelStyle}>CLIENT WALLET (YOU)</label>
-                  <input style={{ ...inputStyle, color: "rgba(255,255,255,0.45)", cursor: "not-allowed" }}
+                  <input style={{ ...inputStyle, color: "var(--text-3)", cursor: "not-allowed" }}
                     value={clientWallet} readOnly />
                 </div>
                 <div>
@@ -220,15 +220,15 @@ export default function CreatePage() {
                     value={totalAmount} onChange={e => setTotalAmount(e.target.value)} />
                   <div style={{
                     display: "flex", gap: "4px", padding: "4px",
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.10)",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
                     borderRadius: "8px",
                   }}>
                     {["SOL", "USDC"].map(c => (
                       <button key={c} onClick={() => setCurrency(c)} style={{
                         padding: "6px 14px", borderRadius: "5px", border: "none",
-                        background: currency === c ? "rgba(255,255,255,0.14)" : "transparent",
-                        color: currency === c ? "white" : "rgba(255,255,255,0.42)",
+                        background: currency === c ? "var(--surface)" : "transparent",
+                        color: currency === c ? "var(--text)" : "var(--text-3)",
                         fontSize: "13px", fontWeight: 600, cursor: "pointer",
                         fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
                         transition: "all 0.2s",
@@ -241,23 +241,21 @@ export default function CreatePage() {
 
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "36px" }}>
               <button onClick={() => setStep(2)} style={{
-                background: "white", color: "#080808", fontWeight: 700,
+                background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)", fontWeight: 700,
                 fontSize: "14px", padding: "13px 32px", borderRadius: "7px",
                 border: "none", cursor: "pointer",
                 display: "flex", alignItems: "center", gap: "8px",
-                boxShadow: "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)",
+                boxShadow: "var(--glass-shadow)",
                 fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-                transition: "opacity 0.2s, transform 0.2s, box-shadow 0.2s",
+                transition: "opacity 0.2s, transform 0.2s",
               }}
                 onMouseEnter={e => {
                   (e.currentTarget as HTMLButtonElement).style.opacity = "0.88";
                   (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 8px 22px rgba(255,255,255,0.18)";
                 }}
                 onMouseLeave={e => {
                   (e.currentTarget as HTMLButtonElement).style.opacity = "1";
                   (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)";
                 }}
                 onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
                 onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; }}
@@ -277,10 +275,10 @@ export default function CreatePage() {
             <div style={{ ...glass, padding: "32px 44px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px" }}>
                 <div>
-                  <h2 style={{ fontSize: "20px", fontWeight: 700, color: "white", marginBottom: "4px", letterSpacing: "-0.025em" }}>
+                  <h2 style={{ fontSize: "20px", fontWeight: 700, color: "var(--text)", marginBottom: "4px", letterSpacing: "-0.025em" }}>
                     Set Checkpoints
                   </h2>
-                  <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.42)" }}>
+                  <p style={{ fontSize: "13px", color: "var(--text-3)" }}>
                     Define milestones and their payment share
                   </p>
                 </div>
@@ -298,8 +296,8 @@ export default function CreatePage() {
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {checkpoints.map((cp, i) => (
                   <div key={i} style={{
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "var(--card-bg)",
+                    border: "1px solid var(--card-border)",
                     borderRadius: "12px", padding: "20px 22px",
                     position: "relative",
                     animation: `fadeSlideUp 0.32s cubic-bezier(0.16,1,0.3,1) ${i * 0.05}s both`,
@@ -307,21 +305,21 @@ export default function CreatePage() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
                       <div style={{
                         width: "26px", height: "26px", borderRadius: "50%",
-                        background: "rgba(201,168,76,0.10)",
-                        border: "1px solid rgba(201,168,76,0.30)",
+                        background: "var(--accent-bg)",
+                        border: "1px solid var(--accent-border)",
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: "12px", fontWeight: 700, color: "rgba(201,168,76,0.80)",
+                        fontSize: "12px", fontWeight: 700, color: "var(--accent-text)",
                       }}>
                         {String(i + 1).padStart(2, "0")}
                       </div>
                       {checkpoints.length > 1 && (
                         <button onClick={() => removeCheckpoint(i)} style={{
                           background: "transparent", border: "none", cursor: "pointer",
-                          color: "rgba(255,255,255,0.30)", padding: "4px",
+                          color: "var(--text-4)", padding: "4px",
                           transition: "color 0.2s",
                         }}
                           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,100,100,0.70)"; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.30)"; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-4)"; }}
                         >
                           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                             <line x1="2" y1="2" x2="12" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -353,21 +351,21 @@ export default function CreatePage() {
 
               <button onClick={addCheckpoint} style={{
                 width: "100%", marginTop: "12px",
-                background: "transparent", border: "1px dashed rgba(255,255,255,0.16)",
+                background: "transparent", border: "1px dashed var(--border)",
                 borderRadius: "10px", padding: "13px",
-                color: "rgba(255,255,255,0.45)", fontSize: "13.5px", fontWeight: 600,
+                color: "var(--text-3)", fontSize: "13.5px", fontWeight: 600,
                 cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
                 fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
                 transition: "border-color 0.2s, color 0.2s, background 0.2s",
               }}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.28)";
-                  (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.70)";
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.03)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-strong)";
+                  (e.currentTarget as HTMLButtonElement).style.color = "var(--text)";
+                  (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)";
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.16)";
-                  (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.45)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)";
+                  (e.currentTarget as HTMLButtonElement).style.color = "var(--text-3)";
                   (e.currentTarget as HTMLButtonElement).style.background = "transparent";
                 }}
               >
@@ -381,20 +379,20 @@ export default function CreatePage() {
 
             <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
               <button onClick={() => setStep(1)} style={{
-                background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.60)",
+                background: "var(--btn-ghost-bg)", color: "var(--btn-ghost-text)",
                 fontSize: "14px", fontWeight: 600, padding: "13px 24px", borderRadius: "7px",
-                border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer",
+                border: "1px solid var(--btn-ghost-border)", cursor: "pointer",
                 fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
                 transition: "background 0.2s, border-color 0.2s, transform 0.2s",
               }}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.09)";
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.20)";
+                  (e.currentTarget as HTMLButtonElement).style.background = "var(--surface)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-strong)";
                   (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)";
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.12)";
+                  (e.currentTarget as HTMLButtonElement).style.background = "var(--btn-ghost-bg)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--btn-ghost-border)";
                   (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
                 }}
                 onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
@@ -403,23 +401,21 @@ export default function CreatePage() {
                 Back
               </button>
               <button onClick={() => setStep(3)} style={{
-                background: "white", color: "#080808", fontWeight: 700,
+                background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)", fontWeight: 700,
                 fontSize: "14px", padding: "13px 32px", borderRadius: "7px",
                 border: "none", cursor: "pointer",
                 display: "flex", alignItems: "center", gap: "8px",
-                boxShadow: "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)",
+                boxShadow: "var(--glass-shadow)",
                 fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-                transition: "opacity 0.2s, transform 0.2s, box-shadow 0.2s",
+                transition: "opacity 0.2s, transform 0.2s",
               }}
                 onMouseEnter={e => {
                   (e.currentTarget as HTMLButtonElement).style.opacity = "0.88";
                   (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 8px 22px rgba(255,255,255,0.18)";
                 }}
                 onMouseLeave={e => {
                   (e.currentTarget as HTMLButtonElement).style.opacity = "1";
                   (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)";
                 }}
                 onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
                 onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; }}
@@ -438,7 +434,7 @@ export default function CreatePage() {
           <div key="step3" style={{ display: "flex", flexDirection: "column", gap: "16px", ...stepAnim }}>
             {/* Summary card */}
             <div style={{ ...glass, padding: "36px 44px" }}>
-              <h2 style={{ fontSize: "20px", fontWeight: 700, color: "white", marginBottom: "28px", letterSpacing: "-0.025em" }}>
+              <h2 style={{ fontSize: "20px", fontWeight: 700, color: "var(--text)", marginBottom: "28px", letterSpacing: "-0.025em" }}>
                 Review Contract
               </h2>
 
@@ -450,56 +446,56 @@ export default function CreatePage() {
                   { label: "CONTRACTOR", value: contractorWallet || "Not set" },
                 ].map((row, i) => (
                   <div key={i} style={{
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.07)",
+                    background: "var(--card-bg)",
+                    border: "1px solid var(--card-border)",
                     borderRadius: "10px", padding: "14px 16px",
                     transition: "border-color 0.2s, background 0.2s",
                   }}
                     onMouseEnter={e => {
-                      (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.14)";
-                      (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.05)";
+                      (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
+                      (e.currentTarget as HTMLDivElement).style.background = "var(--surface)";
                     }}
                     onMouseLeave={e => {
-                      (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)";
-                      (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)";
+                      (e.currentTarget as HTMLDivElement).style.borderColor = "var(--card-border)";
+                      (e.currentTarget as HTMLDivElement).style.background = "var(--card-bg)";
                     }}
                   >
-                    <div style={{ fontSize: "10.5px", letterSpacing: "1.5px", color: "rgba(255,255,255,0.38)", marginBottom: "6px" }}>{row.label}</div>
-                    <div style={{ fontSize: "14px", fontWeight: 600, color: "white", wordBreak: "break-all" }}>{row.value}</div>
+                    <div style={{ fontSize: "10.5px", letterSpacing: "1.5px", color: "var(--text-4)", marginBottom: "6px" }}>{row.label}</div>
+                    <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text)", wordBreak: "break-all" }}>{row.value}</div>
                   </div>
                 ))}
               </div>
 
-              <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "24px" }}>
-                <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "rgba(255,255,255,0.38)", marginBottom: "16px" }}>
+              <div style={{ borderTop: "1px solid var(--border-light)", paddingTop: "24px" }}>
+                <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "var(--text-4)", marginBottom: "16px" }}>
                   CHECKPOINTS ({checkpoints.length})
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {checkpoints.map((cp, i) => (
                     <div key={i} style={{
                       display: "flex", justifyContent: "space-between", alignItems: "center",
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.07)",
+                      background: "var(--card-bg)",
+                      border: "1px solid var(--card-border)",
                       borderRadius: "8px", padding: "12px 16px",
                       animation: `fadeSlideUp 0.30s cubic-bezier(0.16,1,0.3,1) ${i * 0.05}s both`,
                     }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", fontWeight: 700 }}>
+                        <span style={{ fontSize: "11px", color: "var(--text-4)", fontWeight: 700 }}>
                           {String(i + 1).padStart(2, "0")}
                         </span>
-                        <span style={{ fontSize: "14px", color: "white", fontWeight: 600 }}>
+                        <span style={{ fontSize: "14px", color: "var(--text)", fontWeight: 600 }}>
                           {cp.name || `Checkpoint ${i + 1}`}
                         </span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.45)" }}>
+                        <span style={{ fontSize: "13px", color: "var(--text-3)" }}>
                           {totalAmount ? `${((parseFloat(cp.payment) || 0) / 100 * parseFloat(totalAmount)).toFixed(2)} ${currency}` : `${cp.payment || 0}%`}
                         </span>
                         <div style={{
                           padding: "3px 10px", borderRadius: "999px", fontSize: "10.5px",
-                          background: "rgba(255,255,255,0.06)",
-                          border: "1px solid rgba(255,255,255,0.10)",
-                          color: "rgba(255,255,255,0.45)",
+                          background: "var(--surface-2)",
+                          border: "1px solid var(--border)",
+                          color: "var(--text-3)",
                         }}>
                           {cp.payment || 0}%
                         </div>
@@ -517,16 +513,16 @@ export default function CreatePage() {
             }}>
               <div style={{ flexShrink: 0, marginTop: "2px" }}>
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <circle cx="9" cy="9" r="7.5" stroke="rgba(255,255,255,0.35)" strokeWidth="1.3" />
-                  <line x1="9" y1="8" x2="9" y2="13" stroke="rgba(255,255,255,0.55)" strokeWidth="1.4" strokeLinecap="round" />
-                  <circle cx="9" cy="5.5" r="0.8" fill="rgba(255,255,255,0.55)" />
+                  <circle cx="9" cy="9" r="7.5" stroke="var(--text-3)" strokeWidth="1.3" />
+                  <line x1="9" y1="8" x2="9" y2="13" stroke="var(--text-2)" strokeWidth="1.4" strokeLinecap="round" />
+                  <circle cx="9" cy="5.5" r="0.8" fill="var(--text-2)" />
                 </svg>
               </div>
               <div>
-                <div style={{ fontSize: "13.5px", fontWeight: 600, color: "white", marginBottom: "4px" }}>
+                <div style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--text)", marginBottom: "4px" }}>
                   Deploying to Solana Devnet
                 </div>
-                <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.40)", lineHeight: 1.65, margin: 0 }}>
+                <p style={{ fontSize: "13px", color: "var(--text-3)", lineHeight: 1.65, margin: 0 }}>
                   Contract hash + escrow will be created on-chain. You&apos;ll need to approve the transaction in your Phantom wallet.
                   Transaction fee is approximately 0.00005 SOL.
                 </p>
@@ -535,20 +531,20 @@ export default function CreatePage() {
 
             <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
               <button onClick={() => setStep(2)} style={{
-                background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.60)",
+                background: "var(--btn-ghost-bg)", color: "var(--btn-ghost-text)",
                 fontSize: "14px", fontWeight: 600, padding: "13px 24px", borderRadius: "7px",
-                border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer",
+                border: "1px solid var(--btn-ghost-border)", cursor: "pointer",
                 fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
                 transition: "background 0.2s, border-color 0.2s, transform 0.2s",
               }}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.09)";
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.20)";
+                  (e.currentTarget as HTMLButtonElement).style.background = "var(--surface)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-strong)";
                   (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)";
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.12)";
+                  (e.currentTarget as HTMLButtonElement).style.background = "var(--btn-ghost-bg)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--btn-ghost-border)";
                   (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
                 }}
                 onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
@@ -557,26 +553,24 @@ export default function CreatePage() {
                 Back
               </button>
               <button onClick={handleDeploy} disabled={deploying} style={{
-                background: deploying ? "rgba(255,255,255,0.60)" : "white",
-                color: "#080808", fontWeight: 700,
+                background: deploying ? "var(--surface)" : "var(--btn-primary-bg)",
+                color: "var(--btn-primary-text)", fontWeight: 700,
                 fontSize: "14px", padding: "13px 32px", borderRadius: "7px",
                 border: "none", cursor: deploying ? "not-allowed" : "pointer",
                 display: "flex", alignItems: "center", gap: "8px",
-                boxShadow: "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)",
+                boxShadow: "var(--glass-shadow)",
                 fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-                transition: "opacity 0.2s, transform 0.2s, box-shadow 0.2s",
+                transition: "opacity 0.2s, transform 0.2s",
               }}
                 onMouseEnter={e => {
                   if (!deploying) {
                     (e.currentTarget as HTMLButtonElement).style.opacity = "0.88";
                     (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 8px 22px rgba(255,255,255,0.18)";
                   }
                 }}
                 onMouseLeave={e => {
                   (e.currentTarget as HTMLButtonElement).style.opacity = "1";
                   (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)";
                 }}
                 onMouseDown={e => { if (!deploying) (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
                 onMouseUp={e => { if (!deploying) (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; }}
@@ -585,8 +579,8 @@ export default function CreatePage() {
                   <>
                     <svg width="14" height="14" viewBox="0 0 44 44" fill="none"
                       style={{ animation: "spinRing 1.2s linear infinite" }}>
-                      <circle cx="22" cy="22" r="18" stroke="rgba(0,0,0,0.20)" strokeWidth="5" />
-                      <path d="M22 4 A18 18 0 0 1 40 22" stroke="#080808" strokeWidth="5" strokeLinecap="round" />
+                      <circle cx="22" cy="22" r="18" stroke="var(--border)" strokeWidth="5" />
+                      <path d="M22 4 A18 18 0 0 1 40 22" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
                     </svg>
                     Deploying...
                   </>
@@ -624,43 +618,41 @@ export default function CreatePage() {
                   style={{ filter: "drop-shadow(0 0 6px rgba(80,220,140,0.60))" }} />
               </svg>
             </div>
-            <h2 style={{ fontSize: "28px", fontWeight: 900, color: "white", marginBottom: "12px", letterSpacing: "-0.04em" }}>
+            <h2 style={{ fontSize: "28px", fontWeight: 900, color: "var(--text)", marginBottom: "12px", letterSpacing: "-0.04em" }}>
               Contract deployed!
             </h2>
-            <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.45)", marginBottom: "8px" }}>
+            <p style={{ fontSize: "14px", color: "var(--text-3)", marginBottom: "8px" }}>
               Your contract is now live on Solana Devnet.
             </p>
             <div style={{
               display: "inline-flex", alignItems: "center", gap: "8px",
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.10)",
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
               borderRadius: "8px", padding: "10px 16px", marginBottom: "36px",
             }}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <rect x="1" y="3" width="8" height="10" rx="2" fill="none" stroke="rgba(255,255,255,0.40)" strokeWidth="1.3" />
-                <path d="M5 1 h6 a2 2 0 0 1 2 2 v8" fill="none" stroke="rgba(255,255,255,0.40)" strokeWidth="1.3" strokeLinecap="round" />
+                <rect x="1" y="3" width="8" height="10" rx="2" fill="none" stroke="var(--text-3)" strokeWidth="1.3" />
+                <path d="M5 1 h6 a2 2 0 0 1 2 2 v8" fill="none" stroke="var(--text-3)" strokeWidth="1.3" strokeLinecap="round" />
               </svg>
-              <span style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.45)", fontFamily: "monospace" }}>
+              <span style={{ fontSize: "12.5px", color: "var(--text-3)", fontFamily: "monospace" }}>
                 txn: 5Xm9...k4Rp
               </span>
             </div>
             <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
               <a href="/dashboard" style={{
-                background: "white", color: "#080808", fontWeight: 700,
+                background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)", fontWeight: 700,
                 fontSize: "14px", padding: "13px 32px", borderRadius: "7px",
                 textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px",
-                boxShadow: "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)",
-                transition: "opacity 0.2s, transform 0.2s, box-shadow 0.2s",
+                boxShadow: "var(--glass-shadow)",
+                transition: "opacity 0.2s, transform 0.2s",
               }}
                 onMouseEnter={e => {
                   (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88";
                   (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
-                  (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.22), 0 8px 22px rgba(255,255,255,0.18)";
                 }}
                 onMouseLeave={e => {
                   (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
                   (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
-                  (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)";
                 }}
                 onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
                 onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
@@ -668,19 +660,19 @@ export default function CreatePage() {
                 View in Dashboard
               </a>
               <a href="/audit" style={{
-                background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.65)",
+                background: "var(--btn-ghost-bg)", color: "var(--btn-ghost-text)",
                 fontSize: "14px", fontWeight: 600, padding: "13px 26px", borderRadius: "7px",
-                border: "1px solid rgba(255,255,255,0.12)", textDecoration: "none",
+                border: "1px solid var(--btn-ghost-border)", textDecoration: "none",
                 transition: "background 0.2s, border-color 0.2s, transform 0.2s",
               }}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.10)";
-                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.20)";
+                  (e.currentTarget as HTMLAnchorElement).style.background = "var(--surface)";
+                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--border-strong)";
                   (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-1px)";
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.06)";
-                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.12)";
+                  (e.currentTarget as HTMLAnchorElement).style.background = "var(--btn-ghost-bg)";
+                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--btn-ghost-border)";
                   (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
                 }}
                 onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}

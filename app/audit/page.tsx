@@ -10,11 +10,11 @@ import type { ContractReviewResult } from "../../../contractguard-agent/contract
 
 /* ── shared glass style ── */
 const glass = {
-  background: "rgba(255,255,255,0.055)",
+  background: "var(--surface)",
   backdropFilter: "blur(20px)",
   WebkitBackdropFilter: "blur(20px)",
-  border: "1px solid rgba(255,255,255,0.13)",
-  boxShadow: "0 4px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18)",
+  border: "1px solid var(--border)",
+  boxShadow: "var(--glass-shadow)",
   borderRadius: "16px",
 } as const;
 
@@ -51,7 +51,7 @@ function ScoreArc({ score }: { score: number }) {
     <div style={{ textAlign: "center", marginBottom: "32px" }}>
       <svg width="130" height="72" viewBox="0 0 130 72" style={{ overflow: "visible" }}>
         <path d="M 17 65 A 48 48 0 0 1 113 65" fill="none"
-          stroke="rgba(255,255,255,0.08)" strokeWidth="8" strokeLinecap="round" />
+          stroke="var(--border-light)" strokeWidth="8" strokeLinecap="round" />
         <path d="M 17 65 A 48 48 0 0 1 113 65" fill="none"
           stroke={color} strokeWidth="8" strokeLinecap="round"
           strokeDasharray={`${dash} ${circumference}`}
@@ -65,7 +65,7 @@ function ScoreArc({ score }: { score: number }) {
         }}>
           {score}
         </div>
-        <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "rgba(255,255,255,0.40)", marginTop: "4px" }}>
+        <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "var(--text-3)", marginTop: "4px" }}>
           FAIRNESS SCORE / 10
         </div>
       </div>
@@ -109,7 +109,6 @@ export default function AuditPage() {
     setErrorMsg("");
     setResult(null);
 
-    // Step 1: Upload PDF
     setFileState("uploading");
     toast.info("Uploading contract...", "Extracting text from PDF");
 
@@ -134,7 +133,6 @@ export default function AuditPage() {
       return;
     }
 
-    // Step 2: Analyze with AI
     setFileState("analyzing");
     toast.info("Analyzing contract...", "AI is reading every clause");
 
@@ -175,7 +173,7 @@ export default function AuditPage() {
   ] : [];
 
   return (
-    <main style={{ background: "#080808", minHeight: "100vh", color: "white" }}>
+    <main style={{ background: "var(--bg)", minHeight: "100vh", color: "var(--text)" }}>
       <Navbar />
 
       {/* ambient glow */}
@@ -183,7 +181,7 @@ export default function AuditPage() {
         position: "fixed", pointerEvents: "none", zIndex: 0,
         top: "30%", left: "50%", transform: "translate(-50%, -50%)",
         width: "70%", height: "60%",
-        background: "radial-gradient(ellipse, rgba(255,255,255,0.028) 0%, transparent 65%)",
+        background: "radial-gradient(ellipse, var(--orb) 0%, transparent 65%)",
         filter: "blur(70px)",
       }} />
 
@@ -196,23 +194,23 @@ export default function AuditPage() {
         <div style={{ marginBottom: "56px" }}>
           <div className="page-in p0" style={{
             display: "inline-flex", alignItems: "center",
-            border: "1px solid rgba(201,168,76,0.38)", borderRadius: "999px",
+            border: "1px solid var(--accent-border-strong)", borderRadius: "999px",
             padding: "4px 14px", fontSize: "11px",
-            color: "rgba(201,168,76,0.85)", background: "rgba(201,168,76,0.06)",
+            color: "var(--accent-text)", background: "var(--accent-bg)",
             backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-            boxShadow: "inset 0 1px 0 rgba(201,168,76,0.16), 0 0 14px rgba(201,168,76,0.08)",
+            boxShadow: "inset 0 1px 0 var(--accent-glow), 0 0 14px var(--accent-glow)",
             marginBottom: "18px", letterSpacing: "1.5px",
           }}>
             AI CONTRACT REVIEW
           </div>
           <h1 className="page-in p1" style={{
             fontSize: "clamp(36px,4vw,54px)", fontWeight: 900,
-            letterSpacing: "-0.04em", color: "white", lineHeight: 1.0,
+            letterSpacing: "-0.04em", color: "var(--text)", lineHeight: 1.0,
             marginBottom: "14px",
           }}>
             Upload your contract.<br />Get the truth in seconds.
           </h1>
-          <p className="page-in p2" style={{ fontSize: "15px", color: "rgba(255,255,255,0.44)", maxWidth: "480px", lineHeight: 1.75 }}>
+          <p className="page-in p2" style={{ fontSize: "15px", color: "var(--text-3)", maxWidth: "480px", lineHeight: 1.75 }}>
             AI reads every clause, detects price markups, flags risky terms,
             and gives you a fairness score — before you sign anything.
           </p>
@@ -241,12 +239,12 @@ export default function AuditPage() {
                 textAlign: "center",
                 marginBottom: "16px",
                 border: fileState === "dragging"
-                  ? "1px solid rgba(255,255,255,0.40)"
+                  ? "1px solid var(--border-strong)"
                   : fileState === "done"
                   ? "1px solid rgba(80,220,140,0.30)"
                   : fileState === "error"
                   ? "1px solid rgba(255,80,80,0.30)"
-                  : "1px dashed rgba(255,255,255,0.18)",
+                  : "1px dashed var(--border)",
                 transition: "border 0.2s, background 0.2s",
               }}
             >
@@ -258,14 +256,14 @@ export default function AuditPage() {
                   <div style={{ marginBottom: "20px" }}>
                     <svg width="44" height="44" viewBox="0 0 44 44" fill="none"
                       style={{ animation: "spinRing 1.2s linear infinite" }}>
-                      <circle cx="22" cy="22" r="18" stroke="rgba(255,255,255,0.12)" strokeWidth="3" />
-                      <path d="M22 4 A18 18 0 0 1 40 22" stroke="rgba(255,255,255,0.80)" strokeWidth="3" strokeLinecap="round" />
+                      <circle cx="22" cy="22" r="18" stroke="var(--border)" strokeWidth="3" />
+                      <path d="M22 4 A18 18 0 0 1 40 22" stroke="var(--text)" strokeWidth="3" strokeLinecap="round" />
                     </svg>
                   </div>
-                  <div style={{ fontSize: "15px", fontWeight: 600, color: "white", marginBottom: "8px" }}>
+                  <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--text)", marginBottom: "8px" }}>
                     {fileState === "uploading" ? "Uploading..." : "Analyzing contract..."}
                   </div>
-                  <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.40)" }}>{loadingLabel}</div>
+                  <div style={{ fontSize: "13px", color: "var(--text-3)" }}>{loadingLabel}</div>
                 </>
               )}
 
@@ -280,14 +278,14 @@ export default function AuditPage() {
                   <div style={{ fontSize: "14px", fontWeight: 600, color: "rgba(80,220,140,0.90)", marginBottom: "6px" }}>
                     Review complete
                   </div>
-                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.38)", marginBottom: "12px" }}>{fileName}</div>
-                  <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.22)", wordBreak: "break-all", padding: "0 8px" }}>
+                  <div style={{ fontSize: "12px", color: "var(--text-3)", marginBottom: "12px" }}>{fileName}</div>
+                  <div style={{ fontSize: "11px", color: "var(--text-4)", wordBreak: "break-all", padding: "0 8px" }}>
                     hash: {fileHash.slice(0, 16)}...
                   </div>
                   <div style={{ marginTop: "16px" }}>
                     <button onClick={() => { setFileState("idle"); setResult(null); }} style={{
-                      fontSize: "12px", color: "rgba(255,255,255,0.45)",
-                      background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)",
+                      fontSize: "12px", color: "var(--text-3)",
+                      background: "var(--surface-2)", border: "1px solid var(--border)",
                       borderRadius: "6px", padding: "6px 14px", cursor: "pointer",
                       fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
                     }}>
@@ -302,10 +300,10 @@ export default function AuditPage() {
                   <div style={{ marginBottom: "16px", color: "rgba(255,100,100,0.80)", fontSize: "14px", fontWeight: 600 }}>
                     Analysis failed
                   </div>
-                  <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.40)", marginBottom: "16px" }}>{errorMsg}</div>
+                  <div style={{ fontSize: "13px", color: "var(--text-3)", marginBottom: "16px" }}>{errorMsg}</div>
                   <button onClick={() => setFileState("idle")} style={{
-                    fontSize: "12px", color: "rgba(255,255,255,0.55)",
-                    background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)",
+                    fontSize: "12px", color: "var(--text-2)",
+                    background: "var(--surface-2)", border: "1px solid var(--border)",
                     borderRadius: "6px", padding: "6px 14px", cursor: "pointer",
                     fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
                   }}>
@@ -318,31 +316,31 @@ export default function AuditPage() {
                 <>
                   <div style={{ marginBottom: "20px" }}>
                     <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-                      <rect x="8" y="6" width="28" height="36" rx="4" fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth="1.8" />
-                      <line x1="14" y1="16" x2="30" y2="16" stroke="rgba(255,255,255,0.22)" strokeWidth="1.4" />
-                      <line x1="14" y1="22" x2="30" y2="22" stroke="rgba(255,255,255,0.22)" strokeWidth="1.4" />
-                      <line x1="14" y1="28" x2="22" y2="28" stroke="rgba(255,255,255,0.22)" strokeWidth="1.4" />
-                      <circle cx="33" cy="34" r="7" fill="#080808" stroke="rgba(255,255,255,0.30)" strokeWidth="1.5" />
-                      <line x1="33" y1="31" x2="33" y2="37" stroke="rgba(255,255,255,0.70)" strokeWidth="1.8" strokeLinecap="round" />
-                      <line x1="30" y1="34" x2="36" y2="34" stroke="rgba(255,255,255,0.70)" strokeWidth="1.8" strokeLinecap="round" />
+                      <rect x="8" y="6" width="28" height="36" rx="4" fill="none" stroke="var(--border-strong)" strokeWidth="1.8" />
+                      <line x1="14" y1="16" x2="30" y2="16" stroke="var(--border)" strokeWidth="1.4" />
+                      <line x1="14" y1="22" x2="30" y2="22" stroke="var(--border)" strokeWidth="1.4" />
+                      <line x1="14" y1="28" x2="22" y2="28" stroke="var(--border)" strokeWidth="1.4" />
+                      <circle cx="33" cy="34" r="7" fill="var(--bg)" stroke="var(--border-strong)" strokeWidth="1.5" />
+                      <line x1="33" y1="31" x2="33" y2="37" stroke="var(--text-2)" strokeWidth="1.8" strokeLinecap="round" />
+                      <line x1="30" y1="34" x2="36" y2="34" stroke="var(--text-2)" strokeWidth="1.8" strokeLinecap="round" />
                     </svg>
                   </div>
-                  <div style={{ fontSize: "15px", fontWeight: 600, color: "white", marginBottom: "8px" }}>
+                  <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--text)", marginBottom: "8px" }}>
                     Drop your contract PDF here
                   </div>
-                  <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.40)", marginBottom: "20px" }}>
+                  <div style={{ fontSize: "13px", color: "var(--text-3)", marginBottom: "20px" }}>
                     or click to browse
                   </div>
                   <div style={{
                     display: "inline-flex", alignItems: "center", gap: "6px",
-                    fontSize: "11.5px", color: "rgba(255,255,255,0.30)",
-                    border: "1px solid rgba(255,255,255,0.10)", borderRadius: "999px",
+                    fontSize: "11.5px", color: "var(--text-4)",
+                    border: "1px solid var(--border-light)", borderRadius: "999px",
                     padding: "4px 12px",
                   }}>
                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                      <circle cx="6" cy="6" r="5" stroke="rgba(255,255,255,0.40)" strokeWidth="1.2" />
-                      <line x1="6" y1="5" x2="6" y2="9" stroke="rgba(255,255,255,0.40)" strokeWidth="1.2" strokeLinecap="round" />
-                      <circle cx="6" cy="3.5" r="0.6" fill="rgba(255,255,255,0.40)" />
+                      <circle cx="6" cy="6" r="5" stroke="var(--text-3)" strokeWidth="1.2" />
+                      <line x1="6" y1="5" x2="6" y2="9" stroke="var(--text-3)" strokeWidth="1.2" strokeLinecap="round" />
+                      <circle cx="6" cy="3.5" r="0.6" fill="var(--text-3)" />
                     </svg>
                     PDF only · Max 10MB
                   </div>
@@ -352,7 +350,7 @@ export default function AuditPage() {
 
             {/* What AI checks */}
             <div style={{ ...glass, padding: "24px 28px" }}>
-              <div style={{ fontSize: "12px", letterSpacing: "1.5px", color: "rgba(201,168,76,0.70)", marginBottom: "16px" }}>
+              <div style={{ fontSize: "12px", letterSpacing: "1.5px", color: "var(--accent-text-dim)", marginBottom: "16px" }}>
                 WHAT AI CHECKS
               </div>
               {[
@@ -364,13 +362,13 @@ export default function AuditPage() {
                 <div key={i} style={{
                   display: "flex", alignItems: "center", gap: "12px",
                   padding: "10px 8px",
-                  borderBottom: i < 3 ? "1px solid rgba(255,255,255,0.06)" : "none",
+                  borderBottom: i < 3 ? "1px solid var(--border-light)" : "none",
                   borderRadius: "8px", cursor: "default",
                   transition: "transform 0.2s ease, background 0.2s ease",
                 }}
                   onMouseEnter={e => {
                     (e.currentTarget as HTMLDivElement).style.transform = "translateX(4px)";
-                    (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)";
+                    (e.currentTarget as HTMLDivElement).style.background = "var(--surface-2)";
                   }}
                   onMouseLeave={e => {
                     (e.currentTarget as HTMLDivElement).style.transform = "translateX(0)";
@@ -379,13 +377,13 @@ export default function AuditPage() {
                 >
                   <div style={{
                     width: "32px", height: "32px", borderRadius: "8px", flexShrink: 0,
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.10)",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
-                    <Icon size={15} color="rgba(255,255,255,0.65)" strokeWidth={1.7} />
+                    <Icon size={15} color="var(--text-2)" strokeWidth={1.7} />
                   </div>
-                  <span style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.55)" }}>{label}</span>
+                  <span style={{ fontSize: "13.5px", color: "var(--text-2)" }}>{label}</span>
                 </div>
               ))}
             </div>
@@ -401,16 +399,16 @@ export default function AuditPage() {
             }}>
               <div style={{ marginBottom: "24px", opacity: 0.25 }}>
                 <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
-                  <rect x="16" y="10" width="40" height="52" rx="5" fill="none" stroke="white" strokeWidth="2" />
-                  <line x1="24" y1="26" x2="48" y2="26" stroke="white" strokeWidth="1.5" strokeOpacity={0.5} />
-                  <line x1="24" y1="34" x2="48" y2="34" stroke="white" strokeWidth="1.5" strokeOpacity={0.5} />
-                  <line x1="24" y1="42" x2="36" y2="42" stroke="white" strokeWidth="1.5" strokeOpacity={0.5} />
+                  <rect x="16" y="10" width="40" height="52" rx="5" fill="none" stroke="currentColor" strokeWidth="2" />
+                  <line x1="24" y1="26" x2="48" y2="26" stroke="currentColor" strokeWidth="1.5" strokeOpacity={0.5} />
+                  <line x1="24" y1="34" x2="48" y2="34" stroke="currentColor" strokeWidth="1.5" strokeOpacity={0.5} />
+                  <line x1="24" y1="42" x2="36" y2="42" stroke="currentColor" strokeWidth="1.5" strokeOpacity={0.5} />
                 </svg>
               </div>
-              <div style={{ fontSize: "17px", fontWeight: 600, color: "rgba(255,255,255,0.30)", marginBottom: "8px" }}>
+              <div style={{ fontSize: "17px", fontWeight: 600, color: "var(--text-3)", marginBottom: "8px" }}>
                 Upload a contract to see the AI review
               </div>
-              <div style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.22)" }}>
+              <div style={{ fontSize: "13.5px", color: "var(--text-4)" }}>
                 Results will appear here
               </div>
             </div>
@@ -421,16 +419,16 @@ export default function AuditPage() {
               <div style={{ ...glass, padding: "32px 36px", animation: "fadeSlideUp 0.48s cubic-bezier(0.16,1,0.3,1) forwards", opacity: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "rgba(255,255,255,0.40)", marginBottom: "8px" }}>
+                    <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "var(--text-3)", marginBottom: "8px" }}>
                       AI REVIEW RESULT
                     </div>
-                    <div style={{ fontSize: "15px", fontWeight: 700, color: "white", marginBottom: "4px" }}>
+                    <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>
                       Contract analysis complete
                     </div>
-                    <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.40)", marginBottom: "12px" }}>
+                    <div style={{ fontSize: "13px", color: "var(--text-3)", marginBottom: "12px" }}>
                       {result.price_analysis.filter(p => p.status === "overpriced").length} overpriced items · {result.risky_clauses.filter(c => c.risk_level === "high").length} high-risk clauses
                     </div>
-                    <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.50)", lineHeight: 1.65, maxWidth: "280px" }}>
+                    <p style={{ fontSize: "13px", color: "var(--text-2)", lineHeight: 1.65, maxWidth: "280px" }}>
                       {result.overall_summary}
                     </p>
                   </div>
@@ -440,14 +438,14 @@ export default function AuditPage() {
 
               {/* Tabs */}
               <div style={{ ...glass, overflow: "hidden", animation: "fadeSlideUp 0.48s cubic-bezier(0.16,1,0.3,1) forwards", animationDelay: "0.10s", opacity: 0 }}>
-                <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                <div style={{ display: "flex", borderBottom: "1px solid var(--border-light)" }}>
                   {tabs.map(t => (
                     <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
                       flex: 1, padding: "14px 16px", background: "transparent",
                       border: "none", cursor: "pointer", fontSize: "13px",
-                      color: activeTab === t.id ? "white" : "rgba(255,255,255,0.42)",
+                      color: activeTab === t.id ? "var(--text)" : "var(--text-3)",
                       fontWeight: activeTab === t.id ? 700 : 400,
-                      borderBottom: activeTab === t.id ? "2px solid rgba(201,168,76,0.85)" : "2px solid transparent",
+                      borderBottom: activeTab === t.id ? "2px solid var(--accent)" : "2px solid transparent",
                       transition: "color 0.2s",
                       display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
                       fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
@@ -455,8 +453,8 @@ export default function AuditPage() {
                       {t.label}
                       <span style={{
                         fontSize: "10px", padding: "2px 7px", borderRadius: "999px",
-                        background: activeTab === t.id ? "rgba(201,168,76,0.15)" : "rgba(255,255,255,0.10)",
-                        color: activeTab === t.id ? "rgba(201,168,76,0.85)" : "rgba(255,255,255,0.60)",
+                        background: activeTab === t.id ? "var(--accent-bg)" : "var(--surface-2)",
+                        color: activeTab === t.id ? "var(--accent-text)" : "var(--text-3)",
                       }}>{t.count}</span>
                     </button>
                   ))}
@@ -469,41 +467,41 @@ export default function AuditPage() {
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                       {result.price_analysis.map((item, i) => (
                         <div key={i} style={{
-                          background: "rgba(255,255,255,0.03)",
-                          border: "1px solid rgba(255,255,255,0.07)",
+                          background: "var(--card-bg)",
+                          border: "1px solid var(--card-border)",
                           borderRadius: "10px", padding: "14px 16px",
                           transition: "border-color 0.2s, background 0.2s",
                         }}
                           onMouseEnter={e => {
-                            (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.13)";
-                            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.05)";
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
+                            (e.currentTarget as HTMLDivElement).style.background = "var(--surface)";
                           }}
                           onMouseLeave={e => {
-                            (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)";
-                            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)";
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--card-border)";
+                            (e.currentTarget as HTMLDivElement).style.background = "var(--card-bg)";
                           }}
                         >
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-                            <div style={{ fontSize: "13.5px", fontWeight: 600, color: "white", flex: 1 }}>{item.item}</div>
+                            <div style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--text)", flex: 1 }}>{item.item}</div>
                             <RiskBadge risk={toRisk(item.status)} />
                           </div>
                           <div style={{ display: "flex", gap: "24px", marginBottom: "8px" }}>
                             <div>
-                              <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)", letterSpacing: "1px" }}>CONTRACT</div>
-                              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.70)" }}>{formatIDR(item.contract_price)}</div>
+                              <div style={{ fontSize: "10px", color: "var(--text-4)", letterSpacing: "1px" }}>CONTRACT</div>
+                              <div style={{ fontSize: "13px", color: "var(--text-2)" }}>{formatIDR(item.contract_price)}</div>
                             </div>
                             <div>
-                              <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)", letterSpacing: "1px" }}>MARKET EST.</div>
-                              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.70)" }}>{item.market_estimate}</div>
+                              <div style={{ fontSize: "10px", color: "var(--text-4)", letterSpacing: "1px" }}>MARKET EST.</div>
+                              <div style={{ fontSize: "13px", color: "var(--text-2)" }}>{item.market_estimate}</div>
                             </div>
                             <div>
-                              <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)", letterSpacing: "1px" }}>STATUS</div>
+                              <div style={{ fontSize: "10px", color: "var(--text-4)", letterSpacing: "1px" }}>STATUS</div>
                               <div style={{ fontSize: "13px", fontWeight: 700, color: toRisk(item.status) === "high" ? "rgba(255,100,100,0.90)" : toRisk(item.status) === "medium" ? "rgba(255,210,80,0.90)" : "rgba(80,220,140,0.90)" }}>
                                 {item.status.toUpperCase()}
                               </div>
                             </div>
                           </div>
-                          <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.38)", lineHeight: 1.55, margin: 0 }}>{item.notes}</p>
+                          <p style={{ fontSize: "12px", color: "var(--text-4)", lineHeight: 1.55, margin: 0 }}>{item.notes}</p>
                         </div>
                       ))}
                     </div>
@@ -514,25 +512,25 @@ export default function AuditPage() {
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                       {result.risky_clauses.map((item, i) => (
                         <div key={i} style={{
-                          background: "rgba(255,255,255,0.03)",
-                          border: "1px solid rgba(255,255,255,0.07)",
+                          background: "var(--card-bg)",
+                          border: "1px solid var(--card-border)",
                           borderRadius: "10px", padding: "16px 18px",
                           transition: "border-color 0.2s, background 0.2s",
                         }}
                           onMouseEnter={e => {
-                            (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.13)";
-                            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.05)";
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
+                            (e.currentTarget as HTMLDivElement).style.background = "var(--surface)";
                           }}
                           onMouseLeave={e => {
-                            (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)";
-                            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)";
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--card-border)";
+                            (e.currentTarget as HTMLDivElement).style.background = "var(--card-bg)";
                           }}
                         >
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                            <div style={{ fontSize: "13.5px", fontWeight: 700, color: "white" }}>{item.clause}</div>
+                            <div style={{ fontSize: "13.5px", fontWeight: 700, color: "var(--text)" }}>{item.clause}</div>
                             <RiskBadge risk={item.risk_level} />
                           </div>
-                          <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.50)", lineHeight: 1.65, margin: "0 0 8px" }}>{item.issue}</p>
+                          <p style={{ fontSize: "13px", color: "var(--text-2)", lineHeight: 1.65, margin: "0 0 8px" }}>{item.issue}</p>
                           {item.potential_impact && (
                             <p style={{ fontSize: "12px", color: "rgba(255,150,100,0.55)", lineHeight: 1.55, margin: "0 0 8px" }}>
                               ⚠ {item.potential_impact}
@@ -554,28 +552,28 @@ export default function AuditPage() {
                       {result.revision_suggestions.map((s, i) => (
                         <div key={i} style={{
                           display: "flex", gap: "14px",
-                          background: "rgba(255,255,255,0.03)",
-                          border: "1px solid rgba(255,255,255,0.07)",
+                          background: "var(--card-bg)",
+                          border: "1px solid var(--card-border)",
                           borderRadius: "10px", padding: "14px 16px",
                           transition: "border-color 0.2s, background 0.2s",
                         }}
                           onMouseEnter={e => {
-                            (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.13)";
-                            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.05)";
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
+                            (e.currentTarget as HTMLDivElement).style.background = "var(--surface)";
                           }}
                           onMouseLeave={e => {
-                            (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)";
-                            (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)";
+                            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--card-border)";
+                            (e.currentTarget as HTMLDivElement).style.background = "var(--card-bg)";
                           }}
                         >
                           <div style={{
                             width: "24px", height: "24px", borderRadius: "50%", flexShrink: 0,
-                            background: "rgba(201,168,76,0.10)",
-                            border: "1px solid rgba(201,168,76,0.30)",
+                            background: "var(--accent-bg)",
+                            border: "1px solid var(--accent-border)",
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: "11px", fontWeight: 700, color: "rgba(201,168,76,0.80)",
+                            fontSize: "11px", fontWeight: 700, color: "var(--accent-text)",
                           }}>{i + 1}</div>
-                          <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.55)", lineHeight: 1.65, margin: 0 }}>{s}</p>
+                          <p style={{ fontSize: "13px", color: "var(--text-2)", lineHeight: 1.65, margin: 0 }}>{s}</p>
                         </div>
                       ))}
                     </div>
@@ -590,19 +588,19 @@ export default function AuditPage() {
                 animation: "fadeSlideUp 0.48s cubic-bezier(0.16,1,0.3,1) forwards", animationDelay: "0.20s", opacity: 0,
               }}>
                 <div>
-                  <div style={{ fontSize: "14px", fontWeight: 700, color: "white", marginBottom: "4px" }}>
+                  <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>
                     Ready to create on-chain contract?
                   </div>
-                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.35)", fontFamily: "monospace", wordBreak: "break-all" }}>
+                  <div style={{ fontSize: "12px", color: "var(--text-4)", fontFamily: "monospace", wordBreak: "break-all" }}>
                     hash: {analysisHash.slice(0, 24)}...
                   </div>
                 </div>
                 {connected ? (
                   <a href="/create" style={{
-                    background: "white", color: "#080808", fontWeight: 700,
+                    background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)", fontWeight: 700,
                     fontSize: "13.5px", padding: "12px 28px", borderRadius: "7px",
                     textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px",
-                    boxShadow: "0 0 0 1px rgba(255,255,255,0.20), 0 4px 14px rgba(255,255,255,0.12)",
+                    boxShadow: "var(--glass-shadow)",
                     whiteSpace: "nowrap", transition: "opacity 0.2s, transform 0.2s",
                   }}
                     onMouseEnter={e => {
@@ -621,19 +619,19 @@ export default function AuditPage() {
                   </a>
                 ) : (
                   <button onClick={() => setVisible(true)} style={{
-                    background: "rgba(201,168,76,0.12)", color: "rgba(201,168,76,0.90)",
+                    background: "var(--accent-bg)", color: "var(--accent-text)",
                     fontWeight: 700, fontSize: "13.5px", padding: "12px 24px",
-                    borderRadius: "7px", border: "1px solid rgba(201,168,76,0.35)",
+                    borderRadius: "7px", border: "1px solid var(--accent-border-strong)",
                     cursor: "pointer", whiteSpace: "nowrap",
                     fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
                     transition: "background 0.2s, transform 0.2s",
                   }}
                     onMouseEnter={e => {
-                      (e.currentTarget as HTMLButtonElement).style.background = "rgba(201,168,76,0.20)";
+                      (e.currentTarget as HTMLButtonElement).style.background = "var(--accent-bg-hover)";
                       (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
                     }}
                     onMouseLeave={e => {
-                      (e.currentTarget as HTMLButtonElement).style.background = "rgba(201,168,76,0.12)";
+                      (e.currentTarget as HTMLButtonElement).style.background = "var(--accent-bg)";
                       (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
                     }}
                   >

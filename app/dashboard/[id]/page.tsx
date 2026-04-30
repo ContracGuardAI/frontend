@@ -7,11 +7,11 @@ import { IconCheck, IconX, IconUpload } from "../../components/Icons";
 import { toast } from "../../components/Toast";
 
 const glass = {
-  background: "rgba(255,255,255,0.055)",
+  background: "var(--surface)",
   backdropFilter: "blur(20px)",
   WebkitBackdropFilter: "blur(20px)",
-  border: "1px solid rgba(255,255,255,0.13)",
-  boxShadow: "0 4px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18)",
+  border: "1px solid var(--border)",
+  boxShadow: "var(--glass-shadow)",
   borderRadius: "16px",
 } as const;
 
@@ -20,7 +20,7 @@ type CPStatus = "approved" | "submitted" | "pending" | "revision";
 const CP_STATUS: Record<CPStatus, { label: string; bg: string; text: string; border: string; dot: string }> = {
   approved: { label: "APPROVED",   bg: "rgba(80,220,140,0.10)", text: "rgba(80,220,140,0.90)",  border: "rgba(80,220,140,0.28)", dot: "rgba(80,220,140,0.90)" },
   submitted:{ label: "SUBMITTED",  bg: "rgba(255,210,80,0.10)", text: "rgba(255,210,80,0.90)",  border: "rgba(255,210,80,0.28)", dot: "rgba(255,210,80,0.90)" },
-  pending:  { label: "PENDING",    bg: "rgba(255,255,255,0.05)", text: "rgba(255,255,255,0.45)", border: "rgba(255,255,255,0.12)", dot: "rgba(255,255,255,0.30)" },
+  pending:  { label: "PENDING",    bg: "var(--surface-2)",      text: "var(--text-3)",           border: "var(--border)",         dot: "var(--text-4)" },
   revision: { label: "NEEDS REVISION", bg: "rgba(255,80,80,0.10)", text: "rgba(255,120,120,0.90)", border: "rgba(255,80,80,0.28)", dot: "rgba(255,120,120,0.90)" },
 };
 
@@ -135,14 +135,14 @@ export default function ContractDetailPage() {
   const currentCP = activeCP !== null ? contract.checkpoints.find(c => c.id === activeCP) : null;
 
   return (
-    <main style={{ background: "#080808", minHeight: "100vh", color: "white" }}>
+    <main style={{ background: "var(--bg)", minHeight: "100vh", color: "var(--text)" }}>
       <Navbar />
 
       <div style={{
         position: "fixed", pointerEvents: "none", zIndex: 0,
         top: "30%", left: "50%", transform: "translate(-50%,-50%)",
         width: "65%", height: "60%",
-        background: "radial-gradient(ellipse, rgba(255,255,255,0.022) 0%, transparent 65%)",
+        background: "radial-gradient(ellipse, var(--orb) 0%, transparent 65%)",
         filter: "blur(70px)",
       }} />
 
@@ -151,16 +151,16 @@ export default function ContractDetailPage() {
         {/* Back link */}
         <Link href="/dashboard" className="page-in p0" style={{
           display: "inline-flex", alignItems: "center", gap: "8px",
-          color: "rgba(255,255,255,0.40)", textDecoration: "none",
+          color: "var(--text-3)", textDecoration: "none",
           fontSize: "13px", marginBottom: "28px",
           transition: "color 0.2s, transform 0.2s",
         }}
           onMouseEnter={e => {
-            (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.75)";
+            (e.currentTarget as HTMLAnchorElement).style.color = "var(--text)";
             (e.currentTarget as HTMLAnchorElement).style.transform = "translateX(-3px)";
           }}
           onMouseLeave={e => {
-            (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.40)";
+            (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-3)";
             (e.currentTarget as HTMLAnchorElement).style.transform = "translateX(0)";
           }}
         >
@@ -180,11 +180,11 @@ export default function ContractDetailPage() {
                   borderRadius: "999px", background: "rgba(80,220,140,0.10)",
                   color: "rgba(80,220,140,0.90)", border: "1px solid rgba(80,220,140,0.28)",
                 }}>ACTIVE</span>
-                <span style={{ fontSize: "11.5px", color: "rgba(255,255,255,0.30)" }}>{contract.createdAt}</span>
+                <span style={{ fontSize: "11.5px", color: "var(--text-4)" }}>{contract.createdAt}</span>
               </div>
               <h1 style={{
                 fontSize: "clamp(20px,2.5vw,28px)", fontWeight: 900,
-                letterSpacing: "-0.03em", color: "white", marginBottom: "12px",
+                letterSpacing: "-0.03em", color: "var(--text)", marginBottom: "12px",
               }}>{contract.title}</h1>
               <div style={{ display: "flex", gap: "24px" }}>
                 {[
@@ -192,8 +192,8 @@ export default function ContractDetailPage() {
                   { label: "CONTRACTOR", value: `${contract.contractor} (${contract.contractorWallet})` },
                 ].map((p, i) => (
                   <div key={i}>
-                    <div style={{ fontSize: "9.5px", letterSpacing: "1.5px", color: "rgba(255,255,255,0.32)", marginBottom: "3px" }}>{p.label}</div>
-                    <div style={{ fontSize: "12.5px", fontFamily: "monospace", color: "rgba(255,255,255,0.55)" }}>{p.value}</div>
+                    <div style={{ fontSize: "9.5px", letterSpacing: "1.5px", color: "var(--text-4)", marginBottom: "3px" }}>{p.label}</div>
+                    <div style={{ fontSize: "12.5px", fontFamily: "monospace", color: "var(--text-2)" }}>{p.value}</div>
                   </div>
                 ))}
               </div>
@@ -201,17 +201,17 @@ export default function ContractDetailPage() {
 
             {/* Escrow summary */}
             <div style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.09)",
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
               borderRadius: "12px", padding: "20px 24px", minWidth: "220px",
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+              boxShadow: "inset 0 1px 0 var(--border)",
             }}>
-              <div style={{ fontSize: "10px", letterSpacing: "1.5px", color: "rgba(201,168,76,0.70)", marginBottom: "6px" }}>ESCROW STATUS</div>
-              <div style={{ fontSize: "26px", fontWeight: 900, letterSpacing: "-0.04em", marginBottom: "12px", background: "linear-gradient(135deg, #E8C470, #C9A84C)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              <div style={{ fontSize: "10px", letterSpacing: "1.5px", color: "var(--accent-text-dim)", marginBottom: "6px" }}>ESCROW STATUS</div>
+              <div style={{ fontSize: "26px", fontWeight: 900, letterSpacing: "-0.04em", marginBottom: "12px", background: "linear-gradient(135deg, var(--accent-2), var(--accent))", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 {contract.totalAmount} {contract.currency}
               </div>
               {/* Escrow bar */}
-              <div style={{ height: "5px", borderRadius: "999px", background: "rgba(255,255,255,0.08)", overflow: "hidden", marginBottom: "8px" }}>
+              <div style={{ height: "5px", borderRadius: "999px", background: "var(--border-light)", overflow: "hidden", marginBottom: "8px" }}>
                 <div style={{
                   height: "100%", borderRadius: "999px",
                   width: escrowReady ? `${totalPaid}%` : "0%",
@@ -222,7 +222,7 @@ export default function ContractDetailPage() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
                 <span style={{ color: "rgba(80,220,140,0.70)" }}>Released: {paidAmount.toFixed(2)} SOL</span>
-                <span style={{ color: "rgba(255,255,255,0.35)" }}>Locked: {lockedAmount.toFixed(2)} SOL</span>
+                <span style={{ color: "var(--text-4)" }}>Locked: {lockedAmount.toFixed(2)} SOL</span>
               </div>
             </div>
           </div>
@@ -233,7 +233,7 @@ export default function ContractDetailPage() {
 
           {/* LEFT: Checkpoint timeline */}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "rgba(201,168,76,0.70)", marginBottom: "4px", paddingLeft: "4px" }}>
+            <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "var(--accent-text-dim)", marginBottom: "4px", paddingLeft: "4px" }}>
               CHECKPOINTS
             </div>
             {contract.checkpoints.map((cp, i) => {
@@ -255,21 +255,21 @@ export default function ContractDetailPage() {
                     style={{
                       ...glass, padding: "20px 22px",
                       cursor: "pointer",
-                      border: isActive ? "1px solid rgba(255,255,255,0.22)" : "1px solid rgba(255,255,255,0.10)",
-                      background: isActive ? "rgba(255,255,255,0.075)" : "rgba(255,255,255,0.045)",
+                      border: isActive ? "1px solid var(--border-strong)" : "1px solid var(--border-light)",
+                      background: isActive ? "var(--surface)" : "var(--surface-2)",
                       transition: "all 0.2s",
                       animation: `fadeSlideUp 0.42s cubic-bezier(0.16,1,0.3,1) ${i * 0.08}s both`,
                     }}
                     onMouseEnter={e => {
                       if (!isActive) {
-                        (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.18)";
-                        (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.062)";
+                        (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
+                        (e.currentTarget as HTMLDivElement).style.background = "var(--surface)";
                       }
                     }}
                     onMouseLeave={e => {
                       if (!isActive) {
-                        (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.10)";
-                        (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.045)";
+                        (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-light)";
+                        (e.currentTarget as HTMLDivElement).style.background = "var(--surface-2)";
                       }
                     }}
                   >
@@ -279,7 +279,7 @@ export default function ContractDetailPage() {
                         <div style={{
                           width: "36px", height: "36px", borderRadius: "50%", flexShrink: 0,
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          background: cp.status === "approved" ? "rgba(80,220,140,0.12)" : "rgba(255,255,255,0.07)",
+                          background: cp.status === "approved" ? "rgba(80,220,140,0.12)" : "var(--surface-2)",
                           border: `1px solid ${st.dot}44`,
                           boxShadow: `0 0 12px ${st.dot}20`,
                         }}>
@@ -292,8 +292,8 @@ export default function ContractDetailPage() {
                           )}
                         </div>
                         <div>
-                          <div style={{ fontSize: "15px", fontWeight: 700, color: "white", marginBottom: "4px" }}>{cp.name}</div>
-                          <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.38)" }}>
+                          <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>{cp.name}</div>
+                          <div style={{ fontSize: "12px", color: "var(--text-3)" }}>
                             {(parseFloat(cp.payment) / 100 * totalAmount).toFixed(2)} SOL ({cp.payment}%)
                           </div>
                         </div>
@@ -302,8 +302,8 @@ export default function ContractDetailPage() {
                     </div>
 
                     {isActive && (
-                      <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-                        <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.48)", lineHeight: 1.65, marginBottom: "16px" }}>
+                      <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--border-light)" }}>
+                        <p style={{ fontSize: "13px", color: "var(--text-3)", lineHeight: 1.65, marginBottom: "16px" }}>
                           {cp.description}
                         </p>
 
@@ -370,27 +370,27 @@ export default function ContractDetailPage() {
                             onClick={e => { e.stopPropagation(); setSubmitMode(true); }}
                             style={{
                               width: "100%", padding: "11px", borderRadius: "7px",
-                              background: "rgba(255,255,255,0.10)",
-                              border: "1px solid rgba(255,255,255,0.18)",
-                              color: "white", fontWeight: 700, fontSize: "13.5px",
+                              background: "var(--btn-ghost-bg)",
+                              border: "1px solid var(--btn-ghost-border)",
+                              color: "var(--text)", fontWeight: 700, fontSize: "13.5px",
                               cursor: "pointer",
                               fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-                              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
+                              boxShadow: "inset 0 1px 0 var(--border)",
                               display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
                               transition: "background 0.2s, transform 0.15s",
                             } as React.CSSProperties}
                             onMouseEnter={e => {
-                              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.16)";
+                              (e.currentTarget as HTMLButtonElement).style.background = "var(--surface)";
                               (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
                             }}
                             onMouseLeave={e => {
-                              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.10)";
+                              (e.currentTarget as HTMLButtonElement).style.background = "var(--btn-ghost-bg)";
                               (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
                             }}
                             onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
                             onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"; }}
                           >
-                            <IconUpload size={15} color="rgba(255,255,255,0.80)" strokeWidth={1.8} />
+                            <IconUpload size={15} color="currentColor" strokeWidth={1.8} />
                             Submit Evidence
                           </button>
                         )}
@@ -421,20 +421,20 @@ export default function ContractDetailPage() {
             {submitMode && (
               <div style={{
                 ...glass, padding: "28px 30px",
-                border: "1px solid rgba(255,255,255,0.22)",
+                border: "1px solid var(--border-strong)",
                 animation: "fadeSlideUp 0.32s cubic-bezier(0.16,1,0.3,1) both",
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                  <h3 style={{ fontSize: "16px", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>
+                  <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>
                     Submit Evidence
                   </h3>
                   <button onClick={() => setSubmitMode(false)} style={{
                     background: "transparent", border: "none", cursor: "pointer",
-                    color: "rgba(255,255,255,0.40)", padding: "4px",
+                    color: "var(--text-3)", padding: "4px",
                     transition: "color 0.2s",
                   }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.75)"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.40)"; }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-3)"; }}
                   >
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                       <line x1="2" y1="2" x2="12" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -443,34 +443,34 @@ export default function ContractDetailPage() {
                   </button>
                 </div>
                 <div style={{
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px dashed rgba(255,255,255,0.16)",
+                  background: "var(--surface-2)",
+                  border: "1px dashed var(--border)",
                   borderRadius: "10px", padding: "32px",
                   textAlign: "center", marginBottom: "16px", cursor: "pointer",
                   transition: "border-color 0.2s, background 0.2s",
                 }}
                   onMouseEnter={e => {
-                    (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.28)";
-                    (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.05)";
+                    (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-strong)";
+                    (e.currentTarget as HTMLDivElement).style.background = "var(--surface)";
                   }}
                   onMouseLeave={e => {
-                    (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.16)";
-                    (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)";
+                    (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
+                    (e.currentTarget as HTMLDivElement).style.background = "var(--surface-2)";
                   }}
                 >
-                  <div style={{ fontSize: "14px", fontWeight: 600, color: "rgba(255,255,255,0.50)", marginBottom: "6px" }}>
+                  <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-2)", marginBottom: "6px" }}>
                     Upload photos / documents
                   </div>
-                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.30)" }}>
+                  <div style={{ fontSize: "12px", color: "var(--text-4)" }}>
                     JPG, PNG, PDF · Max 50MB
                   </div>
                 </div>
                 <textarea
                   style={{
-                    width: "100%", background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.11)",
+                    width: "100%", background: "var(--input-bg)",
+                    border: "1px solid var(--input-border)",
                     borderRadius: "8px", padding: "12px 14px",
-                    color: "rgba(255,255,255,0.70)", fontSize: "13.5px", outline: "none",
+                    color: "var(--input-text)", fontSize: "13.5px", outline: "none",
                     minHeight: "80px", resize: "vertical",
                     fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
                     boxSizing: "border-box",
@@ -483,13 +483,13 @@ export default function ContractDetailPage() {
                   disabled={submitting}
                   style={{
                     width: "100%", padding: "13px", borderRadius: "7px", border: "none",
-                    background: submitting ? "rgba(255,255,255,0.50)" : "white",
-                    color: "#080808", fontWeight: 700, fontSize: "14px",
+                    background: submitting ? "var(--surface)" : "var(--btn-primary-bg)",
+                    color: "var(--btn-primary-text)", fontWeight: 700, fontSize: "14px",
                     cursor: submitting ? "not-allowed" : "pointer",
                     fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
                     transition: "opacity 0.2s, transform 0.15s",
-                    boxShadow: "0 4px 14px rgba(255,255,255,0.15)",
+                    boxShadow: "var(--glass-shadow)",
                   } as React.CSSProperties}
                   onMouseEnter={e => { if (!submitting) (e.currentTarget as HTMLButtonElement).style.opacity = "0.88"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
@@ -504,15 +504,15 @@ export default function ContractDetailPage() {
             {/* AI Report card */}
             {currentCP?.aiReport ? (
               <div style={{ ...glass, padding: "24px 28px" }}>
-                <div style={{ fontSize: "10.5px", letterSpacing: "1.5px", color: "rgba(201,168,76,0.70)", marginBottom: "14px" }}>
+                <div style={{ fontSize: "10.5px", letterSpacing: "1.5px", color: "var(--accent-text-dim)", marginBottom: "14px" }}>
                   AI REVIEW — {currentCP.name}
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                   <div>
-                    <div style={{ fontSize: "22px", fontWeight: 900, color: "white", letterSpacing: "-0.04em" }}>
+                    <div style={{ fontSize: "22px", fontWeight: 900, color: "var(--text)", letterSpacing: "-0.04em" }}>
                       {currentCP.aiReport.score}/10
                     </div>
-                    <div style={{ fontSize: "11.5px", color: "rgba(255,255,255,0.40)" }}>
+                    <div style={{ fontSize: "11.5px", color: "var(--text-3)" }}>
                       Compliance Score
                     </div>
                   </div>
@@ -526,19 +526,19 @@ export default function ContractDetailPage() {
                     {currentCP.aiReport.status}
                   </span>
                 </div>
-                <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.50)", lineHeight: 1.65, marginBottom: "16px" }}>
+                <p style={{ fontSize: "13px", color: "var(--text-2)", lineHeight: 1.65, marginBottom: "16px" }}>
                   {currentCP.aiReport.finding}
                 </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {currentCP.aiReport.details.map((d, i) => (
                     <div key={i} style={{
                       display: "flex", gap: "10px", alignItems: "flex-start",
-                      fontSize: "12.5px", color: "rgba(255,255,255,0.45)", lineHeight: 1.55,
+                      fontSize: "12.5px", color: "var(--text-3)", lineHeight: 1.55,
                     }}>
                       <div style={{
                         width: "5px", height: "5px", borderRadius: "50%", flexShrink: 0,
                         marginTop: "7px",
-                        background: d.startsWith("PERHATIAN") ? "rgba(255,210,80,0.80)" : "rgba(255,255,255,0.30)",
+                        background: d.startsWith("PERHATIAN") ? "rgba(255,210,80,0.80)" : "var(--text-4)",
                       }} />
                       {d}
                     </div>
@@ -547,10 +547,10 @@ export default function ContractDetailPage() {
               </div>
             ) : currentCP && (
               <div style={{ ...glass, padding: "36px 28px", textAlign: "center" }}>
-                <div style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.30)", marginBottom: "6px" }}>
+                <div style={{ fontSize: "13.5px", color: "var(--text-4)", marginBottom: "6px" }}>
                   No AI report yet
                 </div>
-                <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.22)" }}>
+                <div style={{ fontSize: "12px", color: "var(--text-5)" }}>
                   Submit evidence to trigger AI review
                 </div>
               </div>
@@ -558,7 +558,7 @@ export default function ContractDetailPage() {
 
             {/* Contract on-chain info */}
             <div style={{ ...glass, padding: "22px 26px" }}>
-              <div style={{ fontSize: "10.5px", letterSpacing: "1.5px", color: "rgba(201,168,76,0.70)", marginBottom: "16px" }}>
+              <div style={{ fontSize: "10.5px", letterSpacing: "1.5px", color: "var(--accent-text-dim)", marginBottom: "16px" }}>
                 ON-CHAIN RECORD
               </div>
               {[
@@ -570,12 +570,12 @@ export default function ContractDetailPage() {
                 <div key={i} style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                   padding: "10px 0",
-                  borderBottom: i < 3 ? "1px solid rgba(255,255,255,0.06)" : "none",
+                  borderBottom: i < 3 ? "1px solid var(--border-light)" : "none",
                 }}>
-                  <span style={{ fontSize: "11px", letterSpacing: "1px", color: "rgba(255,255,255,0.32)" }}>{row.label}</span>
+                  <span style={{ fontSize: "11px", letterSpacing: "1px", color: "var(--text-4)" }}>{row.label}</span>
                   <span style={{
                     fontSize: "12px", fontFamily: row.label.includes("HASH") ? "monospace" : "inherit",
-                    color: row.label === "FAIRNESS SCORE" ? "#C9A84C" : "rgba(255,255,255,0.58)",
+                    color: row.label === "FAIRNESS SCORE" ? "var(--accent)" : "var(--text-2)",
                     fontWeight: row.label === "FAIRNESS SCORE" ? 700 : 400,
                     maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                   }}>{row.value}</span>
@@ -584,16 +584,16 @@ export default function ContractDetailPage() {
               <a href="#" style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "5px",
                 marginTop: "14px",
-                fontSize: "12.5px", color: "rgba(255,255,255,0.35)",
+                fontSize: "12.5px", color: "var(--text-3)",
                 textDecoration: "none",
                 transition: "color 0.2s, transform 0.2s",
               }}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.65)";
+                  (e.currentTarget as HTMLAnchorElement).style.color = "var(--text)";
                   (e.currentTarget as HTMLAnchorElement).style.transform = "translateX(2px)";
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.35)";
+                  (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-3)";
                   (e.currentTarget as HTMLAnchorElement).style.transform = "translateX(0)";
                 }}
               >

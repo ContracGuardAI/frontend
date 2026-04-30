@@ -4,11 +4,11 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
 const glass = {
-  background: "rgba(255,255,255,0.055)",
+  background: "var(--surface)",
   backdropFilter: "blur(20px)",
   WebkitBackdropFilter: "blur(20px)",
-  border: "1px solid rgba(255,255,255,0.13)",
-  boxShadow: "0 4px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18)",
+  border: "1px solid var(--border)",
+  boxShadow: "var(--glass-shadow)",
   borderRadius: "20px",
 } as const;
 
@@ -68,7 +68,7 @@ const plans = [
 
 export default function PricingPage() {
   return (
-    <main style={{ background: "#080808", minHeight: "100vh", color: "white" }}>
+    <main style={{ background: "var(--bg)", minHeight: "100vh", color: "var(--text)" }}>
       <Navbar />
 
       <section style={{ padding: "140px 0 120px", position: "relative", overflow: "hidden" }}>
@@ -77,7 +77,7 @@ export default function PricingPage() {
           position: "absolute", pointerEvents: "none", zIndex: 0,
           top: "30%", left: "50%", transform: "translate(-50%, -50%)",
           width: "70%", height: "60%",
-          background: "radial-gradient(ellipse, rgba(201,168,76,0.08) 0%, transparent 65%)",
+          background: "radial-gradient(ellipse, var(--accent-glow) 0%, transparent 65%)",
           filter: "blur(70px)",
         }} />
 
@@ -87,25 +87,25 @@ export default function PricingPage() {
           <div className="page-in p0" style={{ textAlign: "center", marginBottom: "72px" }}>
             <div style={{
               display: "inline-flex", alignItems: "center",
-              border: "1px solid rgba(201,168,76,0.38)", borderRadius: "999px",
+              border: "1px solid var(--accent-border-strong)", borderRadius: "999px",
               padding: "4px 14px", fontSize: "11px",
-              color: "rgba(201,168,76,0.85)", background: "rgba(201,168,76,0.06)",
+              color: "var(--accent-text)", background: "var(--accent-bg)",
               backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-              boxShadow: "inset 0 1px 0 rgba(201,168,76,0.16)",
+              boxShadow: "inset 0 1px 0 var(--accent-glow)",
               marginBottom: "24px", letterSpacing: "1.5px",
             }}>
               PRICING
             </div>
             <h1 style={{
               fontSize: "clamp(40px,5vw,64px)", fontWeight: 900,
-              letterSpacing: "-0.04em", color: "white", lineHeight: 1.05,
+              letterSpacing: "-0.04em", color: "var(--text)", lineHeight: 1.05,
               marginBottom: "18px",
             }}>
               Simple, transparent<br />
               <span className="text-shimmer">pricing.</span>
             </h1>
             <p style={{
-              fontSize: "16px", color: "rgba(255,255,255,0.45)",
+              fontSize: "16px", color: "var(--text-3)",
               maxWidth: "400px", margin: "0 auto", lineHeight: 1.78,
             }}>
               Start free. Upgrade when you need more.
@@ -124,63 +124,63 @@ export default function PricingPage() {
                 padding: "40px 34px",
                 position: "relative", overflow: "hidden",
                 border: plan.highlight
-                  ? "1px solid rgba(201,168,76,0.45)"
-                  : "1px solid rgba(255,255,255,0.13)",
+                  ? "1px solid var(--accent-border-strong)"
+                  : "1px solid var(--border)",
                 boxShadow: plan.highlight
-                  ? "0 0 0 1px rgba(201,168,76,0.14), 0 8px 40px rgba(201,168,76,0.12), 0 4px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18)"
-                  : "0 4px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18)",
+                  ? `0 0 0 1px var(--accent-glow), 0 8px 40px var(--accent-glow), var(--glass-shadow)`
+                  : "var(--glass-shadow)",
               }}>
                 {/* Top accent line */}
                 <div style={{
                   position: "absolute", top: 0, left: 0, right: 0, height: "1px", pointerEvents: "none",
                   background: plan.highlight
-                    ? "linear-gradient(to right, transparent 5%, rgba(201,168,76,0.70) 50%, transparent 95%)"
-                    : "linear-gradient(to right, transparent 5%, rgba(255,255,255,0.18) 50%, transparent 95%)",
+                    ? "linear-gradient(to right, transparent 5%, var(--accent-border-hover) 50%, transparent 95%)"
+                    : "linear-gradient(to right, transparent 5%, var(--border-strong) 50%, transparent 95%)",
                 }} />
 
                 {plan.highlight && (
                   <div style={{
                     position: "absolute", top: "16px", right: "16px",
                     fontSize: "9.5px", letterSpacing: "1.6px",
-                    color: "rgba(201,168,76,0.90)",
-                    border: "1px solid rgba(201,168,76,0.38)",
+                    color: "var(--accent-text)",
+                    border: "1px solid var(--accent-border-strong)",
                     borderRadius: "999px", padding: "3px 10px",
-                    background: "rgba(201,168,76,0.10)",
+                    background: "var(--accent-bg)",
                   }}>POPULAR</div>
                 )}
 
                 <div style={{ marginBottom: "28px" }}>
                   <p style={{
                     fontSize: "12px", letterSpacing: "1.8px",
-                    color: plan.highlight ? "rgba(201,168,76,0.85)" : "rgba(255,255,255,0.45)",
+                    color: plan.highlight ? "var(--accent-text)" : "var(--text-3)",
                     marginBottom: "10px", fontWeight: 600,
                   }}>{plan.name.toUpperCase()}</p>
                   <div style={{ display: "flex", alignItems: "baseline", gap: "6px", marginBottom: "10px" }}>
-                    <span style={{ fontSize: "14px", color: "rgba(255,255,255,0.45)" }}>$</span>
+                    <span style={{ fontSize: "14px", color: "var(--text-3)" }}>$</span>
                     <span style={{
                       fontSize: "52px", fontWeight: 900,
-                      letterSpacing: "-0.05em", color: "white", lineHeight: 1,
+                      letterSpacing: "-0.05em", color: "var(--text)", lineHeight: 1,
                     }}>{plan.price}</span>
-                    <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.35)" }}>/ {plan.period}</span>
+                    <span style={{ fontSize: "13px", color: "var(--text-4)" }}>/ {plan.period}</span>
                   </div>
-                  <p style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.42)", lineHeight: 1.65 }}>
+                  <p style={{ fontSize: "13.5px", color: "var(--text-3)", lineHeight: 1.65 }}>
                     {plan.desc}
                   </p>
                 </div>
 
                 <div style={{
                   height: "1px", marginBottom: "26px",
-                  background: "rgba(255,255,255,0.08)",
+                  background: "var(--border-light)",
                 }} />
 
                 <ul style={{ listStyle: "none", padding: 0, margin: "0 0 36px", display: "flex", flexDirection: "column", gap: "13px" }}>
                   {plan.features.map((f) => (
                     <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: "1px" }}>
-                        <circle cx="8" cy="8" r="7.5" stroke="rgba(201,168,76,0.45)" />
-                        <path d="M4.5 8L7 10.5L11.5 5.5" stroke="#C9A84C" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="8" cy="8" r="7.5" stroke="var(--accent-border)" />
+                        <path d="M4.5 8L7 10.5L11.5 5.5" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
-                      <span style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.60)", lineHeight: 1.5 }}>{f}</span>
+                      <span style={{ fontSize: "13.5px", color: "var(--text-2)", lineHeight: 1.5 }}>{f}</span>
                     </li>
                   ))}
                 </ul>
@@ -192,26 +192,26 @@ export default function PricingPage() {
                   textDecoration: "none",
                   transition: "transform 0.22s ease, box-shadow 0.22s ease, opacity 0.2s",
                   ...(plan.highlight ? {
-                    background: "linear-gradient(135deg, #C9A84C 0%, #E8C470 50%, #C9A84C 100%)",
+                    background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 50%, var(--accent) 100%)",
                     backgroundSize: "200% 100%",
-                    color: "#1a1200",
-                    boxShadow: "0 0 0 1px rgba(201,168,76,0.40), 0 4px 18px rgba(201,168,76,0.28)",
+                    color: "var(--btn-primary-text)",
+                    boxShadow: `0 0 0 1px var(--accent-border-strong), 0 4px 18px var(--accent-glow)`,
                   } : {
-                    background: "rgba(255,255,255,0.07)",
-                    color: "rgba(255,255,255,0.80)",
-                    border: "1px solid rgba(255,255,255,0.14)",
+                    background: "var(--btn-ghost-bg)",
+                    color: "var(--text-2)",
+                    border: "1px solid var(--border)",
                   }),
                 }}
                   onMouseEnter={e => {
                     (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
                     if (plan.highlight) {
-                      (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 0 0 1px rgba(201,168,76,0.55), 0 8px 28px rgba(201,168,76,0.40)";
+                      (e.currentTarget as HTMLAnchorElement).style.boxShadow = `0 0 0 1px var(--accent-border-hover), 0 8px 28px var(--accent-glow)`;
                     }
                   }}
                   onMouseLeave={e => {
                     (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
                     if (plan.highlight) {
-                      (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 0 0 1px rgba(201,168,76,0.40), 0 4px 18px rgba(201,168,76,0.28)";
+                      (e.currentTarget as HTMLAnchorElement).style.boxShadow = `0 0 0 1px var(--accent-border-strong), 0 4px 18px var(--accent-glow)`;
                     }
                   }}
                 >
@@ -224,10 +224,10 @@ export default function PricingPage() {
           {/* Footer note */}
           <p className="page-in p2" style={{
             textAlign: "center", marginTop: "48px",
-            fontSize: "13px", color: "rgba(255,255,255,0.28)", lineHeight: 1.7,
+            fontSize: "13px", color: "var(--text-4)", lineHeight: 1.7,
           }}>
             All plans include Solana Devnet testing at no extra cost.{" "}
-            <span style={{ color: "rgba(201,168,76,0.55)" }}>No credit card required for Free plan.</span>
+            <span style={{ color: "var(--accent-text-dim)" }}>No credit card required for Free plan.</span>
           </p>
         </div>
       </section>

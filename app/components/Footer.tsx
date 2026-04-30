@@ -5,22 +5,22 @@ import Link from "next/link";
 export default function Footer() {
   return (
     <footer style={{
-      padding: "22px 0", background: "#050505",
-      borderTop: "1px solid rgba(201,168,76,0.14)",
+      padding: "22px 0", background: "var(--footer-bg)",
+      borderTop: "1px solid var(--footer-border)",
       position: "relative",
     }}>
-      {/* subtle gold top glow line */}
+      {/* subtle accent top glow line */}
       <div style={{
         position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
         width: "40%", height: "1px", pointerEvents: "none",
-        background: "linear-gradient(to right, transparent, rgba(201,168,76,0.35), transparent)",
+        background: "linear-gradient(to right, transparent, var(--accent-border-strong), transparent)",
       }} />
 
       <div style={{
         maxWidth: "1160px", margin: "0 auto", padding: "0 80px",
         display: "flex", justifyContent: "space-between", alignItems: "center",
       }}>
-        {/* Logo — same style as Navbar */}
+        {/* Logo */}
         <Link href="/" style={{
           display: "flex", alignItems: "center", gap: "11px",
           textDecoration: "none", transition: "opacity 0.2s",
@@ -29,45 +29,39 @@ export default function Footer() {
           onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = "1"; }}
         >
           <Image
-            src="/contract-guard.png"
+            src="/contract-guard-logo.png"
             alt="ContractGuard AI"
             width={300}
             height={300}
-            style={{ width: "46px", height: "46px", borderRadius: "9px", objectFit: "contain", display: "block", transform: "scale(1.9) translateX(6px)", transformOrigin: "center" }}
+            style={{ width: "38px", height: "38px", objectFit: "contain", display: "block" }}
           />
           <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
             <span style={{
               fontWeight: 800, fontSize: "14px",
-              letterSpacing: "-0.03em", color: "rgba(255,255,255,0.70)",
+              letterSpacing: "-0.03em", color: "var(--text-2)",
               lineHeight: 1.1,
             }}>ContractGuard</span>
             <span style={{
               fontSize: "9px", letterSpacing: "2.2px",
-              color: "rgba(201,168,76,0.55)", fontWeight: 600,
+              color: "var(--accent-text-dim)", fontWeight: 600,
               textTransform: "uppercase" as const, lineHeight: 1,
             }}>AI · Secured</span>
           </div>
         </Link>
 
-        {/* Nav links — gold hover */}
+        {/* Nav links */}
         <div style={{ display: "flex", gap: "30px" }}>
           {[
             { label: "GitHub", href: "#" },
             { label: "Docs",   href: "#" },
           ].map(({ label, href }) => (
             <Link key={label} href={href} style={{
-              fontSize: "13px", color: "rgba(255,255,255,0.35)",
+              fontSize: "13px", color: "var(--text-4)",
               textDecoration: "none",
-              transition: "color 0.2s, text-shadow 0.2s",
+              transition: "color 0.2s",
             }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLAnchorElement).style.color = "#C9A84C";
-                (e.currentTarget as HTMLAnchorElement).style.textShadow = "0 0 12px rgba(201,168,76,0.35)";
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.35)";
-                (e.currentTarget as HTMLAnchorElement).style.textShadow = "none";
-              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "var(--accent-text)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-4)"; }}
             >
               {label}
             </Link>
@@ -76,11 +70,11 @@ export default function Footer() {
 
         {/* Copyright */}
         <div style={{
-          fontSize: "11.5px", color: "rgba(255,255,255,0.22)",
+          fontSize: "11.5px", color: "var(--text-5)",
           letterSpacing: "0.2px",
         }}>
           © 2025 ContractGuard AI ·{" "}
-          <span style={{ color: "rgba(201,168,76,0.45)" }}>Built on Solana</span>
+          <span style={{ color: "var(--accent-text-dim)" }}>Built on Solana</span>
         </div>
       </div>
     </footer>
