@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import { useLanguage } from "./components/LanguageProvider";
 
 const glass = {
   background: "var(--surface)",
@@ -132,6 +133,7 @@ function BrandLogo({ name }: { name: string }) {
 }
 
 function Hero() {
+  const { t } = useLanguage();
   const [parallaxY, setParallaxY] = useState(0);
   const [spotlight, setSpotlight] = useState({ x: 50, y: 50 });
   const [spotActive, setSpotActive] = useState(false);
@@ -184,7 +186,7 @@ function Hero() {
               width: "6px", height: "6px", borderRadius: "50%",
               background: "var(--accent)", flexShrink: 0,
             }} />
-            2,847+ Contracts audited monthly with ContractGuard AI
+            {t("hero.badge")}
           </div>
 
           <h1 className="hero-in h1" style={{
@@ -192,7 +194,7 @@ function Hero() {
             lineHeight: 1.0, letterSpacing: "-0.04em", color: "var(--text)",
             marginBottom: "26px",
           }}>
-            Contracts<br /><span className="text-shimmer">Secured.</span>
+            {t("hero.headline1")}<br /><span className="text-shimmer">{t("hero.headline2")}</span>
           </h1>
 
           <p className="hero-in h2" style={{
@@ -200,8 +202,7 @@ function Hero() {
             color: "var(--text-3)", maxWidth: "310px",
             marginBottom: "42px",
           }}>
-            Audit Contracts, Verify Milestones, And Keep
-            Payments On Track — Effortlessly.
+            {t("hero.subtitle")}
           </p>
 
           <div className="hero-in h3" style={{ display: "flex", gap: "14px", marginBottom: "64px" }}>
@@ -226,7 +227,7 @@ function Hero() {
               onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
               onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
             >
-              Audit Contract
+              {t("hero.ctaAudit")}
               <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                 <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -254,7 +255,7 @@ function Hero() {
               onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
               onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
             >
-              View Dashboard
+              {t("hero.ctaDashboard")}
             </a>
           </div>
 
@@ -269,7 +270,7 @@ function Hero() {
                 letterSpacing: "2.2px", fontWeight: 700,
                 textTransform: "uppercase" as const, whiteSpace: "nowrap", margin: 0,
               }}>
-                Trusted by builders
+                {t("hero.trustedBy")}
               </p>
               <div style={{
                 height: "1px", flex: 1,
@@ -393,14 +394,6 @@ type ChatMsg = {
   typingMs?: number;
 };
 
-const CHAT_SEQ: ChatMsg[] = [
-  { role: "user",  text: "Kontrak_Renovasi_Jl_Sudirman.pdf",  kind: "file" },
-  { role: "ai",    text: "Contract received. Scanning 47 clauses across 8 sections...", kind: "text",    typingMs: 1000 },
-  { role: "ai",    text: "⚠️  3 risk areas detected:\n• Section 4.2 — Payment delay clause (30 days) is unusually long\n• Section 7.1 — No penalty clause for contractor overruns\n• Section 12 — Force majeure clause too broad, potential coverage gap", kind: "warn", typingMs: 1500 },
-  { role: "ai",    text: "Computing fairness score and generating full report...",        kind: "text",    typingMs: 950 },
-  { role: "ai",    text: "✓  Audit complete  ·  Fairness Score: 8 / 10\nContract is safe to sign. Review the 3 flagged items before finalizing.", kind: "success", typingMs: 1200 },
-];
-
 function TypingIndicator() {
   return (
     <div style={{ display: "flex", gap: "4px", padding: "11px 14px", alignItems: "center" }}>
@@ -415,7 +408,7 @@ function TypingIndicator() {
   );
 }
 
-function ChatMessage({ msg, isNew }: { msg: ChatMsg; isNew: boolean }) {
+function ChatMessage({ msg, isNew, fileReadyLabel }: { msg: ChatMsg; isNew: boolean; fileReadyLabel?: string }) {
   const anim = isNew ? "chatMsgIn 0.28s ease both" : "none";
 
   if (msg.kind === "file") {
@@ -441,7 +434,7 @@ function ChatMessage({ msg, isNew }: { msg: ChatMsg; isNew: boolean }) {
           </div>
           <div>
             <div style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--accent-text)", lineHeight: 1.3 }}>{msg.text}</div>
-            <div style={{ fontSize: "10.5px", color: "var(--text-4)", marginTop: "2px" }}>PDF · Ready to audit</div>
+            <div style={{ fontSize: "10.5px", color: "var(--text-4)", marginTop: "2px" }}>{fileReadyLabel ?? "PDF · Ready to audit"}</div>
           </div>
         </div>
       </div>
@@ -479,9 +472,18 @@ function ChatMessage({ msg, isNew }: { msg: ChatMsg; isNew: boolean }) {
 }
 
 function AiChatDemo() {
+  const { t, lang } = useLanguage();
   const [visibleCount, setVisibleCount] = useState(0);
   const [typing, setTyping] = useState(false);
   const msgsRef = useRef<HTMLDivElement>(null);
+
+  const CHAT_SEQ: ChatMsg[] = [
+    { role: "user", text: t("demo.chat1"), kind: "file" },
+    { role: "ai",   text: t("demo.chat2"), kind: "text",    typingMs: 1000 },
+    { role: "ai",   text: t("demo.chat3"), kind: "warn",    typingMs: 1500 },
+    { role: "ai",   text: t("demo.chat4"), kind: "text",    typingMs: 950 },
+    { role: "ai",   text: t("demo.chat5"), kind: "success", typingMs: 1200 },
+  ];
 
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -513,7 +515,8 @@ function AiChatDemo() {
 
     run();
     return () => timers.forEach(clearTimeout);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
 
   // Scroll WITHIN the chat container only — never touch page scroll
   useEffect(() => {
@@ -549,29 +552,29 @@ function AiChatDemo() {
               color: "var(--accent-text)", background: "var(--accent-bg)",
               backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
               marginBottom: "22px", letterSpacing: "1.5px",
-            }}>LIVE DEMO</div>
+            }}>{t("demo.badge")}</div>
 
             <h2 style={{
               fontSize: "clamp(30px,3.4vw,46px)", fontWeight: 900,
               letterSpacing: "-0.04em", color: "var(--text)",
               lineHeight: 1.08, marginBottom: "18px",
+              whiteSpace: "pre-line",
             }}>
-              See the AI<br />audit agent<br />in action.
+              {t("demo.headline")}
             </h2>
 
             <p style={{
               fontSize: "14.5px", lineHeight: 1.78, color: "var(--text-3)",
               marginBottom: "38px", maxWidth: "320px",
             }}>
-              Upload any contract and watch ContractGuard AI scan every clause,
-              flag risks, and deliver a fairness score — in seconds.
+              {t("demo.subtitle")}
             </p>
 
             <div style={{ display: "flex", gap: "28px" }}>
               {[
-                { value: "< 3s",  label: "audit time" },
-                { value: "47+",   label: "clauses scanned" },
-                { value: "8/10",  label: "avg score" },
+                { value: "< 3s",  label: t("demo.statLabel1") },
+                { value: "47+",   label: t("demo.statLabel2") },
+                { value: "8/10",  label: t("demo.statLabel3") },
               ].map((s, i) => (
                 <div key={i}>
                   <div style={{
@@ -610,10 +613,10 @@ function AiChatDemo() {
                 </div>
                 <div>
                   <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}>
-                    ContractGuard AI Agent
+                    {t("demo.agentName")}
                   </div>
                   <div style={{ fontSize: "10px", color: "var(--text-4)", marginTop: "1px" }}>
-                    Powered by Claude · Solana
+                    {t("demo.agentSub")}
                   </div>
                 </div>
               </div>
@@ -638,7 +641,7 @@ function AiChatDemo() {
             {/* Messages */}
             <div ref={msgsRef} style={{ height: "340px", overflowY: "auto", padding: "16px 14px 8px" }}>
               {visible.map((msg, i) => (
-                <ChatMessage key={`${i}-${visible.length}`} msg={msg} isNew={i === visible.length - 1} />
+                <ChatMessage key={`${i}-${visible.length}`} msg={msg} isNew={i === visible.length - 1} fileReadyLabel={t("demo.fileReady")} />
               ))}
 
               {typing && (
@@ -677,7 +680,7 @@ function AiChatDemo() {
                 fontSize: "13px", color: "var(--text-5)", cursor: "not-allowed",
                 userSelect: "none",
               }}>
-                Upload a contract to audit...
+                {t("demo.inputPlaceholder")}
               </div>
               <div style={{
                 width: "34px", height: "34px", borderRadius: "8px", flexShrink: 0,
@@ -701,24 +704,25 @@ function AiChatDemo() {
 // ── How It Works ─────────────────────────────────────────────
 
 function HowItWorks() {
+  const { t } = useLanguage();
   const steps = [
     {
       num: "01", type: "review" as const,
-      when: "BEFORE THE DEAL",
-      title: "AI Contract Review",
-      desc: "Upload your contract PDF. AI reads every clause, detects price markups, identifies unfair terms, and outputs a fairness score — before you sign anything.",
+      when: t("how.step1When"),
+      title: t("how.step1Title"),
+      desc: t("how.step1Desc"),
     },
     {
       num: "02", type: "monitor" as const,
-      when: "DURING THE PROJECT",
-      title: "Checkpoint Monitoring",
-      desc: "At each milestone, contractors upload proof of work. AI cross-references it with the contract spec and sends a full verification report instantly.",
+      when: t("how.step2When"),
+      title: t("how.step2Title"),
+      desc: t("how.step2Desc"),
     },
     {
       num: "03", type: "record" as const,
-      when: "AFTER EACH STEP",
-      title: "On-Chain Record",
-      desc: "Every contract hash, AI report, and approval is permanently stored on Solana blockchain. Immutable — no one can edit or delete it, ever.",
+      when: t("how.step3When"),
+      title: t("how.step3Title"),
+      desc: t("how.step3Desc"),
     },
   ];
 
@@ -745,21 +749,17 @@ function HowItWorks() {
             color: "var(--accent-text)", background: "var(--accent-bg)",
             backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
             marginBottom: "20px", letterSpacing: "1.5px",
-          }}>
-            HOW IT WORKS
-          </div>
+          }}>{t("how.badge")}</div>
           <h2 style={{
             fontSize: "clamp(34px,3.8vw,52px)", fontWeight: 900,
             letterSpacing: "-0.04em", color: "var(--text)", lineHeight: 1.05, marginBottom: "16px",
-          }}>
-            Three phases.<br />Zero surprises.
-          </h2>
+            whiteSpace: "pre-line",
+          }}>{t("how.headline")}</h2>
           <p style={{
             fontSize: "15px", color: "var(--text-3)",
             maxWidth: "420px", margin: "0 auto", lineHeight: 1.76,
           }}>
-            From contract review to final payment — every step verified by AI
-            and recorded on blockchain.
+            {t("how.subtitle")}
           </p>
         </div>
 
@@ -826,27 +826,12 @@ function HowItWorks() {
 }
 
 function Features() {
+  const { t } = useLanguage();
   const items = [
-    {
-      type: "audit", tag: "AI POWERED",
-      title: "AI Contract Audit",
-      desc: "Fairness score 1–10, line-by-line price analysis, risky clause detection, and specific revision suggestions — before you commit to anything.",
-    },
-    {
-      type: "escrow", tag: "SOLANA",
-      title: "Smart Escrow Payments",
-      desc: "Funds locked in a Solana smart contract. Released automatically when milestones are approved — no banks, no middlemen, no delays.",
-    },
-    {
-      type: "check", tag: "MONITORING",
-      title: "Checkpoint Verification",
-      desc: "At every milestone, contractors upload photo evidence. AI cross-references against the contract spec. Approve or request revision — on-chain.",
-    },
-    {
-      type: "chain", tag: "BLOCKCHAIN",
-      title: "Tamper-Proof Records",
-      desc: "Contract hash, AI reports, and every approval written to Solana. Permanent evidence that no one — not even us — can alter or delete.",
-    },
+    { type: "audit", tag: t("feat.f1Tag"), title: t("feat.f1Title"), desc: t("feat.f1Desc") },
+    { type: "escrow", tag: t("feat.f2Tag"), title: t("feat.f2Title"), desc: t("feat.f2Desc") },
+    { type: "check", tag: t("feat.f3Tag"), title: t("feat.f3Title"), desc: t("feat.f3Desc") },
+    { type: "chain", tag: t("feat.f4Tag"), title: t("feat.f4Title"), desc: t("feat.f4Desc") },
   ];
 
   return (
@@ -872,22 +857,20 @@ function Features() {
             color: "var(--accent-text)", background: "var(--accent-bg)",
             backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
             marginBottom: "20px", letterSpacing: "1.5px",
-          }}>
-            FEATURES
-          </div>
+          }}>{t("feat.badge")}</div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <h2 style={{
               fontSize: "clamp(32px,3.6vw,48px)", fontWeight: 900,
               letterSpacing: "-0.04em", color: "var(--text)", lineHeight: 1.05, maxWidth: "480px",
+              whiteSpace: "pre-line",
             }}>
-              Everything you need<br />to stay protected.
+              {t("feat.headline")}
             </h2>
             <p style={{
               fontSize: "14px", color: "var(--text-3)",
               maxWidth: "290px", lineHeight: 1.76, textAlign: "right",
             }}>
-              Built for builders, contractors, and anyone
-              who&apos;s been burned by a bad contract.
+              {t("feat.subtitle")}
             </p>
           </div>
         </div>
@@ -934,14 +917,14 @@ function Features() {
   );
 }
 
-const STATS_DATA = [
-  { display: "< $0.01", countTo: null as number | null, suffix: "", label: "PER TRANSACTION", sub: "Near-zero fees on Solana" },
-  { display: "400ms",   countTo: 400,                   suffix: "ms", label: "FINALITY SPEED", sub: "Faster than any other chain" },
-  { display: "100%",    countTo: 100,                   suffix: "%",  label: "IMMUTABLE",      sub: "Records can never be altered" },
-  { display: "Claude",  countTo: null as number | null, suffix: "", label: "POWERED BY AI",  sub: "Anthropic's most capable model" },
-];
-
 function Stats() {
+  const { t } = useLanguage();
+  const STATS_DATA = [
+    { display: "< $0.01", countTo: null as number | null, suffix: "", label: t("stats.label1"), sub: t("stats.sub1") },
+    { display: "400ms",   countTo: 400,                   suffix: "ms", label: t("stats.label2"), sub: t("stats.sub2") },
+    { display: "100%",    countTo: 100,                   suffix: "%",  label: t("stats.label3"), sub: t("stats.sub3") },
+    { display: "Claude",  countTo: null as number | null, suffix: "", label: t("stats.label4"), sub: t("stats.sub4") },
+  ];
   const [counts, setCounts] = useState(STATS_DATA.map(s => s.countTo ?? 0));
   const animatedRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -989,9 +972,9 @@ function Stats() {
           <h2 style={{
             fontSize: "clamp(30px,3.2vw,44px)", fontWeight: 900,
             letterSpacing: "-0.04em", color: "var(--text)", marginBottom: "12px",
-          }}>Trustless by design.</h2>
+          }}>{t("stats.headline")}</h2>
           <p style={{ fontSize: "14px", color: "var(--text-3)", lineHeight: 1.75 }}>
-            Built on Solana for speed, cost-efficiency, and absolute immutability.
+            {t("stats.subtitle")}
           </p>
         </div>
 
@@ -1073,6 +1056,7 @@ function Stats() {
 }
 
 function CTA() {
+  const { t } = useLanguage();
   return (
     <section style={{
       padding: "140px 0",
@@ -1124,25 +1108,22 @@ function CTA() {
               color: "var(--accent-text)", background: "var(--accent-bg)",
               backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
               marginBottom: "28px", letterSpacing: "1.5px",
-            }}>
-              GET STARTED
-            </div>
+            }}>{t("cta.badge")}</div>
 
             <h2 style={{
               fontSize: "clamp(30px,4vw,48px)", fontWeight: 900,
               letterSpacing: "-0.045em", color: "var(--text)",
               lineHeight: 1.08, marginBottom: "22px",
             }}>
-              Secure your next contract<br />
-              <span className="text-shimmer">with AI + blockchain.</span>
+              {t("cta.headline1")}<br />
+              <span className="text-shimmer">{t("cta.headline2")}</span>
             </h2>
 
             <p style={{
               fontSize: "15px", color: "var(--text-3)",
               marginBottom: "48px", lineHeight: 1.78,
             }}>
-              Upload your contract PDF, get an AI audit in seconds,
-              and lock every milestone on-chain — for free.
+              {t("cta.subtitle")}
             </p>
 
             <div style={{ display: "flex", gap: "14px", justifyContent: "center" }}>
@@ -1168,7 +1149,7 @@ function CTA() {
                 onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
                 onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
               >
-                Audit Contract
+                {t("cta.ctaAudit")}
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                   <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor"
                     strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
@@ -1197,7 +1178,7 @@ function CTA() {
                 onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
                 onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
               >
-                View Pricing
+                {t("cta.ctaPricing")}
               </a>
             </div>
           </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { IconDocument } from "../components/Icons";
+import { useLanguage } from "../components/LanguageProvider";
 
 const glass = {
   background: "var(--surface)",
@@ -84,13 +85,13 @@ function StatusPill({ status }: { status: Status }) {
   );
 }
 
-function ProgressBar({ completed, total }: { completed: number; total: number }) {
+function ProgressBar({ completed, total, checkpointsLabel = "checkpoints" }: { completed: number; total: number; checkpointsLabel?: string }) {
   const pct = total > 0 ? (completed / total) * 100 : 0;
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
         <span style={{ fontSize: "11.5px", color: "var(--text-3)" }}>
-          {completed}/{total} checkpoints
+          {completed}/{total} {checkpointsLabel}
         </span>
         <span style={{ fontSize: "11.5px", color: "var(--text-2)", fontWeight: 600 }}>
           {Math.round(pct)}%
@@ -129,15 +130,16 @@ function CountUp({ end, duration = 900 }: { end: number; duration?: number }) {
 }
 
 export default function DashboardPage() {
+  const { t } = useLanguage();
   const [filter, setFilter] = useState<Filter>("All");
 
   const filtered = filter === "All" ? MOCK_CONTRACTS : MOCK_CONTRACTS.filter(c => c.status === filter);
 
   const stats = [
-    { label: "TOTAL CONTRACTS", value: MOCK_CONTRACTS.length },
-    { label: "ACTIVE",          value: MOCK_CONTRACTS.filter(c => c.status === "Active").length },
-    { label: "COMPLETED",       value: MOCK_CONTRACTS.filter(c => c.status === "Completed").length },
-    { label: "ESCROW LOCKED",   value: "24.3 SOL" },
+    { label: t("dash.statTotal"),     value: MOCK_CONTRACTS.length },
+    { label: t("dash.statActive"),    value: MOCK_CONTRACTS.filter(c => c.status === "Active").length },
+    { label: t("dash.statCompleted"), value: MOCK_CONTRACTS.filter(c => c.status === "Completed").length },
+    { label: t("dash.statEscrow"),    value: "24.3 SOL" },
   ];
 
   return (
@@ -166,13 +168,13 @@ export default function DashboardPage() {
               boxShadow: "inset 0 1px 0 var(--accent-glow), 0 0 14px var(--accent-glow)",
               marginBottom: "14px", letterSpacing: "1.5px",
             }}>
-              DASHBOARD
+              {t("dash.badge")}
             </div>
             <h1 className="page-in p1" style={{
               fontSize: "clamp(30px,3.5vw,44px)", fontWeight: 900,
               letterSpacing: "-0.04em", color: "var(--text)", lineHeight: 1.0,
             }}>
-              Your Contracts
+              {t("dash.headline")}
             </h1>
           </div>
           <Link href="/create" className="page-in p2" style={{
@@ -197,7 +199,7 @@ export default function DashboardPage() {
               <line x1="7" y1="1" x2="7" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               <line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            New Contract
+            {t("dash.newContract")}
           </Link>
         </div>
 
@@ -218,7 +220,9 @@ export default function DashboardPage() {
 
         {/* Filter tabs */}
         <div className="page-in p4" style={{ display: "flex", gap: "6px", marginBottom: "20px" }}>
-          {FILTERS.map(f => (
+          {FILTERS.map(f => {
+            const label = f === "All" ? t("dash.filterAll") : f;
+            return (
             <button key={f} onClick={() => setFilter(f)} style={{
               padding: "8px 18px", borderRadius: "8px", cursor: "pointer",
               fontSize: "13px", fontWeight: filter === f ? 700 : 400,
@@ -229,14 +233,14 @@ export default function DashboardPage() {
               transition: "all 0.2s",
               boxShadow: filter === f ? "inset 0 1px 0 var(--accent-glow)" : "none",
             } as React.CSSProperties}>
-              {f}
+              {label}
               {f !== "All" && (
                 <span style={{ marginLeft: "6px", fontSize: "10.5px", opacity: 0.6 }}>
                   {MOCK_CONTRACTS.filter(c => c.status === f).length}
                 </span>
               )}
             </button>
-          ))}
+          )})}
         </div>
 
         {/* Contract cards */}
@@ -301,11 +305,12 @@ export default function DashboardPage() {
                 {/* Middle: progress */}
                 <div>
                   <div style={{ fontSize: "11.5px", color: "var(--text-4)", marginBottom: "10px" }}>
-                    Current: <span style={{ color: "var(--text-2)", fontWeight: 600 }}>{contract.checkpoints.current}</span>
+                    {t("dash.current")} <span style={{ color: "var(--text-2)", fontWeight: 600 }}>{contract.checkpoints.current}</span>
                   </div>
                   <ProgressBar
                     completed={contract.checkpoints.completed}
                     total={contract.checkpoints.total}
+                    checkpointsLabel={t("dash.checkpoints")}
                   />
                 </div>
 
@@ -315,7 +320,7 @@ export default function DashboardPage() {
                     {contract.totalAmount}
                   </div>
                   <div style={{ fontSize: "11px", color: "var(--text-4)" }}>
-                    Fairness: {contract.fairnessScore}/10
+                    {t("dash.fairness")} {contract.fairnessScore}/10
                   </div>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.35 }}>
                     <path d="M4 8H12M12 8L8 4M12 8L8 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -334,10 +339,10 @@ export default function DashboardPage() {
                 <IconDocument size={52} color="currentColor" strokeWidth={1.4} />
               </div>
               <div style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-3)", marginBottom: "8px" }}>
-                No {filter.toLowerCase()} contracts
+                {t("dash.emptyTitle")}
               </div>
               <div style={{ fontSize: "13.5px", color: "var(--text-4)", marginBottom: "24px" }}>
-                Create your first contract to get started
+                {t("dash.emptyDesc")}
               </div>
               <Link href="/create" style={{
                 background: "var(--btn-ghost-bg)", color: "var(--btn-ghost-text)",
@@ -355,7 +360,7 @@ export default function DashboardPage() {
                   (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--btn-ghost-border)";
                 }}
               >
-                Create Contract
+                {t("dash.createContract")}
               </Link>
             </div>
           )}

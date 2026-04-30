@@ -1,8 +1,10 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
+import { useLanguage } from "./LanguageProvider";
 
 export default function Footer() {
+  const { t } = useLanguage();
   return (
     <footer style={{
       padding: "22px 0", background: "var(--footer-bg)",
@@ -52,8 +54,8 @@ export default function Footer() {
         {/* Nav links */}
         <div style={{ display: "flex", gap: "30px" }}>
           {[
-            { label: "GitHub", href: "#" },
-            { label: "Docs",   href: "#" },
+            { label: "GitHub",       href: "#" },
+            { label: t("footer.docs"), href: "#" },
           ].map(({ label, href }) => (
             <Link key={label} href={href} style={{
               fontSize: "13px", color: "var(--text-4)",
@@ -73,8 +75,8 @@ export default function Footer() {
           fontSize: "11.5px", color: "var(--text-5)",
           letterSpacing: "0.2px",
         }}>
-          © 2025 ContractGuard AI ·{" "}
-          <span style={{ color: "var(--accent-text-dim)" }}>Built on Solana</span>
+          {t("footer.copyright")} ·{" "}
+          <span style={{ color: "var(--accent-text-dim)" }}>{t("footer.builtOn")}</span>
         </div>
       </div>
     </footer>

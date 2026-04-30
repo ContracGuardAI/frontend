@@ -1,10 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { IconCheck, IconX, IconUpload } from "../../components/Icons";
 import { toast } from "../../components/Toast";
+import {
+  useContractProgram, unitsToUsdc, formatUsdc, BN, PublicKey,
+  getUsdcMintPDA, getATA, TOKEN_PROGRAM_ID,
+} from "../../lib/useContractProgram";
 
 const glass = {
   background: "var(--surface)",
@@ -15,16 +20,49 @@ const glass = {
   borderRadius: "16px",
 } as const;
 
-type CPStatus = "approved" | "submitted" | "pending" | "revision";
+type CPStatus = "approved" | "submitted" | "pending" | "revision" | "awaiting" | "expired" | "disputed";
+
+interface CPEntry {
+  id: number;
+  name: string;
+  description: string;
+  payment: string;
+  status: CPStatus;
+  submittedAt: string | null;
+  approvedAt: string | null;
+  evidence: string | null;
+  aiReport: { status: string; score: number; finding: string; details: string[] } | null;
+}
+
+interface ContractData {
+  id: string;
+  title: string;
+  contractor: string;
+  contractorWallet: string;
+  clientWallet: string;
+  totalAmount: string;
+  currency: string;
+  status: string;
+  contractHash: string;
+  aiReviewHash: string;
+  createdAt: string;
+  fairnessScore: number;
+  checkpoints: CPEntry[];
+}
 
 const CP_STATUS: Record<CPStatus, { label: string; bg: string; text: string; border: string; dot: string }> = {
-  approved: { label: "APPROVED",   bg: "rgba(80,220,140,0.10)", text: "rgba(80,220,140,0.90)",  border: "rgba(80,220,140,0.28)", dot: "rgba(80,220,140,0.90)" },
-  submitted:{ label: "SUBMITTED",  bg: "rgba(255,210,80,0.10)", text: "rgba(255,210,80,0.90)",  border: "rgba(255,210,80,0.28)", dot: "rgba(255,210,80,0.90)" },
-  pending:  { label: "PENDING",    bg: "var(--surface-2)",      text: "var(--text-3)",           border: "var(--border)",         dot: "var(--text-4)" },
-  revision: { label: "NEEDS REVISION", bg: "rgba(255,80,80,0.10)", text: "rgba(255,120,120,0.90)", border: "rgba(255,80,80,0.28)", dot: "rgba(255,120,120,0.90)" },
+  approved: { label: "APPROVED",        bg: "rgba(80,220,140,0.10)",  text: "rgba(80,220,140,0.90)",   border: "rgba(80,220,140,0.28)",  dot: "rgba(80,220,140,0.90)" },
+  submitted:{ label: "SUBMITTED",       bg: "rgba(255,210,80,0.10)",  text: "rgba(255,210,80,0.90)",   border: "rgba(255,210,80,0.28)",  dot: "rgba(255,210,80,0.90)" },
+  pending:  { label: "PENDING",         bg: "var(--surface-2)",       text: "var(--text-3)",            border: "var(--border)",          dot: "var(--text-4)" },
+  revision: { label: "NEEDS REVISION",  bg: "rgba(255,80,80,0.10)",   text: "rgba(255,120,120,0.90)",  border: "rgba(255,80,80,0.28)",   dot: "rgba(255,120,120,0.90)" },
+  awaiting: { label: "AWAITING AI",     bg: "rgba(160,80,255,0.10)",  text: "rgba(200,140,255,0.90)",  border: "rgba(160,80,255,0.28)",  dot: "rgba(200,140,255,0.90)" },
+  expired:  { label: "EXPIRED",         bg: "rgba(120,120,120,0.10)", text: "rgba(160,160,160,0.90)",  border: "rgba(120,120,120,0.25)", dot: "rgba(160,160,160,0.90)" },
+  disputed: { label: "DISPUTED",        bg: "rgba(255,140,0,0.10)",   text: "rgba(255,180,60,0.90)",   border: "rgba(255,140,0,0.28)",   dot: "rgba(255,180,60,0.90)" },
 };
 
-const CONTRACT = {
+const PROGRAM_ID = "2Htsz7Xf4YWZTc8tupBTgsFHwZNZDzi59FRr9AWmxdNq";
+
+const CONTRACT: ContractData = {
   id: "cg-001",
   title: "Renovasi Rumah Tingkat 2 — Jl. Sudirman",
   contractor: "PT. Bangun Jaya",
@@ -95,12 +133,86 @@ function StatusBadge({ status }: { status: CPStatus }) {
   );
 }
 
+// ── On-chain status → UI status mapping ──────────────────────────────────────
+function mapCPStatus(s: Record<string, unknown>): CPStatus {
+  if (s.approved !== undefined)        return "approved";
+  if (s.submitted !== undefined)       return "submitted";
+  if (s.needsRevision !== undefined)   return "revision";
+  if (s.awaitingAiReview !== undefined) return "awaiting";
+  if (s.expired !== undefined)         return "expired";
+  if (s.disputed !== undefined)        return "disputed";
+  return "pending";
+}
+
 export default function ContractDetailPage() {
+  const params = useParams();
+  const idParam = typeof params?.id === "string" ? params.id : (Array.isArray(params?.id) ? params.id[0] : "");
+
+  const { program, wallet } = useContractProgram();
   const [activeCP, setActiveCP] = useState<number | null>(1);
   const [submitMode, setSubmitMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [evidenceHash, setEvidenceHash] = useState("");
   const [escrowReady, setEscrowReady] = useState(false);
-  const contract = CONTRACT;
+  const [onchainLoaded, setOnchainLoaded] = useState(false);
+  const [contract, setContract] = useState<ContractData>(CONTRACT);
+  // Raw on-chain data cached for action calls
+  const [onchainAcc, setOnchainAcc] = useState<{
+    client: PublicKey; contractor: PublicKey; mint: PublicKey; createdAt: BN;
+  } | null>(null);
+
+  type ChainAcc = {
+    client: PublicKey; contractor: PublicKey; mint: PublicKey;
+    contractHash: string; aiReviewHash: string; totalAmount: BN;
+    status: Record<string, unknown>; createdAt: BN; bump: number;
+    checkpoints: Array<{
+      checkpointNumber: number; descriptionHash: string; evidenceHash: string;
+      paymentAmount: BN; status: Record<string, unknown>;
+      submittedAt: BN; reviewedAt: BN;
+    }>;
+  };
+
+  const fetchOnchain = async () => {
+    if (!program || !idParam || idParam.length < 32) return;
+    let pubkey: PublicKey;
+    try { pubkey = new PublicKey(idParam); } catch { return; }
+    try {
+      const acc = await (program.account as never as {
+        contractAccount: { fetch: (pk: PublicKey) => Promise<ChainAcc> }
+      }).contractAccount.fetch(pubkey);
+
+      const usdcTotal = unitsToUsdc(acc.totalAmount);
+      setOnchainAcc({ client: acc.client, contractor: acc.contractor, mint: acc.mint, createdAt: acc.createdAt });
+      setContract({
+        id: idParam,
+        title: `Contract ${idParam.slice(0, 8)}...`,
+        contractor: acc.contractor.toBase58().slice(0, 8) + "...",
+        contractorWallet: acc.contractor.toBase58(),
+        clientWallet: acc.client.toBase58(),
+        totalAmount: usdcTotal.toFixed(2),
+        currency: "USDC",
+        status: (Object.keys(acc.status)[0] ?? "Active").charAt(0).toUpperCase() + (Object.keys(acc.status)[0] ?? "active").slice(1),
+        contractHash: acc.contractHash,
+        aiReviewHash: acc.aiReviewHash,
+        createdAt: new Date(acc.createdAt.toNumber() * 1000).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+        fairnessScore: 8,
+        checkpoints: acc.checkpoints.map((cp, i) => ({
+          id: i + 1,
+          name: `Checkpoint ${cp.checkpointNumber}`,
+          description: cp.descriptionHash,
+          payment: usdcTotal > 0 ? ((unitsToUsdc(cp.paymentAmount) / usdcTotal) * 100).toFixed(0) : "0",
+          status: mapCPStatus(cp.status),
+          submittedAt: cp.submittedAt.toNumber() > 0 ? new Date(cp.submittedAt.toNumber() * 1000).toLocaleDateString() : null,
+          approvedAt: cp.reviewedAt.toNumber() > 0 ? new Date(cp.reviewedAt.toNumber() * 1000).toLocaleDateString() : null,
+          evidence: cp.evidenceHash || null,
+          aiReport: null,
+        })),
+      });
+      setOnchainLoaded(true);
+    } catch { /* fall back to mock */ }
+  };
+
+  useEffect(() => { fetchOnchain(); }, [program, idParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const t = setTimeout(() => setEscrowReady(true), 400);
@@ -111,25 +223,109 @@ export default function ContractDetailPage() {
     .filter(cp => cp.status === "approved")
     .reduce((sum, cp) => sum + parseFloat(cp.payment), 0);
   const totalAmount = parseFloat(contract.totalAmount);
-  const paidAmount = (totalPaid / 100) * totalAmount;
+  const paidAmount  = (totalPaid / 100) * totalAmount;
   const lockedAmount = totalAmount - paidAmount;
 
-  const handleSubmit = () => {
+  // ── On-chain helpers ──────────────────────────────────────────────────────
+  const getTokenAccounts = (mintPk: PublicKey, clientPk: PublicKey, contractorPk: PublicKey, contractPDA: PublicKey) => {
+    const escrowATA      = getATA(mintPk, contractPDA);
+    const clientATA      = getATA(mintPk, clientPk);
+    const contractorATA  = getATA(mintPk, contractorPk);
+    return { escrowATA, clientATA, contractorATA };
+  };
+
+  const handleSubmit = async () => {
+    const cpIdx = activeCP !== null ? activeCP - 1 : -1;
+    if (!program || !wallet.publicKey || !onchainAcc || cpIdx < 0) {
+      toast.info("Submitting evidence...", "AI review will begin shortly");
+      setSubmitting(true);
+      setTimeout(() => { setSubmitting(false); setSubmitMode(false); toast.success("Evidence submitted", "AI review in progress"); }, 2000);
+      return;
+    }
+    if (!evidenceHash.trim()) { toast.error("Missing hash", "Enter an evidence hash"); return; }
     setSubmitting(true);
-    toast.info("Submitting evidence...", "AI review will begin shortly");
-    setTimeout(() => {
-      setSubmitting(false);
+    toast.info("Submitting checkpoint...", "Awaiting wallet signature");
+    try {
+      const pdaPubkey = new PublicKey(idParam);
+      type M = { submitCheckpoint: (i: number, h: string) => { accounts: (a: object) => { rpc: () => Promise<string> } } };
+      await (program.methods as never as M).submitCheckpoint(cpIdx, evidenceHash.trim()).accounts({
+        contractor: wallet.publicKey,
+        contract: pdaPubkey,
+      }).rpc();
+      toast.success("Checkpoint submitted!", "Client will be notified");
       setSubmitMode(false);
-      toast.success("Evidence submitted", "AI review in progress");
-    }, 2000);
+      setEvidenceHash("");
+      await fetchOnchain();
+    } catch (err: unknown) {
+      toast.error("Submit failed", (err instanceof Error ? err.message : String(err)).slice(0, 80));
+    } finally { setSubmitting(false); }
   };
 
-  const handleApprove = () => {
-    toast.success("Checkpoint approved", "Payment released to contractor");
+  const handleApprove = async () => {
+    const cpIdx = activeCP !== null ? activeCP - 1 : -1;
+    if (!program || !wallet.publicKey || !onchainAcc || cpIdx < 0) {
+      toast.success("Checkpoint approved", "Payment released to contractor");
+      return;
+    }
+    try {
+      const pdaPubkey = new PublicKey(idParam);
+      const { escrowATA, clientATA, contractorATA } = getTokenAccounts(
+        onchainAcc.mint, onchainAcc.client, onchainAcc.contractor, pdaPubkey
+      );
+      type M = { approveCheckpoint: (i: number, h: string) => { accounts: (a: object) => { rpc: () => Promise<string> } } };
+      await (program.methods as never as M).approveCheckpoint(cpIdx, "ai_approved").accounts({
+        client: wallet.publicKey, contractor: onchainAcc.contractor, contract: pdaPubkey,
+        mint: onchainAcc.mint, escrowTokenAccount: escrowATA,
+        contractorTokenAccount: contractorATA, clientTokenAccount: clientATA,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      }).rpc();
+      toast.success("Checkpoint approved!", "USDC released to contractor");
+      await fetchOnchain();
+    } catch (err: unknown) {
+      toast.error("Approve failed", (err instanceof Error ? err.message : String(err)).slice(0, 80));
+    }
   };
 
-  const handleRevision = () => {
-    toast.warning("Revision requested", "Contractor will be notified");
+  const handleRevision = async () => {
+    const cpIdx = activeCP !== null ? activeCP - 1 : -1;
+    if (!program || !wallet.publicKey || !onchainAcc || cpIdx < 0) {
+      toast.warning("Revision requested", "Contractor will be notified");
+      return;
+    }
+    try {
+      const pdaPubkey = new PublicKey(idParam);
+      type M = { requestRevision: (i: number, h: string) => { accounts: (a: object) => { rpc: () => Promise<string> } } };
+      await (program.methods as never as M).requestRevision(cpIdx, "revision_requested").accounts({
+        client: wallet.publicKey, contractor: onchainAcc.contractor, contract: pdaPubkey,
+      }).rpc();
+      toast.warning("Revision requested!", "Contractor notified on-chain");
+      await fetchOnchain();
+    } catch (err: unknown) {
+      toast.error("Revision failed", (err instanceof Error ? err.message : String(err)).slice(0, 80));
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!program || !wallet.publicKey || !onchainAcc) {
+      toast.warning("Cancel not available", "Connect wallet first");
+      return;
+    }
+    try {
+      const pdaPubkey = new PublicKey(idParam);
+      const { escrowATA, clientATA } = getTokenAccounts(
+        onchainAcc.mint, onchainAcc.client, onchainAcc.contractor, pdaPubkey
+      );
+      type M = { cancelContract: () => { accounts: (a: object) => { rpc: () => Promise<string> } } };
+      await (program.methods as never as M).cancelContract().accounts({
+        client: wallet.publicKey, contractor: onchainAcc.contractor, contract: pdaPubkey,
+        mint: onchainAcc.mint, escrowTokenAccount: escrowATA, clientTokenAccount: clientATA,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      }).rpc();
+      toast.success("Contract cancelled", "USDC refunded to client");
+      await fetchOnchain();
+    } catch (err: unknown) {
+      toast.error("Cancel failed", (err instanceof Error ? err.message : String(err)).slice(0, 80));
+    }
   };
 
   const currentCP = activeCP !== null ? contract.checkpoints.find(c => c.id === activeCP) : null;
@@ -179,7 +375,18 @@ export default function ContractDetailPage() {
                   fontSize: "10.5px", fontWeight: 700, letterSpacing: "0.7px", padding: "4px 11px",
                   borderRadius: "999px", background: "rgba(80,220,140,0.10)",
                   color: "rgba(80,220,140,0.90)", border: "1px solid rgba(80,220,140,0.28)",
-                }}>ACTIVE</span>
+                }}>{contract.status.toUpperCase()}</span>
+                {onchainLoaded && (
+                  <span style={{
+                    fontSize: "10px", fontWeight: 700, letterSpacing: "0.5px", padding: "3px 9px",
+                    borderRadius: "999px", background: "rgba(80,160,255,0.10)",
+                    color: "rgba(100,180,255,0.90)", border: "1px solid rgba(80,160,255,0.25)",
+                    display: "inline-flex", alignItems: "center", gap: "5px",
+                  }}>
+                    <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "rgba(100,180,255,0.90)", display: "inline-block" }} />
+                    LIVE ON-CHAIN
+                  </span>
+                )}
                 <span style={{ fontSize: "11.5px", color: "var(--text-4)" }}>{contract.createdAt}</span>
               </div>
               <h1 style={{
@@ -208,7 +415,7 @@ export default function ContractDetailPage() {
             }}>
               <div style={{ fontSize: "10px", letterSpacing: "1.5px", color: "var(--accent-text-dim)", marginBottom: "6px" }}>ESCROW STATUS</div>
               <div style={{ fontSize: "26px", fontWeight: 900, letterSpacing: "-0.04em", marginBottom: "12px", background: "linear-gradient(135deg, var(--accent-2), var(--accent))", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                {contract.totalAmount} {contract.currency}
+                {contract.totalAmount} USDC
               </div>
               {/* Escrow bar */}
               <div style={{ height: "5px", borderRadius: "999px", background: "var(--border-light)", overflow: "hidden", marginBottom: "8px" }}>
@@ -220,10 +427,30 @@ export default function ContractDetailPage() {
                   boxShadow: "0 0 8px rgba(80,220,140,0.40)",
                 }} />
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
-                <span style={{ color: "rgba(80,220,140,0.70)" }}>Released: {paidAmount.toFixed(2)} SOL</span>
-                <span style={{ color: "var(--text-4)" }}>Locked: {lockedAmount.toFixed(2)} SOL</span>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "14px" }}>
+                <span style={{ color: "rgba(80,220,140,0.70)" }}>Released: {paidAmount.toFixed(2)} USDC</span>
+                <span style={{ color: "var(--text-4)" }}>Locked: {lockedAmount.toFixed(2)} USDC</span>
               </div>
+              {(contract.status === "Active" || contract.status === "Draft") && (
+                <button onClick={handleCancel} style={{
+                  width: "100%", padding: "9px", borderRadius: "7px",
+                  background: "rgba(255,60,60,0.08)",
+                  border: "1px solid rgba(255,60,60,0.25)",
+                  color: "rgba(255,100,100,0.85)",
+                  fontSize: "12px", fontWeight: 600, cursor: "pointer",
+                  fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
+                  transition: "background 0.2s, border-color 0.2s",
+                }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,60,60,0.15)";
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,60,60,0.40)";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,60,60,0.08)";
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,60,60,0.25)";
+                  }}
+                >Cancel Contract</button>
+              )}
             </div>
           </div>
         </div>
@@ -294,7 +521,7 @@ export default function ContractDetailPage() {
                         <div>
                           <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>{cp.name}</div>
                           <div style={{ fontSize: "12px", color: "var(--text-3)" }}>
-                            {(parseFloat(cp.payment) / 100 * totalAmount).toFixed(2)} SOL ({cp.payment}%)
+                            {(parseFloat(cp.payment) / 100 * totalAmount).toFixed(2)} USDC ({cp.payment}%)
                           </div>
                         </div>
                       </div>
@@ -403,7 +630,7 @@ export default function ContractDetailPage() {
                             <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                               <path d="M2 7 L5.5 10.5 L12 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
-                            Payment released · {(parseFloat(cp.payment) / 100 * totalAmount).toFixed(2)} SOL sent to contractor
+                            Payment released · {(parseFloat(cp.payment) / 100 * totalAmount).toFixed(2)} USDC sent to contractor
                           </div>
                         )}
                       </div>
@@ -465,18 +692,18 @@ export default function ContractDetailPage() {
                     JPG, PNG, PDF · Max 50MB
                   </div>
                 </div>
-                <textarea
+                <input
                   style={{
                     width: "100%", background: "var(--input-bg)",
                     border: "1px solid var(--input-border)",
                     borderRadius: "8px", padding: "12px 14px",
-                    color: "var(--input-text)", fontSize: "13.5px", outline: "none",
-                    minHeight: "80px", resize: "vertical",
-                    fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-                    boxSizing: "border-box",
+                    color: "var(--input-text)", fontSize: "13px", outline: "none",
+                    fontFamily: "monospace", boxSizing: "border-box" as const,
                     marginBottom: "14px",
-                  } as React.CSSProperties}
-                  placeholder="Describe what was completed..."
+                  }}
+                  placeholder="Evidence hash (e.g. SHA-256 of your file or IPFS CID)"
+                  value={evidenceHash}
+                  onChange={e => setEvidenceHash(e.target.value)}
                 />
                 <button
                   onClick={handleSubmit}
@@ -562,26 +789,27 @@ export default function ContractDetailPage() {
                 ON-CHAIN RECORD
               </div>
               {[
-                { label: "CONTRACT HASH", value: contract.contractHash },
-                { label: "AI REVIEW HASH", value: contract.aiReviewHash },
-                { label: "NETWORK", value: "Solana Devnet" },
-                { label: "FAIRNESS SCORE", value: `${contract.fairnessScore}/10` },
+                { label: "PROGRAM ID",     value: PROGRAM_ID, mono: true },
+                { label: "CONTRACT HASH",  value: contract.contractHash, mono: true },
+                { label: "AI REVIEW HASH", value: contract.aiReviewHash, mono: true },
+                { label: "NETWORK",        value: "Solana Devnet", mono: false },
+                { label: "FAIRNESS SCORE", value: `${contract.fairnessScore}/10`, mono: false },
               ].map((row, i) => (
                 <div key={i} style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                   padding: "10px 0",
-                  borderBottom: i < 3 ? "1px solid var(--border-light)" : "none",
+                  borderBottom: i < 4 ? "1px solid var(--border-light)" : "none",
                 }}>
-                  <span style={{ fontSize: "11px", letterSpacing: "1px", color: "var(--text-4)" }}>{row.label}</span>
+                  <span style={{ fontSize: "11px", letterSpacing: "1px", color: "var(--text-4)", flexShrink: 0 }}>{row.label}</span>
                   <span style={{
-                    fontSize: "12px", fontFamily: row.label.includes("HASH") ? "monospace" : "inherit",
-                    color: row.label === "FAIRNESS SCORE" ? "var(--accent)" : "var(--text-2)",
+                    fontSize: "12px", fontFamily: row.mono ? "monospace" : "inherit",
+                    color: row.label === "FAIRNESS SCORE" ? "var(--accent)" : row.label === "PROGRAM ID" ? "var(--accent-text)" : "var(--text-2)",
                     fontWeight: row.label === "FAIRNESS SCORE" ? 700 : 400,
-                    maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                   }}>{row.value}</span>
                 </div>
               ))}
-              <a href="#" style={{
+              <a href={`https://explorer.solana.com/address/${PROGRAM_ID}?cluster=devnet`} target="_blank" rel="noopener noreferrer" style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "5px",
                 marginTop: "14px",
                 fontSize: "12.5px", color: "var(--text-3)",

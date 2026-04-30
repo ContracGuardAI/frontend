@@ -7,6 +7,7 @@ import { toast } from "../components/Toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "../components/WalletProvider";
 import type { ContractReviewResult } from "../../../contractguard-agent/contractAgent";
+import { useLanguage } from "../components/LanguageProvider";
 
 const glass = {
   background: "var(--surface)",
@@ -26,10 +27,9 @@ type AuditChatMsg =
   | { role: "ai"; kind: "risks"; result: ContractReviewResult }
   | { role: "ai"; kind: "cta"; analysisHash: string };
 
-const GREETING: AuditChatMsg = {
-  role: "ai", kind: "text",
-  text: "Halo! Upload kontrak PDF kamu di panel kiri dan saya akan mengaudit setiap klausanya secara mendetail.",
-};
+// GREETING is created inside component so it can be translated
+const GREETING_ID = "Halo! Upload kontrak PDF kamu di panel kiri dan saya akan mengaudit setiap klausanya secara mendetail.";
+const GREETING_EN = "Hello! Upload a contract PDF on the left panel and I'll audit every clause in detail.";
 
 function toRisk(val: string): "high" | "medium" | "low" {
   if (val === "high" || val === "overpriced") return "high";
@@ -97,6 +97,7 @@ function ChatTypingBubble() {
 }
 
 function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean }) {
+  const { lang } = useLanguage();
   const anim: React.CSSProperties = isNew ? { animation: "chatMsgIn 0.28s ease both" } : {};
 
   if (msg.role === "user") {
@@ -125,7 +126,7 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
               lineHeight: 1.3, maxWidth: "180px",
               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
             }}>{msg.name}</div>
-            <div style={{ fontSize: "10.5px", color: "var(--text-4)", marginTop: "2px" }}>PDF · Sending for audit</div>
+            <div style={{ fontSize: "10.5px", color: "var(--text-4)", marginTop: "2px" }}>{lang === "en" ? "PDF · Sending for audit" : "PDF · Dikirim untuk diaudit"}</div>
           </div>
         </div>
       </div>
@@ -167,7 +168,7 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
           maxWidth: "92%", width: "100%",
         }}>
           <div style={{ fontSize: "10.5px", letterSpacing: "1.3px", color: "var(--accent-text-dim)", marginBottom: "12px" }}>
-            AUDIT COMPLETE
+            {lang === "en" ? "AUDIT COMPLETE" : "AUDIT SELESAI"}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "18px", marginBottom: "12px" }}>
             <div style={{
@@ -179,10 +180,10 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
             </div>
             <div>
               <div style={{ fontSize: "14.5px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>
-                Fairness Score
+                {lang === "en" ? "Fairness Score" : "Skor Keadilan"}
               </div>
               <div style={{ fontSize: "12px", color: "var(--text-3)", lineHeight: 1.55 }}>
-                {overpricedCount} overpriced items<br />{highRiskCount} high-risk clauses
+                {overpricedCount} {lang === "en" ? "overpriced items" : "item mahal"}<br />{highRiskCount} {lang === "en" ? "high-risk clauses" : "klausul risiko tinggi"}
               </div>
             </div>
           </div>
@@ -209,7 +210,7 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
           {highRisks.length > 0 && (
             <div style={{ marginBottom: overpriced.length > 0 ? "16px" : 0 }}>
               <div style={{ fontSize: "10.5px", letterSpacing: "1.3px", color: "rgba(255,100,100,0.65)", marginBottom: "10px" }}>
-                HIGH-RISK CLAUSES
+                {lang === "en" ? "HIGH-RISK CLAUSES" : "KLAUSUL RISIKO TINGGI"}
               </div>
               {highRisks.map((c, i) => (
                 <div key={i} style={{
@@ -230,7 +231,7 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
           {overpriced.length > 0 && (
             <div>
               <div style={{ fontSize: "10.5px", letterSpacing: "1.3px", color: "rgba(255,185,50,0.65)", marginBottom: "10px" }}>
-                OVERPRICED ITEMS
+                {lang === "en" ? "OVERPRICED ITEMS" : "ITEM TERLALU MAHAL"}
               </div>
               {overpriced.map((p, i) => (
                 <div key={i} style={{
@@ -252,7 +253,7 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
           )}
           {highRisks.length === 0 && overpriced.length === 0 && (
             <div style={{ fontSize: "13px", color: "rgba(80,220,140,0.85)" }}>
-              ✓ Tidak ada klausul berisiko tinggi atau item yang terlalu mahal ditemukan.
+              {lang === "en" ? "✓ No high-risk clauses or overpriced items found." : "✓ Tidak ada klausul berisiko tinggi atau item yang terlalu mahal ditemukan."}
             </div>
           )}
         </div>
@@ -269,7 +270,7 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
           borderRadius: "4px 12px 12px 12px", padding: "14px 16px", maxWidth: "88%",
         }}>
           <div style={{ fontSize: "13px", color: "var(--text-2)", lineHeight: 1.68, marginBottom: "14px" }}>
-            Audit selesai! Mau mengunci kontrak ini on-chain dengan Solana smart escrow?
+            {lang === "en" ? "Audit complete! Want to lock this contract on-chain with Solana smart escrow?" : "Audit selesai! Mau mengunci kontrak ini on-chain dengan Solana smart escrow?"}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" as const }}>
             <a href="/create" style={{
@@ -281,7 +282,7 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
               onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = "1"; }}
             >
-              Create Contract
+              {lang === "en" ? "Create Contract" : "Buat Kontrak"}
               <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
                 <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -299,11 +300,28 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
 }
 
 export default function AuditPage() {
+  const { lang, t } = useLanguage();
+  const greeting: AuditChatMsg = {
+    role: "ai", kind: "text",
+    text: lang === "en" ? GREETING_EN : GREETING_ID,
+  };
+
   const [fileState, setFileState] = useState<FileState>("idle");
   const [fileName, setFileName]   = useState("");
   const [fileHash, setFileHash]   = useState("");
-  const [chatMsgs, setChatMsgs]   = useState<AuditChatMsg[]>([GREETING]);
+  const [chatMsgs, setChatMsgs]   = useState<AuditChatMsg[]>([]);
   const [chatTyping, setChatTyping] = useState(false);
+
+  // Re-init greeting when language changes
+  useEffect(() => {
+    setChatMsgs(prev => {
+      if (prev.length === 0 || (prev.length === 1 && prev[0].kind === "text" && (prev[0].text === GREETING_ID || prev[0].text === GREETING_EN))) {
+        return [{ role: "ai", kind: "text", text: lang === "en" ? GREETING_EN : GREETING_ID }];
+      }
+      return prev;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
 
   const chatRef  = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -330,7 +348,7 @@ export default function AuditPage() {
     }
 
     setFileName(file.name);
-    setChatMsgs([GREETING]);
+    setChatMsgs([greeting]);
     setTimeout(() => addMsg({ role: "user", kind: "file", name: file.name }), 0);
 
     // ── Step 1: Upload PDF ────────────────────────────────────
@@ -435,7 +453,9 @@ export default function AuditPage() {
     if (file) handleFile(file);
   };
 
-  const loadingLabel = fileState === "uploading" ? "Extracting PDF text..." : "AI is analyzing every clause...";
+  const loadingLabel = fileState === "uploading"
+    ? (lang === "en" ? "Extracting PDF text..." : "Mengekstrak teks PDF...")
+    : (lang === "en" ? "AI is analyzing every clause..." : "AI sedang menganalisis setiap klausul...");
 
   const statusLabel  = isLoading
     ? (fileState === "uploading" ? "UPLOADING" : "ANALYZING")
@@ -472,18 +492,17 @@ export default function AuditPage() {
             boxShadow: "inset 0 1px 0 var(--accent-glow), 0 0 14px var(--accent-glow)",
             marginBottom: "18px", letterSpacing: "1.5px",
           }}>
-            AI CONTRACT REVIEW
+            {t("audit.badge")}
           </div>
           <h1 className="page-in p1" style={{
             fontSize: "clamp(36px,4vw,54px)", fontWeight: 900,
             letterSpacing: "-0.04em", color: "var(--text)", lineHeight: 1.0,
             marginBottom: "14px",
           }}>
-            Upload your contract.<br />Get the truth in seconds.
+            {lang === "en" ? <>Upload your contract.<br />Get the truth in seconds.</> : <>Upload kontrak kamu.<br />Dapatkan kebenarannya dalam hitungan detik.</>}
           </h1>
           <p className="page-in p2" style={{ fontSize: "15px", color: "var(--text-3)", maxWidth: "480px", lineHeight: 1.75 }}>
-            AI reads every clause, detects price markups, flags risky terms,
-            and gives you a fairness score — before you sign anything.
+            {t("audit.subtitle")}
           </p>
         </div>
 
@@ -524,7 +543,7 @@ export default function AuditPage() {
                     </svg>
                   </div>
                   <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--text)", marginBottom: "8px" }}>
-                    {fileState === "uploading" ? "Uploading..." : "Analyzing contract..."}
+                    {fileState === "uploading" ? t("audit.uploading") : t("audit.analyzing")}
                   </div>
                   <div style={{ fontSize: "13px", color: "var(--text-3)" }}>{loadingLabel}</div>
                 </>
@@ -549,7 +568,7 @@ export default function AuditPage() {
                     <button onClick={e => {
                       e.stopPropagation();
                       setFileState("idle");
-                      setChatMsgs([GREETING]);
+                      setChatMsgs([greeting]);
                       setChatTyping(false);
                     }} style={{
                       fontSize: "12px", color: "var(--text-3)",
@@ -557,7 +576,7 @@ export default function AuditPage() {
                       borderRadius: "6px", padding: "6px 14px", cursor: "pointer",
                       fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
                     }}>
-                      Analyze another
+                      {t("audit.changeFile")}
                     </button>
                   </div>
                 </>
@@ -593,10 +612,10 @@ export default function AuditPage() {
                     </svg>
                   </div>
                   <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--text)", marginBottom: "8px" }}>
-                    Drop your contract PDF here
+                    {lang === "en" ? "Drop your contract PDF here" : "Taruh PDF kontrak kamu di sini"}
                   </div>
                   <div style={{ fontSize: "13px", color: "var(--text-3)", marginBottom: "20px" }}>
-                    or click to browse
+                    {lang === "en" ? "or click to browse" : "atau klik untuk memilih file"}
                   </div>
                   <div style={{
                     display: "inline-flex", alignItems: "center", gap: "6px",
@@ -609,7 +628,7 @@ export default function AuditPage() {
                       <line x1="6" y1="5" x2="6" y2="9" stroke="var(--text-3)" strokeWidth="1.2" strokeLinecap="round" />
                       <circle cx="6" cy="3.5" r="0.6" fill="var(--text-3)" />
                     </svg>
-                    PDF only · Max 10MB
+                    {lang === "en" ? "PDF only · Max 10MB" : "Hanya PDF · Maks 10MB"}
                   </div>
                 </>
               )}
@@ -618,13 +637,13 @@ export default function AuditPage() {
             {/* What AI checks */}
             <div style={{ ...glass, padding: "24px 28px" }}>
               <div style={{ fontSize: "12px", letterSpacing: "1.5px", color: "var(--accent-text-dim)", marginBottom: "16px" }}>
-                WHAT AI CHECKS
+                {lang === "en" ? "WHAT AI CHECKS" : "APA YANG AI PERIKSA"}
               </div>
               {[
-                { Icon: IconDollar,        label: "Price markup detection vs. market rates" },
-                { Icon: IconAlertTriangle, label: "One-sided clauses & risky terms" },
-                { Icon: IconFileText,      label: "Scope ambiguity & missing deliverables" },
-                { Icon: IconShield,        label: "Escrow & payment security gaps" },
+                { Icon: IconDollar,        label: lang === "en" ? "Price markup detection vs. market rates" : "Deteksi markup harga vs. harga pasar" },
+                { Icon: IconAlertTriangle, label: lang === "en" ? "One-sided clauses & risky terms" : "Klausul sepihak & syarat berisiko" },
+                { Icon: IconFileText,      label: lang === "en" ? "Scope ambiguity & missing deliverables" : "Ambiguitas lingkup & deliverables yang hilang" },
+                { Icon: IconShield,        label: lang === "en" ? "Escrow & payment security gaps" : "Celah keamanan escrow & pembayaran" },
               ].map(({ Icon, label }, i) => (
                 <div key={i} style={{
                   display: "flex", alignItems: "center", gap: "12px",
@@ -680,10 +699,10 @@ export default function AuditPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}>
-                    ContractGuard AI Agent
+                    {t("demo.agentName")}
                   </div>
                   <div style={{ fontSize: "10px", color: "var(--text-4)", marginTop: "1px" }}>
-                    Powered by Claude · Solana
+                    {t("demo.agentSub")}
                   </div>
                 </div>
               </div>
@@ -724,12 +743,12 @@ export default function AuditPage() {
                 background: "var(--input-bg)", border: "1px solid var(--border-light)",
                 fontSize: "13px", color: "var(--text-5)", userSelect: "none",
               }}>
-                {fileState === "idle"      && "Upload a contract PDF to begin..."}
-                {fileState === "dragging"  && "Drop it!"}
-                {fileState === "uploading" && "Extracting PDF text..."}
-                {fileState === "analyzing" && "AI is analyzing every clause..."}
-                {fileState === "done"      && "Audit complete — upload another to compare"}
-                {fileState === "error"     && "Something went wrong — try again"}
+                {fileState === "idle"      && (lang === "en" ? "Upload a contract PDF to begin..." : "Upload PDF kontrak untuk memulai...")}
+                {fileState === "dragging"  && (lang === "en" ? "Drop it!" : "Lepaskan di sini!")}
+                {fileState === "uploading" && (lang === "en" ? "Extracting PDF text..." : "Mengekstrak teks PDF...")}
+                {fileState === "analyzing" && (lang === "en" ? "AI is analyzing every clause..." : "AI sedang menganalisis setiap klausul...")}
+                {fileState === "done"      && (lang === "en" ? "Audit complete — upload another to compare" : "Audit selesai — upload lagi untuk membandingkan")}
+                {fileState === "error"     && (lang === "en" ? "Something went wrong — try again" : "Terjadi kesalahan — coba lagi")}
               </div>
               <div style={{
                 width: "34px", height: "34px", borderRadius: "8px", flexShrink: 0,

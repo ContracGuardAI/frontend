@@ -2,7 +2,9 @@
 import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { useLanguage } from "../components/LanguageProvider";
 
+// plans defined inside component so t() is available
 const glass = {
   background: "var(--surface)",
   backdropFilter: "blur(20px)",
@@ -12,61 +14,42 @@ const glass = {
   borderRadius: "20px",
 } as const;
 
-const plans = [
-  {
-    name: "Free",
-    price: "0",
-    period: "forever",
-    desc: "Get started with basic contract auditing.",
-    features: [
-      "3 contract reviews / month",
-      "AI fairness score",
-      "Basic clause detection",
-      "PDF upload support",
-    ],
-    cta: "Get Started",
-    href: "/audit",
-    highlight: false,
-  },
-  {
-    name: "Pro",
-    price: "9",
-    period: "per month",
-    desc: "Full AI audit suite for active builders.",
-    features: [
-      "Unlimited contract reviews",
-      "Deep price markup analysis",
-      "Full risky clause detection",
-      "Checkpoint monitoring",
-      "On-chain record (Solana)",
-      "PDF + text upload",
-      "Priority AI processing",
-    ],
-    cta: "Start Free Trial",
-    href: "/audit",
-    highlight: true,
-  },
-  {
-    name: "Enterprise",
-    price: "49",
-    period: "per month",
-    desc: "For teams and high-volume projects.",
-    features: [
-      "Everything in Pro",
-      "Team workspace",
-      "Custom AI prompts",
-      "Bulk contract upload",
-      "Dedicated support",
-      "Custom on-chain program",
-      "SLA guarantee",
-    ],
-    cta: "Contact Us",
-    href: "/audit",
-    highlight: false,
-  },
-];
-
 export default function PricingPage() {
+  const { t } = useLanguage();
+
+  const plans = [
+    {
+      name: t("price.freeName"),
+      price: "0",
+      period: t("price.forever"),
+      desc: t("price.freeDesc"),
+      features: [t("price.freeF1"), t("price.freeF2"), t("price.freeF3"), t("price.freeF4")],
+      cta: t("price.freeCta"),
+      href: "/audit",
+      highlight: false,
+    },
+    {
+      name: t("price.proName"),
+      price: "9",
+      period: t("price.perMonth"),
+      desc: t("price.proDesc"),
+      features: [t("price.proF1"), t("price.proF2"), t("price.proF3"), t("price.proF4"), t("price.proF5"), t("price.proF6"), t("price.proF7")],
+      cta: t("price.proCta"),
+      href: "/audit",
+      highlight: true,
+    },
+    {
+      name: t("price.entName"),
+      price: "49",
+      period: t("price.perMonth"),
+      desc: t("price.entDesc"),
+      features: [t("price.entF1"), t("price.entF2"), t("price.entF3"), t("price.entF4"), t("price.entF5"), t("price.entF6"), t("price.entF7")],
+      cta: t("price.entCta"),
+      href: "/audit",
+      highlight: false,
+    },
+  ];
+
   return (
     <main style={{ background: "var(--bg)", minHeight: "100vh", color: "var(--text)" }}>
       <Navbar />
@@ -93,23 +76,21 @@ export default function PricingPage() {
               backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
               boxShadow: "inset 0 1px 0 var(--accent-glow)",
               marginBottom: "24px", letterSpacing: "1.5px",
-            }}>
-              PRICING
-            </div>
+            }}>{t("price.badge")}</div>
             <h1 style={{
               fontSize: "clamp(40px,5vw,64px)", fontWeight: 900,
               letterSpacing: "-0.04em", color: "var(--text)", lineHeight: 1.05,
               marginBottom: "18px",
             }}>
-              Simple, transparent<br />
-              <span className="text-shimmer">pricing.</span>
+              {t("price.headline1")}<br />
+              <span className="text-shimmer">{t("price.headline2")}</span>
             </h1>
             <p style={{
               fontSize: "16px", color: "var(--text-3)",
               maxWidth: "400px", margin: "0 auto", lineHeight: 1.78,
+              whiteSpace: "pre-line",
             }}>
-              Start free. Upgrade when you need more.
-              No hidden fees, no lock-in.
+              {t("price.subtitle")}
             </p>
           </div>
 
@@ -146,7 +127,7 @@ export default function PricingPage() {
                     border: "1px solid var(--accent-border-strong)",
                     borderRadius: "999px", padding: "3px 10px",
                     background: "var(--accent-bg)",
-                  }}>POPULAR</div>
+                  }}>{t("price.popular")}</div>
                 )}
 
                 <div style={{ marginBottom: "28px" }}>
@@ -226,8 +207,8 @@ export default function PricingPage() {
             textAlign: "center", marginTop: "48px",
             fontSize: "13px", color: "var(--text-4)", lineHeight: 1.7,
           }}>
-            All plans include Solana Devnet testing at no extra cost.{" "}
-            <span style={{ color: "var(--accent-text-dim)" }}>No credit card required for Free plan.</span>
+            {t("price.footerNote")}{" "}
+            <span style={{ color: "var(--accent-text-dim)" }}>{t("price.footerNote2")}</span>
           </p>
         </div>
       </section>

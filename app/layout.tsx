@@ -4,6 +4,7 @@ import "./globals.css";
 import { ToastContainer } from "./components/Toast";
 import SolanaWalletProvider from "./components/WalletProvider";
 import ThemeProvider from "./components/ThemeProvider";
+import LanguageProvider from "./components/LanguageProvider";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -21,12 +22,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={dmSans.variable}>
       <body>
-        <ThemeProvider>
-          <SolanaWalletProvider>
-            {children}
-            <ToastContainer />
-          </SolanaWalletProvider>
-        </ThemeProvider>
+        <LanguageProvider>
+          <ThemeProvider>
+            <SolanaWalletProvider>
+              {children}
+              <ToastContainer />
+            </SolanaWalletProvider>
+          </ThemeProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

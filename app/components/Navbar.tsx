@@ -5,13 +5,44 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import WalletButton from "./WalletButton";
 import { useTheme } from "./ThemeProvider";
+import { useLanguage } from "./LanguageProvider";
 
-const NAV_LINKS = [
-  { label: "Features", href: "/#features" },
-  { label: "How It Works", href: "/#how-it-works" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "Dashboard", href: "/dashboard" },
-];
+function LanguageToggle() {
+  const { lang, setLang } = useLanguage();
+  const isEn = lang === "en";
+  return (
+    <button
+      onClick={() => setLang(isEn ? "id" : "en")}
+      title={isEn ? "Switch to Indonesian" : "Switch to English"}
+      style={{
+        height: "34px", borderRadius: "8px", padding: "0 10px",
+        background: "var(--surface-2)",
+        border: "1px solid var(--border)",
+        cursor: "pointer",
+        display: "flex", alignItems: "center", gap: "5px",
+        color: "var(--text-3)",
+        flexShrink: 0,
+        fontSize: "12px", fontWeight: 700, letterSpacing: "0.3px",
+        fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
+        transition: "background 0.2s, border-color 0.2s, color 0.2s",
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLButtonElement).style.background = "var(--accent-bg)";
+        (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--accent-border)";
+        (e.currentTarget as HTMLButtonElement).style.color = "var(--accent-text)";
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)";
+        (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)";
+        (e.currentTarget as HTMLButtonElement).style.color = "var(--text-3)";
+      }}
+    >
+      <span style={{ opacity: isEn ? 1 : 0.45, transition: "opacity 0.2s" }}>EN</span>
+      <span style={{ opacity: 0.35, fontSize: "10px" }}>|</span>
+      <span style={{ opacity: isEn ? 0.45 : 1, transition: "opacity 0.2s" }}>ID</span>
+    </button>
+  );
+}
 
 function ThemeToggle() {
   const { theme, toggle } = useTheme();
@@ -67,6 +98,14 @@ function ThemeToggle() {
 export default function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
+  const { t } = useLanguage();
+
+  const NAV_LINKS = [
+    { labelKey: "nav.features",   href: "/#features" },
+    { labelKey: "nav.howItWorks", href: "/#how-it-works" },
+    { labelKey: "nav.pricing",    href: "/pricing" },
+    { labelKey: "nav.dashboard",  href: "/dashboard" },
+  ];
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 48);
@@ -121,10 +160,11 @@ export default function Navbar() {
 
         {/* Nav links */}
         <div style={{ display: "flex", gap: "36px" }}>
-          {NAV_LINKS.map(({ label, href }) => {
+          {NAV_LINKS.map(({ labelKey, href }) => {
+            const label = t(labelKey);
             const isActive = href === pathname || (href !== "/" && pathname.startsWith(href.split("#")[0]) && href.split("#")[0] !== "/");
             return (
-              <Link key={label} href={href} style={{
+              <Link key={labelKey} href={href} style={{
                 color: isActive ? "var(--accent)" : "var(--nav-text)",
                 fontSize: "14px", textDecoration: "none",
                 transition: "color 0.2s ease, text-shadow 0.2s ease",
@@ -152,8 +192,9 @@ export default function Navbar() {
           })}
         </div>
 
-        {/* CTA buttons + theme toggle */}
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        {/* CTA buttons + toggles */}
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <LanguageToggle />
           <ThemeToggle />
           <Link href="/audit" style={{
             background: "var(--btn-ghost-bg)",
@@ -174,7 +215,7 @@ export default function Navbar() {
               (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--btn-ghost-border)";
             }}
           >
-            Audit Contract
+            {t("nav.auditContract")}
           </Link>
           <WalletButton />
         </div>

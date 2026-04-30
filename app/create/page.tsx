@@ -3,6 +3,13 @@ import { useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { toast } from "../components/Toast";
+import { useLanguage } from "../components/LanguageProvider";
+import ClaimUsdcButton from "../components/ClaimUsdcButton";
+import {
+  useContractProgram, getContractPDA, getUsdcMintPDA, getATA,
+  usdcToUnits, hashString, BN, PublicKey,
+  TOKEN_PROGRAM_ID, ASSOC_TOKEN_PID,
+} from "../lib/useContractProgram";
 
 const glass = {
   background: "var(--surface)",
@@ -41,18 +48,22 @@ interface Checkpoint {
   payment: string;
 }
 
+const PROGRAM_ID = "2Htsz7Xf4YWZTc8tupBTgsFHwZNZDzi59FRr9AWmxdNq";
+
 export default function CreatePage() {
+  const { t, lang } = useLanguage();
+  const { program, wallet } = useContractProgram();
   const [step, setStep] = useState(1);
   const [deploying, setDeploying] = useState(false);
   const [deployed, setDeployed] = useState(false);
+  const [contractPDA, setContractPDA] = useState<string>("");
 
   /* Step 1 state */
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [clientWallet, setClientWallet] = useState("8xKm...9dFQ");
   const [contractorWallet, setContractorWallet] = useState("");
   const [totalAmount, setTotalAmount] = useState("");
-  const [currency, setCurrency] = useState("SOL");
+  const [usdcBalance, setUsdcBalance] = useState(0);
 
   /* Step 2 state */
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([
@@ -77,20 +88,94 @@ export default function CreatePage() {
 
   const totalPercent = checkpoints.reduce((sum, cp) => sum + (parseFloat(cp.payment) || 0), 0);
 
-  const handleDeploy = () => {
+  const handleDeploy = async () => {
+    if (!program || !wallet.publicKey) {
+      toast.error("Wallet not connected", "Please connect your Phantom wallet first");
+      return;
+    }
+    if (!contractorWallet) {
+      toast.error("Missing contractor", "Enter the contractor wallet address");
+      return;
+    }
+    const usdcAmt = parseFloat(totalAmount);
+    if (!usdcAmt || usdcAmt <= 0) {
+      toast.error("Invalid amount", "Enter a valid USDC amount");
+      return;
+    }
+    if (usdcBalance < usdcAmt) {
+      toast.error("Insufficient USDC", `You have ${usdcBalance.toFixed(2)} USDC, need ${usdcAmt}`);
+      return;
+    }
+
     setDeploying(true);
     toast.info("Deploying to Solana...", "Awaiting wallet signature");
-    setTimeout(() => {
+
+    try {
+      const contractor    = new PublicKey(contractorWallet);
+      const createdAt     = new BN(Math.floor(Date.now() / 1000));
+      const totalUnits    = usdcToUnits(usdcAmt);
+      const mint          = getUsdcMintPDA();
+      const clientATA     = getATA(mint, wallet.publicKey);
+      const pda           = getContractPDA(wallet.publicKey, contractor, createdAt);
+      const escrowATA     = getATA(mint, pda);
+
+      const contractHash  = await hashString(`${title}|${description}|${Date.now()}`);
+      const aiReviewHash  = await hashString(`ai_review|${contractHash}`);
+
+      // Distribute USDC proportionally across checkpoints
+      const cpInputs = checkpoints.map((cp, i) => {
+        const pct     = parseFloat(cp.payment) || 0;
+        const payment = new BN(Math.round((pct / 100) * totalUnits.toNumber()));
+        const deadline = new BN(Math.floor(Date.now() / 1000) + (i + 1) * 30 * 86400);
+        return {
+          descriptionHash: (cp.description || `Checkpoint ${i + 1}`).slice(0, 64),
+          paymentAmount: payment,
+          deadline,
+        };
+      });
+      // Fix rounding: last checkpoint gets remainder
+      const sumSoFar = cpInputs.slice(0, -1).reduce((s, c) => s.add(c.paymentAmount), new BN(0));
+      cpInputs[cpInputs.length - 1].paymentAmount = totalUnits.sub(sumSoFar);
+
+      type Methods = {
+        createContract: (
+          a: BN, b: string, c: string, d: BN,
+          e: number, f: number, g: number, h: number, i: number,
+          j: typeof cpInputs,
+        ) => { accounts: (accs: object) => { rpc: () => Promise<string> } }
+      };
+
+      await (program.methods as never as Methods).createContract(
+        createdAt, contractHash, aiReviewHash, totalUnits,
+        10, 500, 7, 3, 3,
+        cpInputs,
+      ).accounts({
+        client:               wallet.publicKey,
+        contractor,
+        contract:             pda,
+        mint,
+        escrowTokenAccount:   escrowATA,
+        clientTokenAccount:   clientATA,
+        tokenProgram:         TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOC_TOKEN_PID,
+        systemProgram:        "11111111111111111111111111111111",
+      }).rpc();
+
+      setContractPDA(pda.toBase58());
       setDeploying(false);
       setDeployed(true);
-      toast.success("Contract deployed!", "Live on Solana Devnet");
-    }, 2800);
+      toast.success("Contract deployed!", `${usdcAmt} USDC locked in escrow`);
+    } catch (err: unknown) {
+      setDeploying(false);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error("Deploy failed", msg.slice(0, 80));
+    }
   };
 
   const STEPS = [
-    { num: 1, label: "Contract Details" },
-    { num: 2, label: "Checkpoints" },
-    { num: 3, label: "Review & Deploy" },
+    { num: 1, label: t("create.step1") },
+    { num: 2, label: t("create.step2") },
+    { num: 3, label: t("create.step3") },
   ];
 
   const stepAnim = { animation: "fadeSlideUp 0.38s cubic-bezier(0.16,1,0.3,1) 0.04s both" };
@@ -119,18 +204,21 @@ export default function CreatePage() {
             backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
             boxShadow: "inset 0 1px 0 var(--accent-glow), 0 0 14px var(--accent-glow)",
             marginBottom: "18px", letterSpacing: "1.5px",
-          }}>
-            CREATE CONTRACT
-          </div>
+          }}>{t("create.badge")}</div>
           <h1 className="page-in p1" style={{
             fontSize: "clamp(32px,3.5vw,48px)", fontWeight: 900,
             letterSpacing: "-0.04em", color: "var(--text)", marginBottom: "12px",
           }}>
-            Deploy your contract to Solana.
+            {t("create.headline")}
           </h1>
           <p className="page-in p2" style={{ fontSize: "14px", color: "var(--text-3)", lineHeight: 1.7 }}>
-            Set up milestones, define payments, and lock everything on-chain.
+            {t("create.subtitle")}
           </p>
+        </div>
+
+        {/* USDC claim bar */}
+        <div className="page-in p3" style={{ marginBottom: "32px" }}>
+          <ClaimUsdcButton onBalanceChange={setUsdcBalance} />
         </div>
 
         {/* Step indicators */}
@@ -181,60 +269,53 @@ export default function CreatePage() {
         {step === 1 && (
           <div key="step1" style={{ ...glass, padding: "40px 44px", ...stepAnim }}>
             <h2 style={{ fontSize: "20px", fontWeight: 700, color: "var(--text)", marginBottom: "32px", letterSpacing: "-0.025em" }}>
-              Contract Details
+              {t("create.s1Title")}
             </h2>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
               <div>
-                <label style={labelStyle}>CONTRACT TITLE</label>
-                <input style={inputStyle} placeholder="e.g. Renovasi Rumah — Jl. Sudirman No. 12"
+                <label style={labelStyle}>{t("create.labelTitle")}</label>
+                <input style={inputStyle} placeholder={t("create.phTitle")}
                   value={title} onChange={e => setTitle(e.target.value)} />
               </div>
 
               <div>
-                <label style={labelStyle}>DESCRIPTION</label>
+                <label style={labelStyle}>{t("create.labelDesc")}</label>
                 <textarea
                   style={{ ...inputStyle, minHeight: "90px", resize: "vertical" } as React.CSSProperties}
-                  placeholder="Describe the scope of work..."
+                  placeholder={t("create.phDesc")}
                   value={description} onChange={e => setDescription(e.target.value)}
                 />
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 <div>
-                  <label style={labelStyle}>CLIENT WALLET (YOU)</label>
+                  <label style={labelStyle}>{t("create.labelClient")}</label>
                   <input style={{ ...inputStyle, color: "var(--text-3)", cursor: "not-allowed" }}
-                    value={clientWallet} readOnly />
+                    value={wallet.publicKey?.toBase58() ?? "Connect wallet"} readOnly />
                 </div>
                 <div>
-                  <label style={labelStyle}>CONTRACTOR WALLET</label>
-                  <input style={inputStyle} placeholder="e.g. 7mXp...3kRw"
+                  <label style={labelStyle}>{t("create.labelContractor")}</label>
+                  <input style={inputStyle} placeholder={t("create.phContractor")}
                     value={contractorWallet} onChange={e => setContractorWallet(e.target.value)} />
                 </div>
               </div>
 
               <div>
-                <label style={labelStyle}>TOTAL CONTRACT AMOUNT</label>
-                <div style={{ display: "flex", gap: "8px" }}>
+                <label style={labelStyle}>{t("create.labelAmount")}</label>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                   <input style={{ ...inputStyle, flex: 1 }} type="number" placeholder="0.00"
                     value={totalAmount} onChange={e => setTotalAmount(e.target.value)} />
                   <div style={{
-                    display: "flex", gap: "4px", padding: "4px",
-                    background: "var(--surface-2)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "8px",
-                  }}>
-                    {["SOL", "USDC"].map(c => (
-                      <button key={c} onClick={() => setCurrency(c)} style={{
-                        padding: "6px 14px", borderRadius: "5px", border: "none",
-                        background: currency === c ? "var(--surface)" : "transparent",
-                        color: currency === c ? "var(--text)" : "var(--text-3)",
-                        fontSize: "13px", fontWeight: 600, cursor: "pointer",
-                        fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-                        transition: "all 0.2s",
-                      }}>{c}</button>
-                    ))}
-                  </div>
+                    padding: "10px 16px", borderRadius: "8px",
+                    background: "rgba(39,117,255,0.10)",
+                    border: "1px solid rgba(39,117,255,0.25)",
+                    fontSize: "13px", fontWeight: 700, color: "rgba(100,180,255,0.90)",
+                    whiteSpace: "nowrap",
+                  }}>USDC</div>
+                </div>
+                <div style={{ fontSize: "12px", color: "var(--text-4)", marginTop: "6px" }}>
+                  Balance: <span style={{ color: "var(--text-2)", fontWeight: 600 }}>{usdcBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })} USDC</span>
                 </div>
               </div>
             </div>
@@ -260,7 +341,7 @@ export default function CreatePage() {
                 onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
                 onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; }}
               >
-                Next: Set Checkpoints
+                {t("create.nextCheckpoints")}
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                   <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -276,10 +357,10 @@ export default function CreatePage() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px" }}>
                 <div>
                   <h2 style={{ fontSize: "20px", fontWeight: 700, color: "var(--text)", marginBottom: "4px", letterSpacing: "-0.025em" }}>
-                    Set Checkpoints
+                    {t("create.s2Title")}
                   </h2>
                   <p style={{ fontSize: "13px", color: "var(--text-3)" }}>
-                    Define milestones and their payment share
+                    {t("create.s2Subtitle")}
                   </p>
                 </div>
                 <div style={{
@@ -330,17 +411,17 @@ export default function CreatePage() {
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px", gap: "12px" }}>
                       <div>
-                        <label style={labelStyle}>MILESTONE NAME</label>
-                        <input style={inputStyle} placeholder="e.g. Foundation"
+                        <label style={labelStyle}>{t("create.labelMilestone")}</label>
+                        <input style={inputStyle} placeholder={t("create.phMilestone")}
                           value={cp.name} onChange={e => updateCheckpoint(i, "name", e.target.value)} />
                       </div>
                       <div>
-                        <label style={labelStyle}>DESCRIPTION</label>
-                        <input style={inputStyle} placeholder="What will be delivered"
+                        <label style={labelStyle}>{t("create.labelMilestoneDesc")}</label>
+                        <input style={inputStyle} placeholder={t("create.phMilestoneDesc")}
                           value={cp.description} onChange={e => updateCheckpoint(i, "description", e.target.value)} />
                       </div>
                       <div>
-                        <label style={labelStyle}>PAYMENT %</label>
+                        <label style={labelStyle}>{t("create.labelPayment")}</label>
                         <input style={{ ...inputStyle, textAlign: "center" }} type="number" placeholder="0"
                           value={cp.payment} onChange={e => updateCheckpoint(i, "payment", e.target.value)} />
                       </div>
@@ -373,7 +454,7 @@ export default function CreatePage() {
                   <line x1="7" y1="1" x2="7" y2="13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                   <line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                 </svg>
-                Add Checkpoint
+                {t("create.addCheckpoint")}
               </button>
             </div>
 
@@ -398,7 +479,7 @@ export default function CreatePage() {
                 onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
                 onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)"; }}
               >
-                Back
+                {t("create.back")}
               </button>
               <button onClick={() => setStep(3)} style={{
                 background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)", fontWeight: 700,
@@ -420,7 +501,7 @@ export default function CreatePage() {
                 onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
                 onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; }}
               >
-                Review & Deploy
+                {t("create.reviewDeploy")}
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                   <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -435,15 +516,15 @@ export default function CreatePage() {
             {/* Summary card */}
             <div style={{ ...glass, padding: "36px 44px" }}>
               <h2 style={{ fontSize: "20px", fontWeight: 700, color: "var(--text)", marginBottom: "28px", letterSpacing: "-0.025em" }}>
-                Review Contract
+                {t("create.s3Title")}
               </h2>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "28px" }}>
                 {[
-                  { label: "CONTRACT TITLE", value: title || "Untitled Contract" },
-                  { label: "TOTAL AMOUNT", value: `${totalAmount || "0"} ${currency}` },
-                  { label: "CLIENT", value: clientWallet },
-                  { label: "CONTRACTOR", value: contractorWallet || "Not set" },
+                  { label: t("create.labelContractTitle"), value: title || t("create.untitled") },
+                  { label: t("create.labelTotalAmount"), value: `${totalAmount || "0"} USDC` },
+                  { label: t("create.labelClientRow"), value: wallet.publicKey?.toBase58() ?? "—" },
+                  { label: t("create.labelContractorRow"), value: contractorWallet || t("create.notSet") },
                 ].map((row, i) => (
                   <div key={i} style={{
                     background: "var(--card-bg)",
@@ -468,7 +549,7 @@ export default function CreatePage() {
 
               <div style={{ borderTop: "1px solid var(--border-light)", paddingTop: "24px" }}>
                 <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "var(--text-4)", marginBottom: "16px" }}>
-                  CHECKPOINTS ({checkpoints.length})
+                  {t("create.checkpointLabel")} ({checkpoints.length})
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {checkpoints.map((cp, i) => (
@@ -484,12 +565,12 @@ export default function CreatePage() {
                           {String(i + 1).padStart(2, "0")}
                         </span>
                         <span style={{ fontSize: "14px", color: "var(--text)", fontWeight: 600 }}>
-                          {cp.name || `Checkpoint ${i + 1}`}
+                          {cp.name || `${t("create.checkpoint")} ${i + 1}`}
                         </span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <span style={{ fontSize: "13px", color: "var(--text-3)" }}>
-                          {totalAmount ? `${((parseFloat(cp.payment) || 0) / 100 * parseFloat(totalAmount)).toFixed(2)} ${currency}` : `${cp.payment || 0}%`}
+                          {totalAmount ? `${((parseFloat(cp.payment) || 0) / 100 * parseFloat(totalAmount)).toFixed(2)} USDC` : `${cp.payment || 0}%`}
                         </span>
                         <div style={{
                           padding: "3px 10px", borderRadius: "999px", fontSize: "10.5px",
@@ -518,14 +599,23 @@ export default function CreatePage() {
                   <circle cx="9" cy="5.5" r="0.8" fill="var(--text-2)" />
                 </svg>
               </div>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--text)", marginBottom: "4px" }}>
-                  Deploying to Solana Devnet
+                  {t("create.onChainTitle")}
                 </div>
-                <p style={{ fontSize: "13px", color: "var(--text-3)", lineHeight: 1.65, margin: 0 }}>
-                  Contract hash + escrow will be created on-chain. You&apos;ll need to approve the transaction in your Phantom wallet.
-                  Transaction fee is approximately 0.00005 SOL.
+                <p style={{ fontSize: "13px", color: "var(--text-3)", lineHeight: 1.65, margin: 0, marginBottom: "10px" }}>
+                  {t("create.onChainDesc")}
                 </p>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "11px", letterSpacing: "0.6px", color: "var(--text-4)", textTransform: "uppercase" }}>Program ID</span>
+                  <span style={{
+                    fontFamily: "monospace", fontSize: "11.5px", color: "var(--text-2)",
+                    background: "var(--surface-2)", border: "1px solid var(--border)",
+                    borderRadius: "5px", padding: "2px 8px", wordBreak: "break-all",
+                  }}>
+                    {PROGRAM_ID}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -550,7 +640,7 @@ export default function CreatePage() {
                 onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)"; }}
                 onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)"; }}
               >
-                Back
+                {t("create.back")}
               </button>
               <button onClick={handleDeploy} disabled={deploying} style={{
                 background: deploying ? "var(--surface)" : "var(--btn-primary-bg)",
@@ -582,11 +672,11 @@ export default function CreatePage() {
                       <circle cx="22" cy="22" r="18" stroke="var(--border)" strokeWidth="5" />
                       <path d="M22 4 A18 18 0 0 1 40 22" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
                     </svg>
-                    Deploying...
+                    {t("create.deploying")}
                   </>
                 ) : (
                   <>
-                    Deploy to Solana
+                    {t("create.deployBtn")}
                     <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                       <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -619,24 +709,67 @@ export default function CreatePage() {
               </svg>
             </div>
             <h2 style={{ fontSize: "28px", fontWeight: 900, color: "var(--text)", marginBottom: "12px", letterSpacing: "-0.04em" }}>
-              Contract deployed!
+              {t("create.successTitle")}
             </h2>
             <p style={{ fontSize: "14px", color: "var(--text-3)", marginBottom: "8px" }}>
-              Your contract is now live on Solana Devnet.
+              {t("create.successSub")}
             </p>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: "8px",
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
-              borderRadius: "8px", padding: "10px 16px", marginBottom: "36px",
-            }}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <rect x="1" y="3" width="8" height="10" rx="2" fill="none" stroke="var(--text-3)" strokeWidth="1.3" />
-                <path d="M5 1 h6 a2 2 0 0 1 2 2 v8" fill="none" stroke="var(--text-3)" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-              <span style={{ fontSize: "12.5px", color: "var(--text-3)", fontFamily: "monospace" }}>
-                txn: 5Xm9...k4Rp
-              </span>
+            <div style={{ marginBottom: "36px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+              {/* Contract Account PDA */}
+              {contractPDA && (
+                <div style={{
+                  display: "inline-flex", alignItems: "center", gap: "8px",
+                  background: "rgba(80,220,140,0.06)",
+                  border: "1px solid rgba(80,220,140,0.25)",
+                  borderRadius: "8px", padding: "10px 16px",
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <rect x="1" y="3" width="8" height="10" rx="2" fill="none" stroke="rgba(80,220,140,0.70)" strokeWidth="1.3" />
+                    <path d="M5 1 h6 a2 2 0 0 1 2 2 v8" fill="none" stroke="rgba(80,220,140,0.70)" strokeWidth="1.3" strokeLinecap="round" />
+                  </svg>
+                  <span style={{ fontSize: "11px", letterSpacing: "0.5px", color: "rgba(80,220,140,0.60)", textTransform: "uppercase" }}>Contract Account</span>
+                  <span style={{ fontSize: "12px", color: "rgba(80,220,140,0.90)", fontFamily: "monospace", wordBreak: "break-all", maxWidth: "260px" }}>
+                    {contractPDA.slice(0, 20)}...{contractPDA.slice(-6)}
+                  </span>
+                </div>
+              )}
+              {/* Program ID */}
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: "8px",
+                background: "var(--surface-2)",
+                border: "1px solid var(--border)",
+                borderRadius: "8px", padding: "10px 16px",
+              }}>
+                <span style={{ fontSize: "11px", letterSpacing: "0.5px", color: "var(--text-4)", textTransform: "uppercase" }}>Program ID</span>
+                <span style={{ fontSize: "12px", color: "var(--text-2)", fontFamily: "monospace", wordBreak: "break-all", maxWidth: "320px" }}>
+                  {PROGRAM_ID}
+                </span>
+              </div>
+              {/* Explorer links */}
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+                {contractPDA && (
+                  <a
+                    href={`https://explorer.solana.com/address/${contractPDA}?cluster=devnet`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: "12px", color: "rgba(80,220,140,0.85)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                  >
+                    View Contract on Explorer
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                      <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7M7 1h4m0 0v4m0-4L5.5 6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </a>
+                )}
+                <a
+                  href={`https://explorer.solana.com/address/${PROGRAM_ID}?cluster=devnet`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: "12px", color: "var(--accent)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px", opacity: 0.75 }}
+                >
+                  View Program
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                    <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7M7 1h4m0 0v4m0-4L5.5 6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </a>
+              </div>
             </div>
             <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
               <a href="/dashboard" style={{
@@ -657,7 +790,7 @@ export default function CreatePage() {
                 onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
                 onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
               >
-                View in Dashboard
+                {t("create.viewDashboard")}
               </a>
               <a href="/audit" style={{
                 background: "var(--btn-ghost-bg)", color: "var(--btn-ghost-text)",
@@ -678,7 +811,7 @@ export default function CreatePage() {
                 onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
                 onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)"; }}
               >
-                New Audit
+                {t("create.newAudit")}
               </a>
             </div>
           </div>
