@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { useContractProgram, getConfigPDA, getUsdcMintPDA, getMintRecordPDA, getATA, TOKEN_PROGRAM_ID, ASSOC_TOKEN_PID, MINT_AMOUNT_USDC } from "../lib/useContractProgram";
+import { useContractProgram, getConfigPDA, getUsdcMintPDA, getMintRecordPDA, getATA, TOKEN_PROGRAM_ID, MINT_AMOUNT_USDC } from "../lib/useContractProgram";
 import { BN } from "@anchor-lang/core";
 import { toast } from "./Toast";
 
@@ -83,8 +83,6 @@ export default function ClaimUsdcButton({ onBalanceChange }: Props) {
         userTokenAccount: userATA,
         mintRecord,
         tokenProgram: TOKEN_PROGRAM_ID,
-        associatedTokenProgram: ASSOC_TOKEN_PID,
-        systemProgram: "11111111111111111111111111111111",
       }).rpc();
 
       toast.success(`${MINT_AMOUNT_USDC} USDC claimed!`, "Added to your wallet");

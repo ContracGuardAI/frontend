@@ -4,6 +4,7 @@ import Image from "next/image";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { useLanguage } from "./components/LanguageProvider";
+import ClaimUsdcButton from "./components/ClaimUsdcButton";
 
 const glass = {
   background: "var(--surface)",
@@ -257,6 +258,11 @@ function Hero() {
             >
               {t("hero.ctaDashboard")}
             </a>
+          </div>
+
+          {/* Claim USDC devnet */}
+          <div className="hero-in h3" style={{ marginBottom: "32px", maxWidth: "420px" }}>
+            <ClaimUsdcButton />
           </div>
 
           <div className="hero-in h4">

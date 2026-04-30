@@ -8,7 +8,7 @@ import ClaimUsdcButton from "../components/ClaimUsdcButton";
 import {
   useContractProgram, getContractPDA, getUsdcMintPDA, getATA,
   usdcToUnits, hashString, BN, PublicKey,
-  TOKEN_PROGRAM_ID, ASSOC_TOKEN_PID,
+  TOKEN_PROGRAM_ID,
 } from "../lib/useContractProgram";
 
 const glass = {
@@ -170,8 +170,6 @@ export default function CreatePage() {
         escrowTokenAccount:   escrowATA,
         clientTokenAccount:   clientATA,
         tokenProgram:         TOKEN_PROGRAM_ID,
-        associatedTokenProgram: ASSOC_TOKEN_PID,
-        systemProgram:        "11111111111111111111111111111111",
       }).rpc();
 
       setContractPDA(pda.toBase58());

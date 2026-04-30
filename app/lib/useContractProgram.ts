@@ -8,7 +8,7 @@ import { IDL } from "./idl";
 // ── Program & token constants ─────────────────────────────────────────────────
 export const PROGRAM_ID       = new PublicKey("2Htsz7Xf4YWZTc8tupBTgsFHwZNZDzi59FRr9AWmxdNq");
 export const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
-export const ASSOC_TOKEN_PID  = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1bsT");
+export const ASSOC_TOKEN_PID  = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
 export const USDC_DECIMALS    = 6;
 export const MINT_AMOUNT_USDC = 1_000; // per claim
 

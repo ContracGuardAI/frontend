@@ -35,7 +35,7 @@ export const IDL = {
         { name: "userTokenAccount", writable: true },
         { name: "mintRecord", writable: true },
         { name: "tokenProgram" },
-        { name: "associatedTokenProgram", address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1bsT" },
+        { name: "associatedTokenProgram", address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" },
         { name: "systemProgram", address: "11111111111111111111111111111111" },
       ],
       args: [],
@@ -52,7 +52,7 @@ export const IDL = {
         { name: "escrowTokenAccount", writable: true },
         { name: "clientTokenAccount", writable: true },
         { name: "tokenProgram" },
-        { name: "associatedTokenProgram", address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1bsT" },
+        { name: "associatedTokenProgram", address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" },
         { name: "systemProgram", address: "11111111111111111111111111111111" },
       ],
       args: [
