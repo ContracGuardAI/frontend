@@ -1,9 +1,14 @@
 import { spawn } from "child_process";
 import path from "path";
 
-const AGENT_DIR =
-  process.env.AGENT_DIR ||
-  path.resolve(process.cwd(), "..", "contractguard-agent");
+// Priority: env override → monorepo sibling → bundled inside frontend/agent/
+const AGENT_DIR = (() => {
+  if (process.env.AGENT_DIR) return process.env.AGENT_DIR;
+  const sibling  = path.resolve(process.cwd(), "..", "contractguard-agent");
+  const bundled  = path.resolve(process.cwd(), "agent");
+  const { existsSync } = require("fs") as typeof import("fs");
+  return existsSync(path.join(sibling, "CLAUDE.md")) ? sibling : bundled;
+})();
 
 // Model yang tersedia — ubah CLAUDE_MODEL di .env.local untuk ganti model
 // Pilihan: "claude-haiku-4-5-20251001" | "claude-sonnet-4-6" | "claude-opus-4-7"
