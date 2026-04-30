@@ -50,6 +50,8 @@
   --nav-border-scroll: rgba(255,255,255,0.12);
   --nav-text: rgba(255,255,255,0.46);
   --nav-text-hover: rgba(201,168,76,0.80);
+  --nav-shadow: 0 1px 0 rgba(255,255,255,0.02), 0 4px 24px rgba(0,0,0,0.20);
+  --nav-shadow-scroll: 0 1px 0 rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.35);
 
   /* Buttons */
   --btn-primary-bg: #ffffff;
@@ -86,64 +88,77 @@
 
 /* ── Light theme ── */
 html.light {
-  --bg: #F4F7FF;
-  --bg-2: #EEF2FF;
-  --footer-bg: #EEF2FF;
-  --footer-border: rgba(37,99,235,0.15);
+  /* Backgrounds — sky-blue tint, sangat subtle */
+  --bg: #F5F8FF;
+  --bg-2: #ECF2FF;
+  --footer-bg: #ECF2FF;
+  --footer-border: rgba(47,123,232,0.12);
 
-  --surface: rgba(255,255,255,0.92);
-  --surface-2: rgba(255,255,255,0.75);
-  --glass-shadow: 0 2px 16px rgba(37,99,235,0.07), 0 1px 3px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.98);
+  /* Surfaces */
+  --surface: rgba(255,255,255,0.88);
+  --surface-2: rgba(255,255,255,0.65);
+  --glass-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 6px 24px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,1);
 
-  --border: rgba(37,99,235,0.15);
-  --border-light: rgba(37,99,235,0.08);
-  --border-strong: rgba(37,99,235,0.30);
+  /* Borders — neutral gray agar tidak cramped */
+  --border: rgba(0,0,0,0.09);
+  --border-light: rgba(0,0,0,0.05);
+  --border-strong: rgba(0,0,0,0.15);
 
-  --text: #0F172A;
-  --text-2: rgba(15,23,42,0.68);
-  --text-3: rgba(15,23,42,0.52);
-  --text-4: rgba(15,23,42,0.38);
-  --text-5: rgba(15,23,42,0.22);
+  /* Text — deep navy, bukan pure black */
+  --text: #0D1B2E;
+  --text-2: rgba(13,27,46,0.75);
+  --text-3: rgba(13,27,46,0.62);
+  --text-4: rgba(13,27,46,0.50);
+  --text-5: rgba(13,27,46,0.36);
 
-  --accent: #2563EB;
-  --accent-2: #3B82F6;
-  --accent-text: rgba(37,99,235,0.92);
-  --accent-text-dim: rgba(37,99,235,0.68);
-  --accent-bg: rgba(37,99,235,0.08);
-  --accent-bg-hover: rgba(37,99,235,0.14);
-  --accent-border: rgba(37,99,235,0.28);
-  --accent-border-strong: rgba(37,99,235,0.48);
-  --accent-border-hover: rgba(37,99,235,0.62);
-  --accent-glow: rgba(37,99,235,0.15);
+  /* Accent — #2F7BE8, royal blue smooth (213° 77% 55%) */
+  --accent: #2F7BE8;
+  --accent-2: #5096F0;
+  --accent-text: rgba(47,123,232,0.95);
+  --accent-text-dim: rgba(47,123,232,0.80);
+  --accent-bg: rgba(47,123,232,0.07);
+  --accent-bg-hover: rgba(47,123,232,0.13);
+  --accent-border: rgba(47,123,232,0.22);
+  --accent-border-strong: rgba(47,123,232,0.38);
+  --accent-border-hover: rgba(47,123,232,0.54);
+  --accent-glow: rgba(47,123,232,0.10);
 
-  --nav-bg: rgba(244,247,255,0.85);
-  --nav-bg-scroll: rgba(244,247,255,0.97);
-  --nav-border: rgba(37,99,235,0.10);
-  --nav-border-scroll: rgba(37,99,235,0.18);
-  --nav-text: rgba(15,23,42,0.52);
-  --nav-text-hover: rgba(37,99,235,0.80);
+  /* Navbar */
+  --nav-bg: rgba(255,255,255,0.96);
+  --nav-bg-scroll: rgba(255,255,255,0.99);
+  --nav-border: rgba(0,0,0,0.18);
+  --nav-border-scroll: rgba(0,0,0,0.22);
+  --nav-text: rgba(13,27,46,0.68);
+  --nav-text-hover: rgba(47,123,232,0.92);
+  --nav-shadow: 0 2px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.07);
+  --nav-shadow-scroll: 0 4px 28px rgba(0,0,0,0.14), 0 2px 6px rgba(0,0,0,0.09);
 
-  --btn-primary-bg: #0F172A;
+  /* Buttons */
+  --btn-primary-bg: #0D1B2E;
   --btn-primary-text: #ffffff;
-  --btn-ghost-bg: rgba(37,99,235,0.06);
-  --btn-ghost-border: rgba(37,99,235,0.18);
-  --btn-ghost-text: rgba(15,23,42,0.72);
+  --btn-ghost-bg: rgba(47,123,232,0.06);
+  --btn-ghost-border: rgba(47,123,232,0.18);
+  --btn-ghost-text: rgba(13,27,46,0.65);
 
-  --input-bg: rgba(255,255,255,0.95);
-  --input-border: rgba(37,99,235,0.20);
-  --input-text: #0F172A;
+  /* Inputs */
+  --input-bg: #ffffff;
+  --input-border: rgba(0,0,0,0.12);
+  --input-text: #0D1B2E;
 
-  --card-bg: rgba(255,255,255,0.80);
-  --card-border: rgba(37,99,235,0.10);
-  --card-hover-border: rgba(37,99,235,0.38);
-  --card-hover-bg: rgba(37,99,235,0.05);
+  /* Cards */
+  --card-bg: rgba(255,255,255,0.75);
+  --card-border: rgba(0,0,0,0.07);
+  --card-hover-border: rgba(47,123,232,0.28);
+  --card-hover-bg: rgba(47,123,232,0.04);
 
-  --shimmer-from: #2563EB;
+  /* Shimmer */
+  --shimmer-from: #2F7BE8;
   --shimmer-mid: #93C5FD;
-  --shimmer-to: #3B82F6;
+  --shimmer-to: #5096F0;
 
-  --orb: rgba(37,99,235,0.04);
-  --grid-line: rgba(37,99,235,0.04);
+  /* Misc */
+  --orb: rgba(47,123,232,0.06);
+  --grid-line: rgba(0,0,0,0.04);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -218,6 +233,14 @@ body {
 @keyframes fadeSlideUp {
   from { opacity: 0; transform: translateY(24px) scale(0.98); filter: blur(3px); }
   to   { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0);   }
+}
+@keyframes chatTypingDot {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30%           { opacity: 1;    transform: translateY(-3px); }
+}
+@keyframes chatMsgIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .iso-node { animation: nodeGlow 3s ease-in-out infinite; }
@@ -324,27 +347,27 @@ body::before {
 
 /* ── scroll reveal — animation-based so it re-fires every viewport entry ── */
 @keyframes revealUp {
-  from { opacity: 0; transform: translateY(40px) scale(0.96); filter: blur(3px); }
+  from { opacity: 0; transform: translateY(64px) scale(0.90); filter: blur(8px); }
   to   { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0px); }
 }
 
 .reveal {
   opacity: 0;
-  transform: translateY(40px) scale(0.96);
-  filter: blur(3px);
-  /* smooth exit when leaving viewport */
-  transition: opacity 0.28s ease-out, filter 0.28s ease-out;
+  transform: translateY(64px) scale(0.90);
+  filter: blur(8px);
+  /* visible exit when leaving viewport */
+  transition: opacity 0.50s ease-out, transform 0.50s ease-out, filter 0.50s ease-out;
 }
 .reveal.is-visible {
-  animation: revealUp 0.80s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: revealUp 0.90s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 /* stagger: delay lives on the is-visible state so it applies on every re-entry */
-.reveal.d1.is-visible { animation-delay: 0.06s; }
-.reveal.d2.is-visible { animation-delay: 0.14s; }
-.reveal.d3.is-visible { animation-delay: 0.24s; }
-.reveal.d4.is-visible { animation-delay: 0.36s; }
-.reveal.d5.is-visible { animation-delay: 0.50s; }
-.reveal.d6.is-visible { animation-delay: 0.64s; }
+.reveal.d1.is-visible { animation-delay: 0.08s; }
+.reveal.d2.is-visible { animation-delay: 0.18s; }
+.reveal.d3.is-visible { animation-delay: 0.30s; }
+.reveal.d4.is-visible { animation-delay: 0.44s; }
+.reveal.d5.is-visible { animation-delay: 0.60s; }
+.reveal.d6.is-visible { animation-delay: 0.76s; }
 
 /* ── card hover lift ── */
 .card-lift {

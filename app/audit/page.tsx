@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { IconDollar, IconAlertTriangle, IconFileText, IconShield } from "../components/Icons";
@@ -8,7 +8,6 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "../components/WalletProvider";
 import type { ContractReviewResult } from "../../../contractguard-agent/contractAgent";
 
-/* ── shared glass style ── */
 const glass = {
   background: "var(--surface)",
   backdropFilter: "blur(20px)",
@@ -18,10 +17,30 @@ const glass = {
   borderRadius: "16px",
 } as const;
 
-type Tab = "price" | "clauses" | "suggestions";
 type FileState = "idle" | "dragging" | "uploading" | "analyzing" | "done" | "error";
 
-/* ── risk badge ── */
+type AuditChatMsg =
+  | { role: "user"; kind: "file"; name: string }
+  | { role: "ai"; kind: "text"; text: string; variant?: "normal" | "error" | "success" }
+  | { role: "ai"; kind: "score"; result: ContractReviewResult }
+  | { role: "ai"; kind: "risks"; result: ContractReviewResult }
+  | { role: "ai"; kind: "cta"; analysisHash: string };
+
+const GREETING: AuditChatMsg = {
+  role: "ai", kind: "text",
+  text: "Halo! Upload kontrak PDF kamu di panel kiri dan saya akan mengaudit setiap klausanya secara mendetail.",
+};
+
+function toRisk(val: string): "high" | "medium" | "low" {
+  if (val === "high" || val === "overpriced") return "high";
+  if (val === "medium" || val === "underpriced") return "medium";
+  return "low";
+}
+
+function formatIDR(num: number): string {
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(num);
+}
+
 function RiskBadge({ risk }: { risk: string }) {
   const colors: Record<string, { bg: string; text: string; border: string }> = {
     high:   { bg: "rgba(255,80,80,0.10)",  text: "rgba(255,120,120,1)", border: "rgba(255,80,80,0.22)" },
@@ -34,69 +53,274 @@ function RiskBadge({ risk }: { risk: string }) {
       fontSize: "10px", letterSpacing: "1.2px", fontWeight: 600,
       padding: "3px 9px", borderRadius: "999px",
       background: c.bg, color: c.text, border: `1px solid ${c.border}`,
+      flexShrink: 0,
     }}>
       {risk.toUpperCase()}
     </span>
   );
 }
 
-/* ── fairness score arc ── */
-function ScoreArc({ score }: { score: number }) {
-  const r = 48;
-  const circumference = Math.PI * r;
-  const dash = (score / 10) * circumference;
-  const color = score >= 7 ? "rgba(80,220,140,0.9)" : score >= 5 ? "rgba(255,210,80,0.9)" : "rgba(255,100,100,0.9)";
-
+function AiAvatar() {
   return (
-    <div style={{ textAlign: "center", marginBottom: "32px" }}>
-      <svg width="130" height="72" viewBox="0 0 130 72" style={{ overflow: "visible" }}>
-        <path d="M 17 65 A 48 48 0 0 1 113 65" fill="none"
-          stroke="var(--border-light)" strokeWidth="8" strokeLinecap="round" />
-        <path d="M 17 65 A 48 48 0 0 1 113 65" fill="none"
-          stroke={color} strokeWidth="8" strokeLinecap="round"
-          strokeDasharray={`${dash} ${circumference}`}
-          style={{ filter: `drop-shadow(0 0 10px ${color})`, transition: "stroke-dasharray 1.4s cubic-bezier(0.16,1,0.3,1)" }}
-        />
+    <div style={{
+      width: "28px", height: "28px", borderRadius: "8px", flexShrink: 0, marginTop: "1px",
+      background: "var(--accent-bg)", border: "1px solid var(--accent-border)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <circle cx="7" cy="7" r="5.2" stroke="var(--accent-text)" strokeWidth="1.3" />
+        <circle cx="7" cy="7" r="2.1" fill="var(--accent-text)" />
       </svg>
-      <div style={{ marginTop: "-20px" }}>
-        <div style={{
-          fontSize: "52px", fontWeight: 900, color, letterSpacing: "-0.04em", lineHeight: 1,
-          filter: `drop-shadow(0 0 16px ${color.replace("0.9", "0.35")})`,
-        }}>
-          {score}
-        </div>
-        <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "var(--text-3)", marginTop: "4px" }}>
-          FAIRNESS SCORE / 10
-        </div>
+    </div>
+  );
+}
+
+function ChatTypingBubble() {
+  return (
+    <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", marginBottom: "12px", animation: "chatMsgIn 0.2s ease both" }}>
+      <AiAvatar />
+      <div style={{
+        background: "var(--surface-2)", border: "1px solid var(--border-light)",
+        borderRadius: "4px 12px 12px 12px", padding: "11px 14px",
+        display: "flex", gap: "4px", alignItems: "center",
+      }}>
+        {[0, 1, 2].map(i => (
+          <span key={i} style={{
+            width: "6px", height: "6px", borderRadius: "50%",
+            background: "var(--text-4)", display: "inline-block",
+            animation: `chatTypingDot 1.2s ease-in-out ${i * 0.18}s infinite`,
+          }} />
+        ))}
       </div>
     </div>
   );
 }
 
-/* ── format number as IDR ── */
-function formatIDR(num: number): string {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(num);
-}
+function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean }) {
+  const anim: React.CSSProperties = isNew ? { animation: "chatMsgIn 0.28s ease both" } : {};
 
-/* ── map API risk_level / status to UI risk string ── */
-function toRisk(val: string): "high" | "medium" | "low" {
-  if (val === "high" || val === "overpriced") return "high";
-  if (val === "medium" || val === "underpriced") return "medium";
-  return "low";
+  if (msg.role === "user") {
+    return (
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px", ...anim }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: "10px",
+          background: "var(--accent-bg)", border: "1px solid var(--accent-border)",
+          borderRadius: "12px 12px 4px 12px", padding: "10px 14px", maxWidth: "80%",
+        }}>
+          <div style={{
+            width: "30px", height: "36px", borderRadius: "5px", flexShrink: 0,
+            background: "var(--accent-bg-hover)", border: "1px solid var(--accent-border)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <svg width="14" height="16" viewBox="0 0 14 16" fill="none">
+              <path d="M2 1h7l4 4v10H2z" stroke="var(--accent-text)" strokeWidth="1.3" fill="none" strokeLinejoin="round" />
+              <path d="M9 1v4h4" stroke="var(--accent-text)" strokeWidth="1.3" fill="none" />
+              <line x1="4" y1="8"  x2="10" y2="8"  stroke="var(--accent-text)" strokeWidth="1.1" strokeOpacity="0.7" />
+              <line x1="4" y1="11" x2="10" y2="11" stroke="var(--accent-text)" strokeWidth="1.1" strokeOpacity="0.5" />
+            </svg>
+          </div>
+          <div>
+            <div style={{
+              fontSize: "12.5px", fontWeight: 600, color: "var(--accent-text)",
+              lineHeight: 1.3, maxWidth: "180px",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>{msg.name}</div>
+            <div style={{ fontSize: "10.5px", color: "var(--text-4)", marginTop: "2px" }}>PDF · Sending for audit</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (msg.kind === "text") {
+    const isError   = msg.variant === "error";
+    const isSuccess = msg.variant === "success";
+    return (
+      <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", marginBottom: "12px", ...anim }}>
+        <AiAvatar />
+        <div style={{
+          background: isSuccess ? "rgba(80,220,140,0.08)" : isError ? "rgba(255,80,80,0.08)" : "var(--surface-2)",
+          border: `1px solid ${isSuccess ? "rgba(80,220,140,0.22)" : isError ? "rgba(255,80,80,0.22)" : "var(--border-light)"}`,
+          borderRadius: "4px 12px 12px 12px", padding: "10px 14px",
+          maxWidth: "86%", fontSize: "13px", lineHeight: 1.68,
+          color: isSuccess ? "rgba(80,220,140,0.92)" : isError ? "rgba(255,100,100,0.90)" : "var(--text-2)",
+          whiteSpace: "pre-line",
+        }}>
+          {msg.text}
+        </div>
+      </div>
+    );
+  }
+
+  if (msg.kind === "score") {
+    const r = msg.result;
+    const score = r.fairness_score;
+    const color = score >= 7 ? "rgba(80,220,140,0.9)" : score >= 5 ? "rgba(255,210,80,0.9)" : "rgba(255,100,100,0.9)";
+    const overpricedCount = r.price_analysis.filter(p => p.status === "overpriced").length;
+    const highRiskCount   = r.risky_clauses.filter(c => c.risk_level === "high").length;
+    return (
+      <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", marginBottom: "12px", ...anim }}>
+        <AiAvatar />
+        <div style={{
+          background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: "4px 12px 12px 12px", padding: "16px 18px",
+          maxWidth: "92%", width: "100%",
+        }}>
+          <div style={{ fontSize: "10.5px", letterSpacing: "1.3px", color: "var(--accent-text-dim)", marginBottom: "12px" }}>
+            AUDIT COMPLETE
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "18px", marginBottom: "12px" }}>
+            <div style={{
+              fontSize: "52px", fontWeight: 900, color, letterSpacing: "-0.04em", lineHeight: 1,
+              filter: `drop-shadow(0 0 12px ${color.replace("0.9", "0.22")})`,
+            }}>
+              {score}
+              <span style={{ fontSize: "20px", color: "var(--text-4)", fontWeight: 500 }}>/10</span>
+            </div>
+            <div>
+              <div style={{ fontSize: "14.5px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>
+                Fairness Score
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--text-3)", lineHeight: 1.55 }}>
+                {overpricedCount} overpriced items<br />{highRiskCount} high-risk clauses
+              </div>
+            </div>
+          </div>
+          <p style={{ fontSize: "13px", color: "var(--text-2)", lineHeight: 1.68, margin: 0 }}>
+            {r.overall_summary}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (msg.kind === "risks") {
+    const r = msg.result;
+    const highRisks  = r.risky_clauses.filter(c => c.risk_level === "high").slice(0, 3);
+    const overpriced = r.price_analysis.filter(p => p.status === "overpriced").slice(0, 3);
+    return (
+      <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", marginBottom: "12px", ...anim }}>
+        <AiAvatar />
+        <div style={{
+          background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: "4px 12px 12px 12px", padding: "16px 18px",
+          maxWidth: "92%", width: "100%",
+        }}>
+          {highRisks.length > 0 && (
+            <div style={{ marginBottom: overpriced.length > 0 ? "16px" : 0 }}>
+              <div style={{ fontSize: "10.5px", letterSpacing: "1.3px", color: "rgba(255,100,100,0.65)", marginBottom: "10px" }}>
+                HIGH-RISK CLAUSES
+              </div>
+              {highRisks.map((c, i) => (
+                <div key={i} style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+                  padding: "9px 0",
+                  borderBottom: i < highRisks.length - 1 ? "1px solid var(--border-light)" : "none",
+                  gap: "10px",
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--text)", marginBottom: "3px" }}>{c.clause}</div>
+                    <div style={{ fontSize: "11.5px", color: "var(--text-3)", lineHeight: 1.5 }}>{c.issue}</div>
+                  </div>
+                  <RiskBadge risk={c.risk_level} />
+                </div>
+              ))}
+            </div>
+          )}
+          {overpriced.length > 0 && (
+            <div>
+              <div style={{ fontSize: "10.5px", letterSpacing: "1.3px", color: "rgba(255,185,50,0.65)", marginBottom: "10px" }}>
+                OVERPRICED ITEMS
+              </div>
+              {overpriced.map((p, i) => (
+                <div key={i} style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "9px 0",
+                  borderBottom: i < overpriced.length - 1 ? "1px solid var(--border-light)" : "none",
+                  gap: "10px",
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--text)" }}>{p.item}</div>
+                    <div style={{ fontSize: "11.5px", color: "var(--text-3)" }}>
+                      {formatIDR(p.contract_price)} → {p.market_estimate}
+                    </div>
+                  </div>
+                  <RiskBadge risk={toRisk(p.status)} />
+                </div>
+              ))}
+            </div>
+          )}
+          {highRisks.length === 0 && overpriced.length === 0 && (
+            <div style={{ fontSize: "13px", color: "rgba(80,220,140,0.85)" }}>
+              ✓ Tidak ada klausul berisiko tinggi atau item yang terlalu mahal ditemukan.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (msg.kind === "cta") {
+    return (
+      <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", marginBottom: "12px", ...anim }}>
+        <AiAvatar />
+        <div style={{
+          background: "rgba(80,220,140,0.06)", border: "1px solid rgba(80,220,140,0.20)",
+          borderRadius: "4px 12px 12px 12px", padding: "14px 16px", maxWidth: "88%",
+        }}>
+          <div style={{ fontSize: "13px", color: "var(--text-2)", lineHeight: 1.68, marginBottom: "14px" }}>
+            Audit selesai! Mau mengunci kontrak ini on-chain dengan Solana smart escrow?
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" as const }}>
+            <a href="/create" style={{
+              background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)",
+              fontWeight: 700, fontSize: "12.5px", padding: "8px 18px", borderRadius: "6px",
+              textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "7px",
+              transition: "opacity 0.2s, transform 0.15s",
+            }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = "1"; }}
+            >
+              Create Contract
+              <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+                <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </a>
+            <span style={{ fontSize: "10.5px", color: "var(--text-4)", fontFamily: "monospace" }}>
+              hash: {msg.analysisHash.slice(0, 14)}...
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 export default function AuditPage() {
   const [fileState, setFileState] = useState<FileState>("idle");
-  const [fileName, setFileName] = useState("");
-  const [activeTab, setActiveTab] = useState<Tab>("price");
-  const [result, setResult] = useState<ContractReviewResult | null>(null);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [fileHash, setFileHash] = useState("");
-  const [analysisHash, setAnalysisHash] = useState("");
+  const [fileName, setFileName]   = useState("");
+  const [fileHash, setFileHash]   = useState("");
+  const [chatMsgs, setChatMsgs]   = useState<AuditChatMsg[]>([GREETING]);
+  const [chatTyping, setChatTyping] = useState(false);
+
+  const chatRef  = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { connected } = useWallet();
   const { setVisible } = useWalletModal();
+
+  const addMsg = (msg: AuditChatMsg) =>
+    setChatMsgs(prev => [...prev, msg]);
+
+  // Scroll within chat container only
+  useEffect(() => {
+    const el = chatRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [chatMsgs, chatTyping]);
+
+  const isLoading = fileState === "uploading" || fileState === "analyzing";
 
   const handleFile = async (file: File) => {
     if (!file) return;
@@ -106,10 +330,12 @@ export default function AuditPage() {
     }
 
     setFileName(file.name);
-    setErrorMsg("");
-    setResult(null);
+    setChatMsgs([GREETING]);
+    setTimeout(() => addMsg({ role: "user", kind: "file", name: file.name }), 0);
 
+    // ── Step 1: Upload PDF ────────────────────────────────────
     setFileState("uploading");
+    setChatTyping(true);
     toast.info("Uploading contract...", "Extracting text from PDF");
 
     const formData = new FormData();
@@ -117,40 +343,86 @@ export default function AuditPage() {
 
     let contractText = "";
     let fHash = "";
+    let charCount = 0;
 
     try {
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+      const uploadRes  = await fetch("/api/upload", { method: "POST", body: formData });
       const uploadJson = await uploadRes.json();
       if (!uploadJson.success) throw new Error(uploadJson.error);
       contractText = uploadJson.data.contract_text;
-      fHash = uploadJson.data.file_hash;
+      fHash        = uploadJson.data.file_hash;
+      charCount    = uploadJson.data.char_count;
       setFileHash(fHash);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Upload failed.";
-      setErrorMsg(msg);
+      setChatTyping(false);
+      addMsg({ role: "ai", kind: "text", text: `Upload gagal: ${msg}\n\nCoba lagi dengan file PDF yang valid.`, variant: "error" });
       setFileState("error");
       toast.error("Upload failed", msg);
       return;
     }
 
+    // ── Step 2: Stream audit via SSE ─────────────────────────
+    setChatTyping(false);
     setFileState("analyzing");
+    setChatTyping(true);
     toast.info("Analyzing contract...", "AI is reading every clause");
 
     try {
-      const auditRes = await fetch("/api/audit", {
+      const res = await fetch("/api/audit-stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contractText }),
+        body: JSON.stringify({ contractText, charCount }),
       });
-      const auditJson = await auditRes.json();
-      if (!auditJson.success) throw new Error(auditJson.error);
-      setResult(auditJson.data);
-      setAnalysisHash(auditJson.meta.analysis_hash);
-      setFileState("done");
-      toast.success("Review complete", file.name);
+
+      if (!res.ok || !res.body) throw new Error("Stream tidak tersedia.");
+
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let   buffer  = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          let event: { type: string; message?: string; data?: unknown; meta?: { analysis_hash: string } };
+          try { event = JSON.parse(line.slice(6)); } catch { continue; }
+
+          if (event.type === "progress" && event.message) {
+            // Replace typing indicator with real agent progress message,
+            // then re-show typing for next stage
+            setChatTyping(false);
+            addMsg({ role: "ai", kind: "text", text: event.message });
+            setChatTyping(true);
+          }
+
+          if (event.type === "result" && event.data && event.meta) {
+            setChatTyping(false);
+            setFileState("done");
+            toast.success("Review complete", file.name);
+
+            const result = event.data as import("../../../contractguard-agent/contractAgent").ContractReviewResult;
+            addMsg({ role: "ai", kind: "score", result });
+            setTimeout(() => addMsg({ role: "ai", kind: "risks", result }), 500);
+            setTimeout(() => addMsg({ role: "ai", kind: "cta", analysisHash: event.meta!.analysis_hash }), 1000);
+          }
+
+          if (event.type === "error" && event.message) {
+            throw new Error(event.message);
+          }
+        }
+      }
+
     } catch (err) {
       const msg = err instanceof Error ? err.message : "AI analysis failed.";
-      setErrorMsg(msg);
+      setChatTyping(false);
+      addMsg({ role: "ai", kind: "text", text: `Analisis gagal: ${msg}`, variant: "error" });
       setFileState("error");
       toast.error("Analysis failed", msg);
     }
@@ -163,20 +435,19 @@ export default function AuditPage() {
     if (file) handleFile(file);
   };
 
-  const isLoading = fileState === "uploading" || fileState === "analyzing";
   const loadingLabel = fileState === "uploading" ? "Extracting PDF text..." : "AI is analyzing every clause...";
 
-  const tabs: { id: Tab; label: string; count: number }[] = result ? [
-    { id: "price",       label: "Price Analysis",    count: result.price_analysis.length },
-    { id: "clauses",     label: "Risky Clauses",     count: result.risky_clauses.length },
-    { id: "suggestions", label: "Suggestions",        count: result.revision_suggestions.length },
-  ] : [];
+  const statusLabel  = isLoading
+    ? (fileState === "uploading" ? "UPLOADING" : "ANALYZING")
+    : fileState === "done" ? "DONE" : "READY";
+  const statusColor  = isLoading ? "rgba(255,210,80,0.90)" : "rgba(80,220,140,0.90)";
+  const statusBorder = isLoading ? "rgba(255,210,80,0.22)" : "rgba(80,220,140,0.22)";
+  const statusBg     = isLoading ? "rgba(255,210,80,0.08)" : "rgba(80,220,140,0.08)";
 
   return (
     <main style={{ background: "var(--bg)", minHeight: "100vh", color: "var(--text)" }}>
       <Navbar />
 
-      {/* ambient glow */}
       <div style={{
         position: "fixed", pointerEvents: "none", zIndex: 0,
         top: "30%", left: "50%", transform: "translate(-50%, -50%)",
@@ -217,27 +488,19 @@ export default function AuditPage() {
         </div>
 
         {/* Two-column layout */}
-        <div className="page-in p3" style={{
-          display: "grid",
-          gridTemplateColumns: fileState === "done" ? "1fr 1.4fr" : "1fr 1fr",
-          gap: "24px",
-          transition: "grid-template-columns 0.4s ease",
-        }}>
+        <div className="page-in p3" style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: "24px" }}>
 
-          {/* LEFT: Upload */}
+          {/* LEFT: Upload + what AI checks */}
           <div>
-            {/* Drop zone */}
             <div
               onDragOver={e => { e.preventDefault(); if (!isLoading) setFileState("dragging"); }}
               onDragLeave={() => { if (!isLoading) setFileState("idle"); }}
               onDrop={e => { if (!isLoading) onDrop(e); }}
               onClick={() => { if (!isLoading) inputRef.current?.click(); }}
               style={{
-                ...glass,
-                padding: "48px 32px",
+                ...glass, padding: "48px 32px",
                 cursor: isLoading ? "wait" : "pointer",
-                textAlign: "center",
-                marginBottom: "16px",
+                textAlign: "center", marginBottom: "16px",
                 border: fileState === "dragging"
                   ? "1px solid var(--border-strong)"
                   : fileState === "done"
@@ -283,7 +546,12 @@ export default function AuditPage() {
                     hash: {fileHash.slice(0, 16)}...
                   </div>
                   <div style={{ marginTop: "16px" }}>
-                    <button onClick={() => { setFileState("idle"); setResult(null); }} style={{
+                    <button onClick={e => {
+                      e.stopPropagation();
+                      setFileState("idle");
+                      setChatMsgs([GREETING]);
+                      setChatTyping(false);
+                    }} style={{
                       fontSize: "12px", color: "var(--text-3)",
                       background: "var(--surface-2)", border: "1px solid var(--border)",
                       borderRadius: "6px", padding: "6px 14px", cursor: "pointer",
@@ -300,8 +568,7 @@ export default function AuditPage() {
                   <div style={{ marginBottom: "16px", color: "rgba(255,100,100,0.80)", fontSize: "14px", fontWeight: 600 }}>
                     Analysis failed
                   </div>
-                  <div style={{ fontSize: "13px", color: "var(--text-3)", marginBottom: "16px" }}>{errorMsg}</div>
-                  <button onClick={() => setFileState("idle")} style={{
+                  <button onClick={e => { e.stopPropagation(); setFileState("idle"); }} style={{
                     fontSize: "12px", color: "var(--text-2)",
                     background: "var(--surface-2)", border: "1px solid var(--border)",
                     borderRadius: "6px", padding: "6px 14px", cursor: "pointer",
@@ -377,8 +644,7 @@ export default function AuditPage() {
                 >
                   <div style={{
                     width: "32px", height: "32px", borderRadius: "8px", flexShrink: 0,
-                    background: "var(--surface-2)",
-                    border: "1px solid var(--border)",
+                    background: "var(--surface-2)", border: "1px solid var(--border)",
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
                     <Icon size={15} color="var(--text-2)" strokeWidth={1.7} />
@@ -389,258 +655,96 @@ export default function AuditPage() {
             </div>
           </div>
 
-          {/* RIGHT: Results */}
-          {fileState !== "done" || !result ? (
+          {/* RIGHT: Chat window */}
+          <div style={{
+            ...glass, borderRadius: "20px", overflow: "hidden",
+            display: "flex", flexDirection: "column",
+            minHeight: "640px",
+          }}>
+            {/* Header */}
             <div style={{
-              ...glass, padding: "48px 36px",
-              display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center",
-              textAlign: "center", minHeight: "400px",
+              padding: "13px 16px", borderBottom: "1px solid var(--border-light)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              background: "var(--surface-2)", flexShrink: 0,
             }}>
-              <div style={{ marginBottom: "24px", opacity: 0.25 }}>
-                <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
-                  <rect x="16" y="10" width="40" height="52" rx="5" fill="none" stroke="currentColor" strokeWidth="2" />
-                  <line x1="24" y1="26" x2="48" y2="26" stroke="currentColor" strokeWidth="1.5" strokeOpacity={0.5} />
-                  <line x1="24" y1="34" x2="48" y2="34" stroke="currentColor" strokeWidth="1.5" strokeOpacity={0.5} />
-                  <line x1="24" y1="42" x2="36" y2="42" stroke="currentColor" strokeWidth="1.5" strokeOpacity={0.5} />
+              <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
+                <div style={{
+                  width: "30px", height: "30px", borderRadius: "8px",
+                  background: "var(--accent-bg)", border: "1px solid var(--accent-border)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <svg width="15" height="15" viewBox="0 0 14 14" fill="none">
+                    <circle cx="7" cy="7" r="5.2" stroke="var(--accent-text)" strokeWidth="1.3" />
+                    <circle cx="7" cy="7" r="2.1" fill="var(--accent-text)" />
+                  </svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}>
+                    ContractGuard AI Agent
+                  </div>
+                  <div style={{ fontSize: "10px", color: "var(--text-4)", marginTop: "1px" }}>
+                    Powered by Claude · Solana
+                  </div>
+                </div>
+              </div>
+              <div style={{
+                display: "flex", alignItems: "center", gap: "5px",
+                padding: "3px 10px", borderRadius: "999px",
+                background: statusBg, border: `1px solid ${statusBorder}`,
+                transition: "all 0.3s",
+              }}>
+                <span style={{
+                  width: "5px", height: "5px", borderRadius: "50%",
+                  background: statusColor, display: "inline-block",
+                  animation: isLoading ? "spinRing 1.5s linear infinite" : "pulseGlow 2s ease-in-out infinite",
+                }} />
+                <span style={{ fontSize: "10px", fontWeight: 700, color: statusColor, letterSpacing: "0.8px" }}>
+                  {statusLabel}
+                </span>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div ref={chatRef} style={{ flex: 1, overflowY: "auto", padding: "16px 14px 8px" }}>
+              {chatMsgs.map((msg, i) => (
+                <AuditChatMessage key={i} msg={msg} isNew={i === chatMsgs.length - 1} />
+              ))}
+              {chatTyping && <ChatTypingBubble />}
+              <div style={{ height: "4px" }} />
+            </div>
+
+            {/* Bottom bar — status only, no input */}
+            <div style={{
+              padding: "11px 14px", borderTop: "1px solid var(--border-light)",
+              background: "var(--surface-2)", flexShrink: 0,
+              display: "flex", alignItems: "center", gap: "8px",
+            }}>
+              <div style={{
+                flex: 1, padding: "9px 13px", borderRadius: "10px",
+                background: "var(--input-bg)", border: "1px solid var(--border-light)",
+                fontSize: "13px", color: "var(--text-5)", userSelect: "none",
+              }}>
+                {fileState === "idle"      && "Upload a contract PDF to begin..."}
+                {fileState === "dragging"  && "Drop it!"}
+                {fileState === "uploading" && "Extracting PDF text..."}
+                {fileState === "analyzing" && "AI is analyzing every clause..."}
+                {fileState === "done"      && "Audit complete — upload another to compare"}
+                {fileState === "error"     && "Something went wrong — try again"}
+              </div>
+              <div style={{
+                width: "34px", height: "34px", borderRadius: "8px", flexShrink: 0,
+                background: "var(--surface)", border: "1px solid var(--border)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                opacity: 0.35, cursor: "not-allowed",
+              }}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="var(--text-3)"
+                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <div style={{ fontSize: "17px", fontWeight: 600, color: "var(--text-3)", marginBottom: "8px" }}>
-                Upload a contract to see the AI review
-              </div>
-              <div style={{ fontSize: "13.5px", color: "var(--text-4)" }}>
-                Results will appear here
-              </div>
             </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          </div>
 
-              {/* Score card */}
-              <div style={{ ...glass, padding: "32px 36px", animation: "fadeSlideUp 0.48s cubic-bezier(0.16,1,0.3,1) forwards", opacity: 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "11px", letterSpacing: "1.5px", color: "var(--text-3)", marginBottom: "8px" }}>
-                      AI REVIEW RESULT
-                    </div>
-                    <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>
-                      Contract analysis complete
-                    </div>
-                    <div style={{ fontSize: "13px", color: "var(--text-3)", marginBottom: "12px" }}>
-                      {result.price_analysis.filter(p => p.status === "overpriced").length} overpriced items · {result.risky_clauses.filter(c => c.risk_level === "high").length} high-risk clauses
-                    </div>
-                    <p style={{ fontSize: "13px", color: "var(--text-2)", lineHeight: 1.65, maxWidth: "280px" }}>
-                      {result.overall_summary}
-                    </p>
-                  </div>
-                  <ScoreArc score={result.fairness_score} />
-                </div>
-              </div>
-
-              {/* Tabs */}
-              <div style={{ ...glass, overflow: "hidden", animation: "fadeSlideUp 0.48s cubic-bezier(0.16,1,0.3,1) forwards", animationDelay: "0.10s", opacity: 0 }}>
-                <div style={{ display: "flex", borderBottom: "1px solid var(--border-light)" }}>
-                  {tabs.map(t => (
-                    <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
-                      flex: 1, padding: "14px 16px", background: "transparent",
-                      border: "none", cursor: "pointer", fontSize: "13px",
-                      color: activeTab === t.id ? "var(--text)" : "var(--text-3)",
-                      fontWeight: activeTab === t.id ? 700 : 400,
-                      borderBottom: activeTab === t.id ? "2px solid var(--accent)" : "2px solid transparent",
-                      transition: "color 0.2s",
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-                      fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-                    }}>
-                      {t.label}
-                      <span style={{
-                        fontSize: "10px", padding: "2px 7px", borderRadius: "999px",
-                        background: activeTab === t.id ? "var(--accent-bg)" : "var(--surface-2)",
-                        color: activeTab === t.id ? "var(--accent-text)" : "var(--text-3)",
-                      }}>{t.count}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div style={{ padding: "24px 28px", maxHeight: "340px", overflowY: "auto" }}>
-
-                  {/* Price Analysis */}
-                  {activeTab === "price" && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                      {result.price_analysis.map((item, i) => (
-                        <div key={i} style={{
-                          background: "var(--card-bg)",
-                          border: "1px solid var(--card-border)",
-                          borderRadius: "10px", padding: "14px 16px",
-                          transition: "border-color 0.2s, background 0.2s",
-                        }}
-                          onMouseEnter={e => {
-                            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
-                            (e.currentTarget as HTMLDivElement).style.background = "var(--surface)";
-                          }}
-                          onMouseLeave={e => {
-                            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--card-border)";
-                            (e.currentTarget as HTMLDivElement).style.background = "var(--card-bg)";
-                          }}
-                        >
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-                            <div style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--text)", flex: 1 }}>{item.item}</div>
-                            <RiskBadge risk={toRisk(item.status)} />
-                          </div>
-                          <div style={{ display: "flex", gap: "24px", marginBottom: "8px" }}>
-                            <div>
-                              <div style={{ fontSize: "10px", color: "var(--text-4)", letterSpacing: "1px" }}>CONTRACT</div>
-                              <div style={{ fontSize: "13px", color: "var(--text-2)" }}>{formatIDR(item.contract_price)}</div>
-                            </div>
-                            <div>
-                              <div style={{ fontSize: "10px", color: "var(--text-4)", letterSpacing: "1px" }}>MARKET EST.</div>
-                              <div style={{ fontSize: "13px", color: "var(--text-2)" }}>{item.market_estimate}</div>
-                            </div>
-                            <div>
-                              <div style={{ fontSize: "10px", color: "var(--text-4)", letterSpacing: "1px" }}>STATUS</div>
-                              <div style={{ fontSize: "13px", fontWeight: 700, color: toRisk(item.status) === "high" ? "rgba(255,100,100,0.90)" : toRisk(item.status) === "medium" ? "rgba(255,210,80,0.90)" : "rgba(80,220,140,0.90)" }}>
-                                {item.status.toUpperCase()}
-                              </div>
-                            </div>
-                          </div>
-                          <p style={{ fontSize: "12px", color: "var(--text-4)", lineHeight: 1.55, margin: 0 }}>{item.notes}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Risky Clauses */}
-                  {activeTab === "clauses" && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                      {result.risky_clauses.map((item, i) => (
-                        <div key={i} style={{
-                          background: "var(--card-bg)",
-                          border: "1px solid var(--card-border)",
-                          borderRadius: "10px", padding: "16px 18px",
-                          transition: "border-color 0.2s, background 0.2s",
-                        }}
-                          onMouseEnter={e => {
-                            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
-                            (e.currentTarget as HTMLDivElement).style.background = "var(--surface)";
-                          }}
-                          onMouseLeave={e => {
-                            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--card-border)";
-                            (e.currentTarget as HTMLDivElement).style.background = "var(--card-bg)";
-                          }}
-                        >
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                            <div style={{ fontSize: "13.5px", fontWeight: 700, color: "var(--text)" }}>{item.clause}</div>
-                            <RiskBadge risk={item.risk_level} />
-                          </div>
-                          <p style={{ fontSize: "13px", color: "var(--text-2)", lineHeight: 1.65, margin: "0 0 8px" }}>{item.issue}</p>
-                          {item.potential_impact && (
-                            <p style={{ fontSize: "12px", color: "rgba(255,150,100,0.55)", lineHeight: 1.55, margin: "0 0 8px" }}>
-                              ⚠ {item.potential_impact}
-                            </p>
-                          )}
-                          {item.suggestion && (
-                            <p style={{ fontSize: "12px", color: "rgba(80,220,140,0.55)", lineHeight: 1.55, margin: 0 }}>
-                              ✓ {item.suggestion}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Suggestions */}
-                  {activeTab === "suggestions" && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                      {result.revision_suggestions.map((s, i) => (
-                        <div key={i} style={{
-                          display: "flex", gap: "14px",
-                          background: "var(--card-bg)",
-                          border: "1px solid var(--card-border)",
-                          borderRadius: "10px", padding: "14px 16px",
-                          transition: "border-color 0.2s, background 0.2s",
-                        }}
-                          onMouseEnter={e => {
-                            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
-                            (e.currentTarget as HTMLDivElement).style.background = "var(--surface)";
-                          }}
-                          onMouseLeave={e => {
-                            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--card-border)";
-                            (e.currentTarget as HTMLDivElement).style.background = "var(--card-bg)";
-                          }}
-                        >
-                          <div style={{
-                            width: "24px", height: "24px", borderRadius: "50%", flexShrink: 0,
-                            background: "var(--accent-bg)",
-                            border: "1px solid var(--accent-border)",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: "11px", fontWeight: 700, color: "var(--accent-text)",
-                          }}>{i + 1}</div>
-                          <p style={{ fontSize: "13px", color: "var(--text-2)", lineHeight: 1.65, margin: 0 }}>{s}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Record on chain CTA */}
-              <div style={{
-                ...glass, padding: "24px 28px",
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                animation: "fadeSlideUp 0.48s cubic-bezier(0.16,1,0.3,1) forwards", animationDelay: "0.20s", opacity: 0,
-              }}>
-                <div>
-                  <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>
-                    Ready to create on-chain contract?
-                  </div>
-                  <div style={{ fontSize: "12px", color: "var(--text-4)", fontFamily: "monospace", wordBreak: "break-all" }}>
-                    hash: {analysisHash.slice(0, 24)}...
-                  </div>
-                </div>
-                {connected ? (
-                  <a href="/create" style={{
-                    background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)", fontWeight: 700,
-                    fontSize: "13.5px", padding: "12px 28px", borderRadius: "7px",
-                    textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px",
-                    boxShadow: "var(--glass-shadow)",
-                    whiteSpace: "nowrap", transition: "opacity 0.2s, transform 0.2s",
-                  }}
-                    onMouseEnter={e => {
-                      (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88";
-                      (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
-                    }}
-                    onMouseLeave={e => {
-                      (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
-                      (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
-                    }}
-                  >
-                    Create Contract
-                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                      <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </a>
-                ) : (
-                  <button onClick={() => setVisible(true)} style={{
-                    background: "var(--accent-bg)", color: "var(--accent-text)",
-                    fontWeight: 700, fontSize: "13.5px", padding: "12px 24px",
-                    borderRadius: "7px", border: "1px solid var(--accent-border-strong)",
-                    cursor: "pointer", whiteSpace: "nowrap",
-                    fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-                    transition: "background 0.2s, transform 0.2s",
-                  }}
-                    onMouseEnter={e => {
-                      (e.currentTarget as HTMLButtonElement).style.background = "var(--accent-bg-hover)";
-                      (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
-                    }}
-                    onMouseLeave={e => {
-                      (e.currentTarget as HTMLButtonElement).style.background = "var(--accent-bg)";
-                      (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-                    }}
-                  >
-                    Connect Wallet First
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

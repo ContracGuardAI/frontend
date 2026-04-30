@@ -22,7 +22,7 @@ export default function Footer() {
       }}>
         {/* Logo */}
         <Link href="/" style={{
-          display: "flex", alignItems: "center", gap: "11px",
+          display: "flex", alignItems: "center", gap: "0px",
           textDecoration: "none", transition: "opacity 0.2s",
         }}
           onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = "0.75"; }}
@@ -33,7 +33,7 @@ export default function Footer() {
             alt="ContractGuard AI"
             width={300}
             height={300}
-            style={{ width: "38px", height: "38px", objectFit: "contain", display: "block" }}
+            style={{ width: "50px", height: "50px", objectFit: "contain", display: "block", marginRight: "-4px" }}
           />
           <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
             <span style={{

@@ -384,6 +384,322 @@ function Hero() {
   );
 }
 
+// ── AI Chat Demo ────────────────────────────────────────────
+
+type ChatMsg = {
+  role: "user" | "ai";
+  text: string;
+  kind: "file" | "text" | "warn" | "success";
+  typingMs?: number;
+};
+
+const CHAT_SEQ: ChatMsg[] = [
+  { role: "user",  text: "Kontrak_Renovasi_Jl_Sudirman.pdf",  kind: "file" },
+  { role: "ai",    text: "Contract received. Scanning 47 clauses across 8 sections...", kind: "text",    typingMs: 1000 },
+  { role: "ai",    text: "⚠️  3 risk areas detected:\n• Section 4.2 — Payment delay clause (30 days) is unusually long\n• Section 7.1 — No penalty clause for contractor overruns\n• Section 12 — Force majeure clause too broad, potential coverage gap", kind: "warn", typingMs: 1500 },
+  { role: "ai",    text: "Computing fairness score and generating full report...",        kind: "text",    typingMs: 950 },
+  { role: "ai",    text: "✓  Audit complete  ·  Fairness Score: 8 / 10\nContract is safe to sign. Review the 3 flagged items before finalizing.", kind: "success", typingMs: 1200 },
+];
+
+function TypingIndicator() {
+  return (
+    <div style={{ display: "flex", gap: "4px", padding: "11px 14px", alignItems: "center" }}>
+      {[0, 1, 2].map(i => (
+        <span key={i} style={{
+          width: "6px", height: "6px", borderRadius: "50%",
+          background: "var(--text-4)", display: "inline-block",
+          animation: `chatTypingDot 1.2s ease-in-out ${i * 0.18}s infinite`,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+function ChatMessage({ msg, isNew }: { msg: ChatMsg; isNew: boolean }) {
+  const anim = isNew ? "chatMsgIn 0.28s ease both" : "none";
+
+  if (msg.kind === "file") {
+    return (
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "10px", animation: anim }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: "10px",
+          background: "var(--accent-bg)", border: "1px solid var(--accent-border)",
+          borderRadius: "12px 12px 4px 12px", padding: "10px 14px", maxWidth: "78%",
+        }}>
+          <div style={{
+            width: "32px", height: "38px", borderRadius: "5px", flexShrink: 0,
+            background: "var(--accent-bg-hover)", border: "1px solid var(--accent-border)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <svg width="15" height="16" viewBox="0 0 15 18" fill="none">
+              <path d="M2 1h8l4 4v12H2z" stroke="var(--accent-text)" strokeWidth="1.3" fill="none" strokeLinejoin="round" />
+              <path d="M10 1v4h4" stroke="var(--accent-text)" strokeWidth="1.3" fill="none" />
+              <line x1="4" y1="9"  x2="11" y2="9"  stroke="var(--accent-text)" strokeWidth="1.1" strokeOpacity="0.7" />
+              <line x1="4" y1="12" x2="11" y2="12" stroke="var(--accent-text)" strokeWidth="1.1" strokeOpacity="0.7" />
+              <line x1="4" y1="15" x2="7"  y2="15" stroke="var(--accent-text)" strokeWidth="1.1" strokeOpacity="0.5" />
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--accent-text)", lineHeight: 1.3 }}>{msg.text}</div>
+            <div style={{ fontSize: "10.5px", color: "var(--text-4)", marginTop: "2px" }}>PDF · Ready to audit</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isWarn    = msg.kind === "warn";
+  const isSuccess = msg.kind === "success";
+  const bg     = isSuccess ? "rgba(80,220,140,0.08)"  : isWarn ? "rgba(255,180,50,0.07)"  : "var(--surface-2)";
+  const border = isSuccess ? "rgba(80,220,140,0.22)"  : isWarn ? "rgba(255,180,50,0.22)"  : "var(--border-light)";
+  const color  = isSuccess ? "rgba(80,220,140,0.92)"  : "var(--text-2)";
+
+  return (
+    <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", marginBottom: "10px", animation: anim }}>
+      <div style={{
+        width: "28px", height: "28px", borderRadius: "8px", flexShrink: 0, marginTop: "1px",
+        background: "var(--accent-bg)", border: "1px solid var(--accent-border)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <circle cx="7" cy="7" r="5.2" stroke="var(--accent-text)" strokeWidth="1.3" />
+          <circle cx="7" cy="7" r="2.1" fill="var(--accent-text)" />
+        </svg>
+      </div>
+      <div style={{
+        background: bg, border: `1px solid ${border}`,
+        borderRadius: "4px 12px 12px 12px", padding: "10px 14px",
+        maxWidth: "84%", fontSize: "13px", lineHeight: 1.65,
+        color, fontWeight: isSuccess ? 600 : 400, whiteSpace: "pre-line",
+      }}>
+        {msg.text}
+      </div>
+    </div>
+  );
+}
+
+function AiChatDemo() {
+  const [visibleCount, setVisibleCount] = useState(0);
+  const [typing, setTyping] = useState(false);
+  const msgsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const schedule = (fn: () => void, delay: number) => timers.push(setTimeout(fn, delay));
+    let loop = 0;
+
+    function run() {
+      const thisLoop = ++loop;
+      const guard = (fn: () => void) => () => { if (loop === thisLoop) fn(); };
+
+      setVisibleCount(0);
+      setTyping(false);
+
+      let t = 600;
+      schedule(guard(() => setVisibleCount(1)), t);
+      t += 750;
+
+      for (let i = 1; i < CHAT_SEQ.length; i++) {
+        const ms = CHAT_SEQ[i].typingMs ?? 950;
+        const count = i + 1;
+        schedule(guard(() => setTyping(true)), t);
+        t += ms;
+        schedule(guard(() => { setTyping(false); setVisibleCount(count); }), t);
+        t += 780;
+      }
+
+      schedule(() => run(), t + 3800);
+    }
+
+    run();
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  // Scroll WITHIN the chat container only — never touch page scroll
+  useEffect(() => {
+    const el = msgsRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [visibleCount, typing]);
+
+  const visible = CHAT_SEQ.slice(0, visibleCount);
+
+  return (
+    <section style={{
+      padding: "100px 0", background: "var(--bg)",
+      borderTop: "1px solid var(--border-light)",
+      position: "relative", overflow: "hidden",
+    }}>
+      <div style={{
+        position: "absolute", pointerEvents: "none", zIndex: 0,
+        top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+        width: "60%", height: "90%",
+        background: "radial-gradient(ellipse, var(--orb) 0%, transparent 65%)",
+        filter: "blur(65px)",
+      }} />
+
+      <div style={{ maxWidth: "1160px", margin: "0 auto", padding: "0 80px", position: "relative", zIndex: 1 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.45fr", gap: "64px", alignItems: "center" }}>
+
+          {/* LEFT — label + copy */}
+          <div className="reveal">
+            <div style={{
+              display: "inline-flex", alignItems: "center",
+              border: "1px solid var(--accent-border-strong)", borderRadius: "999px",
+              padding: "4px 14px", fontSize: "11px",
+              color: "var(--accent-text)", background: "var(--accent-bg)",
+              backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+              marginBottom: "22px", letterSpacing: "1.5px",
+            }}>LIVE DEMO</div>
+
+            <h2 style={{
+              fontSize: "clamp(30px,3.4vw,46px)", fontWeight: 900,
+              letterSpacing: "-0.04em", color: "var(--text)",
+              lineHeight: 1.08, marginBottom: "18px",
+            }}>
+              See the AI<br />audit agent<br />in action.
+            </h2>
+
+            <p style={{
+              fontSize: "14.5px", lineHeight: 1.78, color: "var(--text-3)",
+              marginBottom: "38px", maxWidth: "320px",
+            }}>
+              Upload any contract and watch ContractGuard AI scan every clause,
+              flag risks, and deliver a fairness score — in seconds.
+            </p>
+
+            <div style={{ display: "flex", gap: "28px" }}>
+              {[
+                { value: "< 3s",  label: "audit time" },
+                { value: "47+",   label: "clauses scanned" },
+                { value: "8/10",  label: "avg score" },
+              ].map((s, i) => (
+                <div key={i}>
+                  <div style={{
+                    fontSize: "22px", fontWeight: 900, letterSpacing: "-0.04em",
+                    background: "linear-gradient(135deg, var(--accent-2), var(--accent))",
+                    WebkitBackgroundClip: "text", backgroundClip: "text",
+                    WebkitTextFillColor: "transparent", marginBottom: "3px",
+                  }}>{s.value}</div>
+                  <div style={{ fontSize: "11px", color: "var(--text-4)", letterSpacing: "0.4px" }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* RIGHT — Chat window */}
+          <div className="reveal d1" style={{
+            ...glass, borderRadius: "20px", overflow: "hidden",
+            border: "1px solid var(--border)",
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: "13px 16px", borderBottom: "1px solid var(--border-light)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              background: "var(--surface-2)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
+                <div style={{
+                  width: "30px", height: "30px", borderRadius: "8px",
+                  background: "var(--accent-bg)", border: "1px solid var(--accent-border)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <svg width="15" height="15" viewBox="0 0 14 14" fill="none">
+                    <circle cx="7" cy="7" r="5.2" stroke="var(--accent-text)" strokeWidth="1.3" />
+                    <circle cx="7" cy="7" r="2.1" fill="var(--accent-text)" />
+                  </svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}>
+                    ContractGuard AI Agent
+                  </div>
+                  <div style={{ fontSize: "10px", color: "var(--text-4)", marginTop: "1px" }}>
+                    Powered by Claude · Solana
+                  </div>
+                </div>
+              </div>
+              <div style={{
+                display: "flex", alignItems: "center", gap: "5px",
+                padding: "3px 10px", borderRadius: "999px",
+                background: "rgba(80,220,140,0.08)", border: "1px solid rgba(80,220,140,0.22)",
+              }}>
+                <span style={{
+                  width: "5px", height: "5px", borderRadius: "50%",
+                  background: "rgba(80,220,140,0.90)",
+                  boxShadow: "0 0 4px rgba(80,220,140,0.60)",
+                  display: "inline-block",
+                  animation: "pulseGlow 2s ease-in-out infinite",
+                }} />
+                <span style={{ fontSize: "10px", fontWeight: 700, color: "rgba(80,220,140,0.80)", letterSpacing: "0.8px" }}>
+                  LIVE
+                </span>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div ref={msgsRef} style={{ height: "340px", overflowY: "auto", padding: "16px 14px 8px" }}>
+              {visible.map((msg, i) => (
+                <ChatMessage key={`${i}-${visible.length}`} msg={msg} isNew={i === visible.length - 1} />
+              ))}
+
+              {typing && (
+                <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", animation: "chatMsgIn 0.2s ease both" }}>
+                  <div style={{
+                    width: "28px", height: "28px", borderRadius: "8px", flexShrink: 0, marginTop: "1px",
+                    background: "var(--accent-bg)", border: "1px solid var(--accent-border)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <circle cx="7" cy="7" r="5.2" stroke="var(--accent-text)" strokeWidth="1.3" />
+                      <circle cx="7" cy="7" r="2.1" fill="var(--accent-text)" />
+                    </svg>
+                  </div>
+                  <div style={{
+                    background: "var(--surface-2)", border: "1px solid var(--border-light)",
+                    borderRadius: "4px 12px 12px 12px",
+                  }}>
+                    <TypingIndicator />
+                  </div>
+                </div>
+              )}
+
+              <div style={{ height: "4px" }} />
+            </div>
+
+            {/* Input — disabled demo */}
+            <div style={{
+              padding: "11px 14px", borderTop: "1px solid var(--border-light)",
+              display: "flex", gap: "9px", alignItems: "center",
+              background: "var(--surface-2)",
+            }}>
+              <div style={{
+                flex: 1, padding: "9px 13px", borderRadius: "10px",
+                background: "var(--input-bg)", border: "1px solid var(--border-light)",
+                fontSize: "13px", color: "var(--text-5)", cursor: "not-allowed",
+                userSelect: "none",
+              }}>
+                Upload a contract to audit...
+              </div>
+              <div style={{
+                width: "34px", height: "34px", borderRadius: "8px", flexShrink: 0,
+                background: "var(--surface)", border: "1px solid var(--border)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                opacity: 0.45, cursor: "not-allowed",
+              }}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="var(--text-3)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── How It Works ─────────────────────────────────────────────
+
 function HowItWorks() {
   const steps = [
     {
@@ -934,6 +1250,7 @@ export default function Home() {
       }} />
       <Navbar />
       <Hero />
+      <AiChatDemo />
       <Features />
       <HowItWorks />
       <Stats />

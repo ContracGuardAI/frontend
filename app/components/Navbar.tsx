@@ -83,9 +83,7 @@ export default function Navbar() {
       WebkitBackdropFilter: scrolled ? "blur(32px)" : "blur(24px)",
       background: scrolled ? "var(--nav-bg-scroll)" : "var(--nav-bg)",
       borderBottom: `1px solid ${scrolled ? "var(--nav-border-scroll)" : "var(--nav-border)"}`,
-      boxShadow: scrolled
-        ? "0 1px 0 rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.35)"
-        : "0 1px 0 rgba(255,255,255,0.02), 0 4px 24px rgba(0,0,0,0.20)",
+      boxShadow: scrolled ? "var(--nav-shadow-scroll)" : "var(--nav-shadow)",
       transition: "height 0.3s ease, background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease",
     }}>
       <div style={{
