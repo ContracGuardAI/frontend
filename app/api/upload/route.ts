@@ -32,7 +32,27 @@ export async function POST(req: NextRequest) {
     // Require ke lib langsung untuk bypass bug test file pdf-parse@1.x
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const pdfParse = require("pdf-parse/lib/pdf-parse");
-    const pdfData = await pdfParse(buffer);
+
+    let pdfData;
+    try {
+      pdfData = await pdfParse(buffer);
+    } catch (firstErr) {
+      const firstMsg = firstErr instanceof Error ? firstErr.message : "";
+      // Bad XRef / corrupted structure — retry dengan opsi lebih toleran
+      if (/xref|xObject|bad|corrupt|invalid structure/i.test(firstMsg)) {
+        try {
+          pdfData = await pdfParse(buffer, { max: 0 });
+        } catch {
+          throw new Error(
+            "PDF memiliki struktur yang rusak atau terenkripsi. " +
+            "Coba buka PDF di Adobe Reader / browser lalu Save As PDF baru, kemudian upload lagi."
+          );
+        }
+      } else {
+        throw firstErr;
+      }
+    }
+
     const extractedText = pdfData.text?.trim() ?? "";
 
     if (extractedText.length < 50) {

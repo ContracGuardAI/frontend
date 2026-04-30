@@ -454,10 +454,7 @@ function ChatMessage({ msg, isNew, fileReadyLabel }: { msg: ChatMsg; isNew: bool
         background: "var(--accent-bg)", border: "1px solid var(--accent-border)",
         display: "flex", alignItems: "center", justifyContent: "center",
       }}>
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <circle cx="7" cy="7" r="5.2" stroke="var(--accent-text)" strokeWidth="1.3" />
-          <circle cx="7" cy="7" r="2.1" fill="var(--accent-text)" />
-        </svg>
+        <img src="/contract-guard-logo.png" alt="ContractGuard" width={28} height={28} style={{ objectFit: "contain", display: "block" }} />
       </div>
       <div style={{
         background: bg, border: `1px solid ${border}`,
@@ -606,10 +603,7 @@ function AiChatDemo() {
                   background: "var(--accent-bg)", border: "1px solid var(--accent-border)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
-                  <svg width="15" height="15" viewBox="0 0 14 14" fill="none">
-                    <circle cx="7" cy="7" r="5.2" stroke="var(--accent-text)" strokeWidth="1.3" />
-                    <circle cx="7" cy="7" r="2.1" fill="var(--accent-text)" />
-                  </svg>
+                  <img src="/contract-guard-logo.png" alt="ContractGuard" width={30} height={30} style={{ objectFit: "contain", display: "block" }} />
                 </div>
                 <div>
                   <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}>

@@ -150,6 +150,51 @@ ${lang === "en" ? "Follow the Contract Review instructions in CLAUDE.md." : "Lak
   return parsed;
 }
 
+// ─── Contract Q&A ────────────────────────────────────────────────────────────
+
+export interface ContractChatResult {
+  answer: string;
+}
+
+export async function chatContract(
+  contractText: string,
+  analysisResult: ContractReviewResult | null,
+  userQuestion: string,
+  model?: string,
+  lang: "en" | "id" = "id"
+): Promise<ContractChatResult> {
+  if (!userQuestion || userQuestion.trim().length < 3) {
+    throw new Error(lang === "en" ? "Question is too short." : "Pertanyaan terlalu pendek.");
+  }
+
+  const langInstruction = lang === "en"
+    ? "IMPORTANT: Respond ONLY in English. Write in plain text, not JSON."
+    : "PENTING: Respond HANYA dalam Bahasa Indonesia. Tulis dalam plain text, bukan JSON.";
+
+  const contractSnippet = contractText.length > 6000
+    ? contractText.slice(0, 6000) + "\n...[teks dipotong karena terlalu panjang]"
+    : contractText;
+
+  const analysisContext = analysisResult
+    ? `\n\nRingkasan hasil analisis AI sebelumnya:\n- Fairness score: ${analysisResult.fairness_score}/10\n- Ringkasan: ${analysisResult.overall_summary}\n- Klausul risiko tinggi: ${analysisResult.risky_clauses.filter(c => c.risk_level === "high").map(c => c.clause).join(", ") || "tidak ada"}\n- Item overpriced: ${analysisResult.price_analysis.filter(p => p.status === "overpriced").map(p => p.item).join(", ") || "tidak ada"}`
+    : "";
+
+  const prompt = `Contract Q&A Request
+
+${langInstruction}
+
+Teks kontrak:
+${contractSnippet}
+${analysisContext}
+
+Pertanyaan user: ${userQuestion.trim()}
+
+Jawab pertanyaan ini secara profesional sesuai instruksi Mode 3 di CLAUDE.md.`;
+
+  const raw = await runClaude(prompt, model);
+  return { answer: raw.trim() };
+}
+
 // ─── Checkpoint Review ───────────────────────────────────────────────────────
 
 export interface CheckpointReviewResult {

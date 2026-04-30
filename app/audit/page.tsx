@@ -23,10 +23,15 @@ type FileState = "idle" | "dragging" | "uploading" | "analyzing" | "done" | "err
 
 type AuditChatMsg =
   | { role: "user"; kind: "file"; name: string }
+  | { role: "user"; kind: "question"; text: string }
   | { role: "ai"; kind: "text"; text: string; variant?: "normal" | "error" | "success" }
+  | { role: "ai"; kind: "answer"; text: string }
   | { role: "ai"; kind: "score"; result: ContractReviewResult }
   | { role: "ai"; kind: "risks"; result: ContractReviewResult }
+  | { role: "ai"; kind: "action"; result: ContractReviewResult }
   | { role: "ai"; kind: "cta"; analysisHash: string; result: ContractReviewResult; suggestedTitle: string };
+
+const MAX_FREE_CHATS = 3;
 
 // GREETING is created inside component so it can be translated
 const GREETING_ID = "Halo! Upload kontrak PDF kamu di panel kiri dan saya akan mengaudit setiap klausanya secara mendetail.";
@@ -67,11 +72,10 @@ function AiAvatar() {
       width: "28px", height: "28px", borderRadius: "8px", flexShrink: 0, marginTop: "1px",
       background: "var(--accent-bg)", border: "1px solid var(--accent-border)",
       display: "flex", alignItems: "center", justifyContent: "center",
+      overflow: "hidden",
     }}>
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-        <circle cx="7" cy="7" r="5.2" stroke="var(--accent-text)" strokeWidth="1.3" />
-        <circle cx="7" cy="7" r="2.1" fill="var(--accent-text)" />
-      </svg>
+      <img src="/contract-guard-logo.png" alt="ContractGuard" width={28} height={28}
+        style={{ objectFit: "contain", display: "block" }} />
     </div>
   );
 }
@@ -100,6 +104,36 @@ function ChatTypingBubble() {
 function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean }) {
   const { lang } = useLanguage();
   const anim: React.CSSProperties = isNew ? { animation: "chatMsgIn 0.28s ease both" } : {};
+
+  if (msg.role === "user" && msg.kind === "question") {
+    return (
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px", ...anim }}>
+        <div style={{
+          background: "var(--accent-bg)", border: "1px solid var(--accent-border)",
+          borderRadius: "12px 12px 4px 12px", padding: "10px 15px", maxWidth: "82%",
+          fontSize: "13px", color: "var(--accent-text)", lineHeight: 1.68,
+        }}>
+          {msg.text}
+        </div>
+      </div>
+    );
+  }
+
+  if (msg.kind === "answer") {
+    return (
+      <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", marginBottom: "12px", ...anim }}>
+        <AiAvatar />
+        <div style={{
+          background: "var(--surface)", border: "1px solid var(--accent-border)",
+          borderRadius: "4px 12px 12px 12px", padding: "12px 16px",
+          maxWidth: "88%", fontSize: "13.5px", lineHeight: 1.78,
+          color: "var(--text-2)", whiteSpace: "pre-line",
+        }}>
+          {msg.text}
+        </div>
+      </div>
+    );
+  }
 
   if (msg.role === "user") {
     return (
@@ -262,6 +296,166 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
     );
   }
 
+  if (msg.kind === "action") {
+    const r = msg.result;
+    const highClauses  = r.risky_clauses.filter(c => c.risk_level === "high");
+    const medClauses   = r.risky_clauses.filter(c => c.risk_level === "medium");
+    const overpriced   = r.price_analysis.filter(p => p.status === "overpriced");
+    const revisions    = r.revision_suggestions ?? [];
+    const hasAnything  = highClauses.length > 0 || medClauses.length > 0 || overpriced.length > 0 || revisions.length > 0;
+    if (!hasAnything) return null;
+
+    const tagStyle = (color: string): React.CSSProperties => ({
+      display: "inline-block",
+      fontSize: "9.5px", fontWeight: 700, letterSpacing: "0.9px",
+      padding: "2px 8px", borderRadius: "999px",
+      background: `${color}18`, color, border: `1px solid ${color}30`,
+      flexShrink: 0, whiteSpace: "nowrap",
+    });
+
+    return (
+      <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", marginBottom: "12px", ...anim }}>
+        <AiAvatar />
+        <div style={{
+          background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: "4px 12px 12px 12px", padding: "16px 18px",
+          maxWidth: "96%", width: "100%",
+        }}>
+          {/* Header */}
+          <div style={{
+            fontSize: "10.5px", letterSpacing: "1.3px",
+            color: "rgba(255,190,60,0.75)", marginBottom: "14px",
+            display: "flex", alignItems: "center", gap: "8px",
+          }}>
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+              <path d="M7 1L8.5 5.5H13L9.5 8.5L11 13L7 10L3 13L4.5 8.5L1 5.5H5.5Z"
+                stroke="rgba(255,190,60,0.75)" strokeWidth="1.2" fill="rgba(255,190,60,0.15)" strokeLinejoin="round" />
+            </svg>
+            {lang === "en" ? "YOUR ACTION PLAN" : "RENCANA TINDAKANMU"}
+          </div>
+
+          {/* High-risk clauses */}
+          {highClauses.map((c, i) => (
+            <div key={`h${i}`} style={{
+              marginBottom: "14px",
+              paddingBottom: "14px",
+              borderBottom: "1px solid var(--border-light)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px", flexWrap: "wrap" as const }}>
+                <span style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--text)" }}>{c.clause}</span>
+                <span style={tagStyle("rgba(255,90,90,0.9)")}>
+                  {lang === "en" ? "RENEGOTIATE" : "NEGO ULANG"}
+                </span>
+              </div>
+              <p style={{ fontSize: "12px", color: "var(--text-3)", lineHeight: 1.65, margin: "0 0 8px" }}>
+                <span style={{ color: "rgba(255,120,120,0.80)", fontWeight: 600 }}>
+                  {lang === "en" ? "Risk: " : "Risiko: "}
+                </span>
+                {c.potential_impact}
+              </p>
+              <div style={{
+                background: "rgba(80,220,140,0.05)", border: "1px solid rgba(80,220,140,0.15)",
+                borderRadius: "8px", padding: "10px 13px",
+              }}>
+                <div style={{ fontSize: "10px", letterSpacing: "0.9px", color: "rgba(80,220,140,0.60)", marginBottom: "5px", fontWeight: 700 }}>
+                  {lang === "en" ? "SUGGESTED LANGUAGE / ACTION" : "SARAN NEGOSIASI"}
+                </div>
+                <p style={{ fontSize: "12px", color: "rgba(80,220,140,0.85)", lineHeight: 1.68, margin: 0 }}>
+                  {c.suggestion}
+                </p>
+              </div>
+            </div>
+          ))}
+
+          {/* Medium-risk clauses — compact */}
+          {medClauses.length > 0 && (
+            <div style={{ marginBottom: highClauses.length > 0 ? 0 : "14px" }}>
+              <div style={{
+                fontSize: "10.5px", letterSpacing: "1.1px",
+                color: "rgba(255,200,60,0.55)", marginBottom: "10px",
+              }}>
+                {lang === "en" ? "ALSO WORTH REVIEWING" : "PERLU DICERMATI JUGA"}
+              </div>
+              {medClauses.map((c, i) => (
+                <div key={`m${i}`} style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+                  padding: "8px 0",
+                  borderBottom: i < medClauses.length - 1 ? "1px solid var(--border-light)" : "none",
+                  gap: "10px",
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text)", marginBottom: "2px" }}>{c.clause}</div>
+                    <div style={{ fontSize: "11.5px", color: "var(--text-4)", lineHeight: 1.55 }}>{c.suggestion}</div>
+                  </div>
+                  <span style={tagStyle("rgba(255,200,60,0.85)")}>
+                    {lang === "en" ? "REVIEW" : "CERMATI"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Overpriced — renegotiate price */}
+          {overpriced.length > 0 && (
+            <div style={{ marginTop: highClauses.length > 0 || medClauses.length > 0 ? "14px" : 0 }}>
+              <div style={{
+                fontSize: "10.5px", letterSpacing: "1.1px",
+                color: "rgba(255,185,50,0.60)", marginBottom: "10px",
+              }}>
+                {lang === "en" ? "OVERPRICED — NEGOTIATE THE PRICE" : "HARGA MAHAL — MINTA NEGOSIASI HARGA"}
+              </div>
+              {overpriced.map((p, i) => (
+                <div key={`p${i}`} style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+                  padding: "8px 0",
+                  borderBottom: i < overpriced.length - 1 ? "1px solid var(--border-light)" : "none",
+                  gap: "10px",
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text)", marginBottom: "2px" }}>{p.item}</div>
+                    <div style={{ fontSize: "11.5px", color: "var(--text-4)" }}>
+                      {lang === "en" ? "Claimed: " : "Diklaim: "}{formatIDR(p.contract_price)}
+                      {" → "}
+                      {lang === "en" ? "Market: " : "Pasar: "}{p.market_estimate}
+                    </div>
+                  </div>
+                  <span style={tagStyle("rgba(255,185,50,0.9)")}>
+                    {lang === "en" ? "LOWER PRICE" : "TAWAR HARGA"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* General revision suggestions */}
+          {revisions.length > 0 && (
+            <div style={{ marginTop: "14px", paddingTop: "14px", borderTop: "1px solid var(--border-light)" }}>
+              <div style={{
+                fontSize: "10.5px", letterSpacing: "1.1px",
+                color: "rgba(180,160,255,0.60)", marginBottom: "10px",
+              }}>
+                {lang === "en" ? "ADDITIONAL REVISION SUGGESTIONS" : "SARAN REVISI TAMBAHAN"}
+              </div>
+              {revisions.map((s, i) => (
+                <div key={`r${i}`} style={{
+                  display: "flex", gap: "9px", alignItems: "flex-start",
+                  padding: "7px 0",
+                  borderBottom: i < revisions.length - 1 ? "1px solid var(--border-light)" : "none",
+                }}>
+                  <span style={{
+                    fontSize: "10px", fontWeight: 800, color: "rgba(180,160,255,0.65)",
+                    marginTop: "2px", flexShrink: 0,
+                  }}>{i + 1}.</span>
+                  <span style={{ fontSize: "12px", color: "var(--text-3)", lineHeight: 1.65 }}>{s}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (msg.kind === "cta") {
     const handlePrefill = () => {
       const items = msg.result.price_analysis;
@@ -340,6 +534,11 @@ export default function AuditPage() {
   const [fileHash, setFileHash]   = useState("");
   const [chatMsgs, setChatMsgs]   = useState<AuditChatMsg[]>([]);
   const [chatTyping, setChatTyping] = useState(false);
+  const [chatInput, setChatInput]   = useState("");
+  const [isChatting, setIsChatting] = useState(false);
+  const [chatCount, setChatCount]   = useState(0);
+  const contractTextRef    = useRef<string>("");
+  const analysisResultRef  = useRef<ContractReviewResult | null>(null);
 
   // Re-init greeting when language changes
   useEffect(() => {
@@ -377,6 +576,10 @@ export default function AuditPage() {
 
   const handleFile = async (file: File) => {
     if (!file) return;
+    setChatCount(0);
+    setChatInput("");
+    contractTextRef.current = "";
+    analysisResultRef.current = null;
     if (file.type !== "application/pdf") {
       toast.error("Invalid file", lang === "en" ? "Only PDF files are accepted." : "Hanya file PDF yang diterima.");
       return;
@@ -414,6 +617,7 @@ export default function AuditPage() {
       fHash        = uploadJson.data.file_hash;
       charCount    = uploadJson.data.char_count;
       setFileHash(fHash);
+      contractTextRef.current = contractText;
     } catch (err) {
       if ((err as Error).name === "AbortError") { setChatTyping(false); setFileState("idle"); return; }
       const msg = err instanceof Error ? err.message : "Upload failed.";
@@ -486,14 +690,16 @@ export default function AuditPage() {
             toast.success(lang === "en" ? "Review complete" : "Review selesai", file.name);
 
             const result = event.data as import("../lib/contractAgent").ContractReviewResult;
+            analysisResultRef.current = result;
             addMsg({ role: "ai", kind: "score", result });
             setTimeout(() => addMsg({ role: "ai", kind: "risks", result }), 500);
+            setTimeout(() => addMsg({ role: "ai", kind: "action", result }), 1100);
             setTimeout(() => addMsg({
               role: "ai", kind: "cta",
               analysisHash: event.meta!.analysis_hash,
               result,
               suggestedTitle: file.name.replace(/\.pdf$/i, "").replace(/[-_]/g, " "),
-            }), 1000);
+            }), 1700);
           }
 
           if (event.type === "error" && event.message) {
@@ -541,6 +747,58 @@ export default function AuditPage() {
       addMsg({ role: "ai", kind: "text", text: displayMsg, variant: "error" });
       setFileState("error");
       toast.error(lang === "en" ? "Analysis failed" : "Analisis gagal", raw.slice(0, 80));
+    }
+  };
+
+  const handleChatSend = async () => {
+    const question = chatInput.trim();
+    if (!question || isChatting || chatCount >= MAX_FREE_CHATS) return;
+
+    setChatInput("");
+    const newCount = chatCount + 1;
+    setChatCount(newCount);
+    addMsg({ role: "user", kind: "question", text: question });
+    setIsChatting(true);
+    setChatTyping(true);
+
+    try {
+      const res = await fetch("/api/chat-contract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contractText: contractTextRef.current,
+          analysisResult: analysisResultRef.current,
+          userQuestion: question,
+          lang,
+        }),
+      });
+      const json = await res.json();
+      setChatTyping(false);
+
+      if (json.success) {
+        addMsg({ role: "ai", kind: "answer", text: json.data.answer });
+        if (newCount >= MAX_FREE_CHATS) {
+          setTimeout(() => addMsg({
+            role: "ai", kind: "text",
+            text: lang === "en"
+              ? "You've used all 3 free questions. Upgrade to Pro for unlimited contract consultations."
+              : "Kamu sudah menggunakan 3 pertanyaan gratis. Upgrade ke Pro untuk konsultasi kontrak tak terbatas.",
+          }), 400);
+        }
+      } else {
+        addMsg({ role: "ai", kind: "text", variant: "error", text: json.error ?? (lang === "en" ? "Failed to get answer." : "Gagal mendapat jawaban.") });
+      }
+    } catch (err) {
+      setChatTyping(false);
+      if ((err as Error).name !== "AbortError") {
+        addMsg({
+          role: "ai", kind: "text", variant: "error",
+          text: lang === "en" ? "Failed to get answer. Please try again." : "Gagal mendapat jawaban. Coba lagi.",
+        });
+      }
+    } finally {
+      setIsChatting(false);
+      setChatTyping(false);
     }
   };
 
@@ -618,6 +876,9 @@ export default function AuditPage() {
                 ...glass, padding: "48px 32px",
                 cursor: isLoading ? "wait" : "pointer",
                 textAlign: "center", marginBottom: "16px",
+                display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center",
+                minHeight: "220px",
                 border: fileState === "dragging"
                   ? "1px solid var(--border-strong)"
                   : fileState === "done"
@@ -790,11 +1051,10 @@ export default function AuditPage() {
                   width: "30px", height: "30px", borderRadius: "8px",
                   background: "var(--accent-bg)", border: "1px solid var(--accent-border)",
                   display: "flex", alignItems: "center", justifyContent: "center",
+                  overflow: "hidden",
                 }}>
-                  <svg width="15" height="15" viewBox="0 0 14 14" fill="none">
-                    <circle cx="7" cy="7" r="5.2" stroke="var(--accent-text)" strokeWidth="1.3" />
-                    <circle cx="7" cy="7" r="2.1" fill="var(--accent-text)" />
-                  </svg>
+                  <img src="/contract-guard-logo.png" alt="ContractGuard" width={30} height={30}
+                    style={{ objectFit: "contain", display: "block" }} />
                 </div>
                 <div>
                   <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}>
@@ -831,34 +1091,101 @@ export default function AuditPage() {
               <div style={{ height: "4px" }} />
             </div>
 
-            {/* Bottom bar — status only, no input */}
+            {/* Bottom bar — input aktif saat done, status text saat states lain */}
             <div style={{
-              padding: "11px 14px", borderTop: "1px solid var(--border-light)",
+              padding: fileState === "done" ? "9px 14px 11px" : "11px 14px",
+              borderTop: "1px solid var(--border-light)",
               background: "var(--surface-2)", flexShrink: 0,
-              display: "flex", alignItems: "center", gap: "8px",
             }}>
-              <div style={{
-                flex: 1, padding: "9px 13px", borderRadius: "10px",
-                background: "var(--input-bg)", border: "1px solid var(--border-light)",
-                fontSize: "13px", color: "var(--text-5)", userSelect: "none",
-              }}>
-                {fileState === "idle"      && (lang === "en" ? "Upload a contract PDF to begin..." : "Upload PDF kontrak untuk memulai...")}
-                {fileState === "dragging"  && (lang === "en" ? "Drop it!" : "Lepaskan di sini!")}
-                {fileState === "uploading" && (lang === "en" ? "Extracting PDF text..." : "Mengekstrak teks PDF...")}
-                {fileState === "analyzing" && (lang === "en" ? "AI is analyzing every clause..." : "AI sedang menganalisis setiap klausul...")}
-                {fileState === "done"      && (lang === "en" ? "Audit complete — upload another to compare" : "Audit selesai — upload lagi untuk membandingkan")}
-                {fileState === "error"     && (lang === "en" ? "Something went wrong — try again" : "Terjadi kesalahan — coba lagi")}
-              </div>
-              <div style={{
-                width: "34px", height: "34px", borderRadius: "8px", flexShrink: 0,
-                background: "var(--surface)", border: "1px solid var(--border)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                opacity: 0.35, cursor: "not-allowed",
-              }}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="var(--text-3)"
-                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+              {/* Counter row — hanya tampil saat done dan masih ada sisa pertanyaan */}
+              {fileState === "done" && (
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "7px" }}>
+                  {chatCount < MAX_FREE_CHATS ? (
+                    <span style={{
+                      fontSize: "10.5px", color: "var(--text-4)",
+                      background: "var(--surface)", border: "1px solid var(--border-light)",
+                      borderRadius: "999px", padding: "2px 10px",
+                    }}>
+                      {lang === "en"
+                        ? <>{MAX_FREE_CHATS - chatCount} <span style={{ color: "var(--accent-text)" }}>FREE</span> questions left</>
+                        : <>{MAX_FREE_CHATS - chatCount} pertanyaan <span style={{ color: "var(--accent-text)" }}>FREE</span> tersisa</>}
+                    </span>
+                  ) : (
+                    <span style={{
+                      fontSize: "10.5px", color: "var(--text-4)",
+                      background: "var(--accent-bg)", border: "1px solid var(--accent-border)",
+                      borderRadius: "999px", padding: "2px 10px",
+                    }}>
+                      {lang === "en" ? "✦ Upgrade to Pro for unlimited" : "✦ Upgrade ke Pro — unlimited"}
+                    </span>
+                  )}
+                </div>
+              )}
+              {/* Input row */}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {fileState === "done" ? (
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend(); } }}
+                    placeholder={
+                      chatCount >= MAX_FREE_CHATS
+                        ? (lang === "en" ? "Upgrade to Pro for more questions..." : "Upgrade ke Pro untuk lebih banyak pertanyaan...")
+                        : (lang === "en" ? "Ask about this contract..." : "Tanyakan tentang kontrak ini...")
+                    }
+                    disabled={isChatting || chatCount >= MAX_FREE_CHATS}
+                    style={{
+                      flex: 1, padding: "9px 13px", borderRadius: "10px",
+                      background: "var(--input-bg)", border: "1px solid var(--input-border)",
+                      fontSize: "13px",
+                      color: chatCount >= MAX_FREE_CHATS ? "var(--text-5)" : "var(--input-text)",
+                      outline: "none", fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
+                      opacity: chatCount >= MAX_FREE_CHATS ? 0.55 : 1,
+                      cursor: chatCount >= MAX_FREE_CHATS ? "not-allowed" : "text",
+                      transition: "border 0.2s",
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    flex: 1, padding: "9px 13px", borderRadius: "10px",
+                    background: "var(--input-bg)", border: "1px solid var(--border-light)",
+                    fontSize: "13px", color: "var(--text-5)", userSelect: "none",
+                  }}>
+                    {fileState === "idle"      && (lang === "en" ? "Upload a contract PDF to begin..." : "Upload PDF kontrak untuk memulai...")}
+                    {fileState === "dragging"  && (lang === "en" ? "Drop it!" : "Lepaskan di sini!")}
+                    {fileState === "uploading" && (lang === "en" ? "Extracting PDF text..." : "Mengekstrak teks PDF...")}
+                    {fileState === "analyzing" && (lang === "en" ? "AI is analyzing every clause..." : "AI sedang menganalisis setiap klausul...")}
+                    {fileState === "error"     && (lang === "en" ? "Something went wrong — try again" : "Terjadi kesalahan — coba lagi")}
+                  </div>
+                )}
+                <button
+                  onClick={handleChatSend}
+                  disabled={fileState !== "done" || isChatting || !chatInput.trim() || chatCount >= MAX_FREE_CHATS}
+                  style={{
+                    width: "34px", height: "34px", borderRadius: "8px", flexShrink: 0,
+                    background: fileState === "done" && chatInput.trim() && !isChatting && chatCount < MAX_FREE_CHATS
+                      ? "var(--btn-primary-bg)" : "var(--surface)",
+                    border: "1px solid var(--border)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    opacity: fileState === "done" && chatInput.trim() && !isChatting && chatCount < MAX_FREE_CHATS ? 1 : 0.35,
+                    cursor: fileState === "done" && chatInput.trim() && !isChatting && chatCount < MAX_FREE_CHATS ? "pointer" : "not-allowed",
+                    transition: "all 0.18s",
+                  }}
+                >
+                  {isChatting ? (
+                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ animation: "spinRing 1s linear infinite" }}>
+                      <circle cx="7" cy="7" r="4.5" stroke="var(--text-3)" strokeWidth="1.5" strokeDasharray="9 9" />
+                    </svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M1 7H13M13 7L7 1M13 7L7 13"
+                        stroke={fileState === "done" && chatInput.trim() && !isChatting && chatCount < MAX_FREE_CHATS
+                          ? "var(--btn-primary-text)" : "var(--text-3)"}
+                        strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </button>
               </div>
             </div>
           </div>

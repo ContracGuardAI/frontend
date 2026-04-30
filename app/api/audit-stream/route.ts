@@ -50,9 +50,8 @@ export async function POST(req: NextRequest) {
     const errMsg = isEn
       ? "Suspicious content detected in the contract. Analysis aborted for security."
       : "Konten mencurigakan terdeteksi dalam kontrak. Analisis dihentikan demi keamanan.";
-    const encoder = new TextEncoder();
     return new Response(
-      encoder.encode(`data: ${JSON.stringify({ type: "error", message: errMsg })}\n\n`),
+      `data: ${JSON.stringify({ type: "error", message: errMsg })}\n\n`,
       { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" } }
     );
   }
