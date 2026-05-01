@@ -1,18 +1,40 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { TransactionInstruction, Transaction, SystemProgram } from "@solana/web3.js";
+import { BN } from "@anchor-lang/core";
 import { useWalletModal } from "./WalletProvider";
+import { useContractProgram, getUsdcMintPDA, getATA, getMintRecordPDA, getConfigPDA, TOKEN_PROGRAM_ID, ASSOC_TOKEN_PID, PROGRAM_ID, MINT_AMOUNT_USDC } from "../lib/useContractProgram";
+import { toast } from "./Toast";
+
+const COOLDOWN_SECS = 86_400;
 
 function shortAddress(addr: string) {
   return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
 }
 
+function fmtCooldown(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 export default function WalletButton() {
   const { connected, publicKey, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
+  const { program, wallet, connection } = useContractProgram();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  const [solBalance, setSolBalance]   = useState<number | null>(null);
+  const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
+  const [cooldownLeft, setCooldown]   = useState(0);
+  const [claiming, setClaiming]       = useState(false);
+
+  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -22,10 +44,114 @@ export default function WalletButton() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  const fetchBalances = useCallback(async () => {
+    if (!publicKey || !connection) return;
+
+    // SOL
+    try {
+      const lamports = await connection.getBalance(publicKey, "confirmed");
+      setSolBalance(lamports / 1e9);
+    } catch { setSolBalance(0); }
+
+    // USDC
+    const mint = getUsdcMintPDA();
+    const ata  = getATA(mint, publicKey);
+    try {
+      const bal = await connection.getTokenAccountBalance(ata, "confirmed");
+      setUsdcBalance(Number(bal.value.uiAmount ?? 0));
+    } catch { setUsdcBalance(0); }
+
+    // Cooldown
+    if (!program) return;
+    try {
+      const record = getMintRecordPDA(publicKey);
+      const acc = await (program.account as never as {
+        userMintRecord: { fetch: (pk: import("@solana/web3.js").PublicKey) => Promise<{ lastMintAt: BN }> }
+      }).userMintRecord.fetch(record);
+      const elapsed = Math.floor(Date.now() / 1000) - acc.lastMintAt.toNumber();
+      setCooldown(Math.max(0, COOLDOWN_SECS - elapsed));
+    } catch { setCooldown(0); }
+  }, [publicKey, connection, program]);
+
+  useEffect(() => {
+    if (open) fetchBalances();
+  }, [open, fetchBalances]);
+
+  // Countdown tick
+  useEffect(() => {
+    if (cooldownLeft <= 0) return;
+    const id = setInterval(() => setCooldown(s => Math.max(0, s - 1)), 1_000);
+    return () => clearInterval(id);
+  }, [cooldownLeft]);
+
+  const handleClaim = async () => {
+    if (!publicKey || !connection || cooldownLeft > 0 || claiming) return;
+    setClaiming(true);
+    toast.info("Claiming USDC...", "Awaiting wallet signature");
+    try {
+      const config    = getConfigPDA();
+      const mint      = getUsdcMintPDA();
+      const userATA   = getATA(mint, publicKey);
+      const mintRecord = getMintRecordPDA(publicKey);
+
+      const createAtaIx = new TransactionInstruction({
+        programId: ASSOC_TOKEN_PID,
+        keys: [
+          { pubkey: publicKey,               isSigner: true,  isWritable: true  },
+          { pubkey: userATA,                 isSigner: false, isWritable: true  },
+          { pubkey: publicKey,               isSigner: false, isWritable: false },
+          { pubkey: mint,                    isSigner: false, isWritable: false },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+          { pubkey: TOKEN_PROGRAM_ID,        isSigner: false, isWritable: false },
+        ],
+        data: Buffer.from([1]),
+      });
+
+      const mintUsdcIx = new TransactionInstruction({
+        programId: PROGRAM_ID,
+        keys: [
+          { pubkey: publicKey,               isSigner: true,  isWritable: true  },
+          { pubkey: config,                  isSigner: false, isWritable: true  },
+          { pubkey: mint,                    isSigner: false, isWritable: true  },
+          { pubkey: userATA,                 isSigner: false, isWritable: true  },
+          { pubkey: mintRecord,              isSigner: false, isWritable: true  },
+          { pubkey: TOKEN_PROGRAM_ID,        isSigner: false, isWritable: false },
+          { pubkey: ASSOC_TOKEN_PID,         isSigner: false, isWritable: false },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ],
+        data: Buffer.from([18, 18, 44, 151, 229, 134, 223, 5]),
+      });
+
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      const tx = new Transaction();
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = publicKey;
+      tx.add(createAtaIx, mintUsdcIx);
+      const sig = await wallet.sendTransaction!(tx, connection);
+      await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+
+      toast.success(`${MINT_AMOUNT_USDC} USDC claimed!`, "Added to your wallet");
+      await fetchBalances();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("MintCooldownNotExpired")) {
+        toast.warning("Cooldown active", "You can only claim once every 24 hours");
+        setCooldown(COOLDOWN_SECS);
+      } else {
+        toast.error("Claim failed", msg.slice(0, 80));
+      }
+    } finally {
+      setClaiming(false);
+    }
+  };
+
   if (connected && publicKey) {
+    const canClaim = cooldownLeft === 0 && !claiming;
     return (
-      <div ref={ref} style={{ position: "relative" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+
         {/* Address pill */}
+        <div ref={ref} style={{ position: "relative" }}>
         <div
           onClick={() => setOpen(v => !v)}
           style={{
@@ -37,6 +163,7 @@ export default function WalletButton() {
             fontWeight: 600, letterSpacing: "-0.01em",
             cursor: "pointer", userSelect: "none",
             transition: "background 0.18s, border-color 0.18s",
+            height: "34px", boxSizing: "border-box",
           }}
         >
           <span style={{
@@ -55,11 +182,11 @@ export default function WalletButton() {
           </svg>
         </div>
 
-        {/* Dropdown popup */}
+        {/* Dropdown popup (dirender di dalam ref wrapper agar outside-click benar) */}
         {open && (
           <div style={{
             position: "absolute", top: "calc(100% + 8px)", right: 0,
-            minWidth: "160px",
+            minWidth: "268px",
             background: "var(--bg)",
             border: "1px solid var(--border)",
             borderRadius: "10px",
@@ -68,20 +195,66 @@ export default function WalletButton() {
             zIndex: 100,
             animation: "slideDown 0.15s cubic-bezier(0.16,1,0.3,1)",
           }}>
-            {/* Full address */}
-            <div style={{
-              padding: "12px 14px 10px",
-              borderBottom: "1px solid var(--border-light)",
-            }}>
+
+            {/* Address section */}
+            <div style={{ padding: "12px 14px 10px", borderBottom: "1px solid var(--border-light)" }}>
               <div style={{ fontSize: "10px", letterSpacing: "1px", color: "var(--text-4)", marginBottom: "4px" }}>
                 CONNECTED
               </div>
               <div style={{ fontSize: "12px", fontFamily: "monospace", color: "var(--text-2)", wordBreak: "break-all" }}>
-                {publicKey.toBase58().slice(0, 20)}...
+                {publicKey.toBase58().slice(0, 22)}...
               </div>
             </div>
 
-            {/* Disconnect option */}
+            {/* Balances section */}
+            <div style={{ padding: "12px 14px 14px", borderBottom: "1px solid var(--border-light)" }}>
+              <div style={{ fontSize: "10px", letterSpacing: "1px", color: "var(--text-4)", marginBottom: "10px" }}>
+                BALANCES
+              </div>
+
+              {/* SOL row */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{
+                    width: "24px", height: "24px", borderRadius: "50%",
+                    background: "rgba(153,69,255,0.12)", border: "1px solid rgba(153,69,255,0.25)",
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    <svg width="12" height="10" viewBox="0 0 20 17" fill="none">
+                      <path d="M0,0 L13,0 L16,4 L3,4 Z" fill="rgba(153,69,255,0.9)" />
+                      <path d="M2,6.5 L15,6.5 L18,10.5 L5,10.5 Z" fill="rgba(153,69,255,0.7)" />
+                      <path d="M4,13 L17,13 L20,17 L7,17 Z" fill="rgba(153,69,255,0.5)" />
+                    </svg>
+                  </div>
+                  <span style={{ fontSize: "12.5px", color: "var(--text-2)", fontWeight: 600 }}>SOL</span>
+                </div>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", fontFamily: "monospace" }}>
+                  {solBalance === null ? "—" : solBalance.toFixed(4)}
+                </span>
+              </div>
+
+              {/* USDC row */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{
+                    width: "24px", height: "24px", borderRadius: "50%",
+                    background: "rgba(39,117,255,0.12)", border: "1px solid rgba(39,117,255,0.25)",
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 32 32" fill="none">
+                      <circle cx="16" cy="16" r="15" fill="#2775CA" />
+                      <path d="M20.5 19.2c0-2.1-1.3-2.8-3.8-3.1-1.8-.2-2.2-.7-2.2-1.5s.6-1.3 1.8-1.3c1.1 0 1.7.4 2 1.3.1.2.2.3.4.3h.9c.3 0 .5-.2.4-.5-.3-1.4-1.4-2.4-2.8-2.6v-1.5c0-.3-.2-.5-.5-.5h-.8c-.3 0-.5.2-.5.5v1.5c-1.7.3-2.8 1.4-2.8 2.9 0 2 1.3 2.7 3.8 3 1.7.3 2.2.7 2.2 1.6s-.7 1.5-2 1.5c-1.5 0-2-.6-2.2-1.5-.1-.2-.2-.3-.4-.3h-.9c-.3 0-.5.2-.4.5.3 1.5 1.3 2.5 2.9 2.8v1.5c0 .3.2.5.5.5h.8c.3 0 .5-.2.5-.5v-1.5c1.7-.3 2.9-1.5 2.9-3.1z" fill="white" />
+                    </svg>
+                  </div>
+                  <span style={{ fontSize: "12.5px", color: "var(--text-2)", fontWeight: 600 }}>USDC</span>
+                </div>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", fontFamily: "monospace" }}>
+                  {usdcBalance === null ? "—" : usdcBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+
+            {/* Disconnect */}
             <button
               onClick={() => { disconnect(); setOpen(false); }}
               style={{
@@ -111,7 +284,55 @@ export default function WalletButton() {
             from { opacity: 0; transform: translateY(-6px); }
             to   { opacity: 1; transform: translateY(0); }
           }
+          @keyframes spinRing {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+          }
         `}</style>
+        </div>
+
+        {/* Claim USDC button — di kanan address pill */}
+        <button
+          onClick={handleClaim}
+          disabled={!canClaim}
+          title={cooldownLeft > 0 ? `Cooldown: ${fmtCooldown(cooldownLeft)}` : "Claim 1,000 mock USDC"}
+          style={{
+            background: canClaim ? "rgba(39,117,255,0.12)" : "var(--surface-2)",
+            color: canClaim ? "rgba(100,165,255,0.95)" : "var(--text-4)",
+            border: `1px solid ${canClaim ? "rgba(39,117,255,0.26)" : "var(--border)"}`,
+            borderRadius: "6px", padding: "8px 14px",
+            fontSize: "13px", fontWeight: 700,
+            cursor: canClaim ? "pointer" : "not-allowed",
+            display: "inline-flex", alignItems: "center", gap: "6px",
+            fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
+            transition: "opacity 0.15s, background 0.15s",
+            whiteSpace: "nowrap",
+            height: "34px", boxSizing: "border-box",
+          }}
+          onMouseEnter={e => { if (canClaim) (e.currentTarget as HTMLButtonElement).style.opacity = "0.78"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+        >
+          {/* USDC mini icon */}
+          <svg width="13" height="13" viewBox="0 0 32 32" fill="none" style={{ flexShrink: 0 }}>
+            <circle cx="16" cy="16" r="15" fill="#2775CA" />
+            <path d="M20.5 19.2c0-2.1-1.3-2.8-3.8-3.1-1.8-.2-2.2-.7-2.2-1.5s.6-1.3 1.8-1.3c1.1 0 1.7.4 2 1.3.1.2.2.3.4.3h.9c.3 0 .5-.2.4-.5-.3-1.4-1.4-2.4-2.8-2.6v-1.5c0-.3-.2-.5-.5-.5h-.8c-.3 0-.5.2-.5.5v1.5c-1.7.3-2.8 1.4-2.8 2.9 0 2 1.3 2.7 3.8 3 1.7.3 2.2.7 2.2 1.6s-.7 1.5-2 1.5c-1.5 0-2-.6-2.2-1.5-.1-.2-.2-.3-.4-.3h-.9c-.3 0-.5.2-.4.5.3 1.5 1.3 2.5 2.9 2.8v1.5c0 .3.2.5.5.5h.8c.3 0 .5-.2.5-.5v-1.5c1.7-.3 2.9-1.5 2.9-3.1z" fill="white" />
+          </svg>
+          {claiming ? (
+            <svg width="10" height="10" viewBox="0 0 44 44" fill="none" style={{ animation: "spinRing 1.2s linear infinite" }}>
+              <circle cx="22" cy="22" r="18" stroke="rgba(100,165,255,0.3)" strokeWidth="5" />
+              <path d="M22 4 A18 18 0 0 1 40 22" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+            </svg>
+          ) : cooldownLeft > 0 ? (
+            <>
+              <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+                <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M7 4v3l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+              {fmtCooldown(cooldownLeft)}
+            </>
+          ) : "Claim 1,000"}
+        </button>
+
       </div>
     );
   }
@@ -139,8 +360,7 @@ export default function WalletButton() {
     >
       Connect Wallet
       <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
-        <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor"
-          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </button>
   );

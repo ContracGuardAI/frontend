@@ -21,6 +21,7 @@ const T: Dict = {
   "hero.headline2":     { en: "Secured.",            id: "Aman." },
   "hero.subtitle":      { en: "Audit Contracts, Verify Milestones, And Keep Payments On Track — Effortlessly.", id: "Audit Kontrak, Verifikasi Milestone, Dan Pantau Pembayaran — Dengan Mudah." },
   "hero.ctaAudit":      { en: "Audit Contract",     id: "Audit Kontrak" },
+  "hero.ctaHowItWorks": { en: "See How It Works",   id: "Cara Kerja" },
   "hero.ctaDashboard":  { en: "View Dashboard",     id: "Lihat Dasbor" },
   "hero.trustedBy":     { en: "Trusted by builders", id: "Dipercaya oleh builder" },
 
@@ -131,7 +132,8 @@ const T: Dict = {
   "dash.fairness":      { en: "Fairness:",           id: "Keadilan:" },
   "dash.checkpoints":   { en: "checkpoints",         id: "checkpoint" },
   "dash.emptyTitle":    { en: "No contracts yet",    id: "Belum ada kontrak" },
-  "dash.emptyDesc":     { en: "Create your first contract to get started", id: "Buat kontrak pertamamu untuk memulai" },
+  "dash.emptyDesc":     { en: "Audit a contract first to verify it's fair, then deploy it on-chain with Solana escrow.", id: "Audit kontrak terlebih dahulu untuk memastikan klausulnya adil, lalu deploy on-chain dengan Solana escrow." },
+  "dash.emptyAudit":    { en: "Audit a Contract",   id: "Audit Kontrak" },
   "dash.createContract": { en: "Create Contract",   id: "Buat Kontrak" },
 
   // ─── Create page ──────────────────────────────────────────────────────────

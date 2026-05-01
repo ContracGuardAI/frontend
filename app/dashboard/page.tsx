@@ -333,7 +333,7 @@ export default function DashboardPage() {
           {filtered.length === 0 && (
             <div style={{
               ...glass, padding: "64px 48px",
-              textAlign: "center",
+              textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center",
             }}>
               <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px", opacity: 0.20 }}>
                 <IconDocument size={52} color="currentColor" strokeWidth={1.4} />
@@ -341,27 +341,44 @@ export default function DashboardPage() {
               <div style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-3)", marginBottom: "8px" }}>
                 {t("dash.emptyTitle")}
               </div>
-              <div style={{ fontSize: "13.5px", color: "var(--text-4)", marginBottom: "24px" }}>
+              <div style={{ fontSize: "13.5px", color: "var(--text-4)", marginBottom: "28px", maxWidth: "360px", lineHeight: 1.7 }}>
                 {t("dash.emptyDesc")}
               </div>
-              <Link href="/create" style={{
-                background: "var(--btn-ghost-bg)", color: "var(--btn-ghost-text)",
-                fontSize: "14px", fontWeight: 600, padding: "12px 26px", borderRadius: "7px",
-                border: "1px solid var(--btn-ghost-border)", textDecoration: "none",
-                display: "inline-flex", alignItems: "center", gap: "8px",
-                transition: "background 0.2s, border-color 0.2s",
-              }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLAnchorElement).style.background = "var(--surface)";
-                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--border-strong)";
+              <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+                <Link href="/audit" style={{
+                  background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)",
+                  fontSize: "13.5px", fontWeight: 700, padding: "12px 26px", borderRadius: "7px",
+                  textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px",
+                  transition: "opacity 0.2s",
                 }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLAnchorElement).style.background = "var(--btn-ghost-bg)";
-                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--btn-ghost-border)";
+                  onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = "1"; }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                    <path d="M0 6.5A6.5 6.5 0 1 0 13 6.5A6.5 6.5 0 0 0 0 6.5Z" stroke="currentColor" strokeWidth="1.6" />
+                    <path d="M11.5 11.5L13.5 13.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                  {t("dash.emptyAudit")}
+                </Link>
+                <Link href="/create" style={{
+                  background: "var(--btn-ghost-bg)", color: "var(--btn-ghost-text)",
+                  fontSize: "13.5px", fontWeight: 600, padding: "12px 22px", borderRadius: "7px",
+                  border: "1px solid var(--btn-ghost-border)", textDecoration: "none",
+                  display: "inline-flex", alignItems: "center", gap: "8px",
+                  transition: "background 0.2s, border-color 0.2s",
                 }}
-              >
-                {t("dash.createContract")}
-              </Link>
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLAnchorElement).style.background = "var(--surface)";
+                    (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--border-strong)";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLAnchorElement).style.background = "var(--btn-ghost-bg)";
+                    (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--btn-ghost-border)";
+                  }}
+                >
+                  {t("dash.createContract")}
+                </Link>
+              </div>
             </div>
           )}
         </div>

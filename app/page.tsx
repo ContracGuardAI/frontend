@@ -4,7 +4,6 @@ import Image from "next/image";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { useLanguage } from "./components/LanguageProvider";
-import ClaimUsdcButton from "./components/ClaimUsdcButton";
 
 const glass = {
   background: "var(--surface)",
@@ -233,11 +232,11 @@ function Hero() {
                 <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </a>
-            <a href="/dashboard" style={{
+            <a href="/#how-it-works" style={{
               background: "var(--btn-ghost-bg)", color: "var(--btn-ghost-text)",
               fontWeight: 600, fontSize: "14px", padding: "14px 28px",
               borderRadius: "6px", border: "1px solid var(--btn-ghost-border)",
-              textDecoration: "none", display: "inline-block",
+              textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px",
               backdropFilter: "blur(10px)",
               transition: "background 0.2s, border-color 0.2s, transform 0.22s ease",
             }}
@@ -256,13 +255,11 @@ function Hero() {
               onMouseDown={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "scale(0.97)"; }}
               onMouseUp={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
             >
-              {t("hero.ctaDashboard")}
+              {t("hero.ctaHowItWorks")}
+              <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+                <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" transform="rotate(45 7 7)" />
+              </svg>
             </a>
-          </div>
-
-          {/* Claim USDC devnet */}
-          <div className="hero-in h3" style={{ marginBottom: "32px", maxWidth: "420px" }}>
-            <ClaimUsdcButton />
           </div>
 
           <div className="hero-in h4">
@@ -349,7 +346,7 @@ function Hero() {
           <svg width="100%" height="100%" viewBox="0 0 100 100"
             style={{ animation: "spinRing 42s linear infinite", display: "block" }}>
             <circle cx="50" cy="50" r="48" fill="none"
-              stroke="var(--border)" strokeWidth="0.6" strokeDasharray="4 12" />
+              stroke="var(--accent-border)" strokeWidth="0.9" strokeDasharray="4 12" />
           </svg>
         </div>
         <div style={{
@@ -360,7 +357,7 @@ function Hero() {
           <svg width="100%" height="100%" viewBox="0 0 100 100"
             style={{ animation: "spinRingCCW 28s linear infinite", display: "block" }}>
             <circle cx="50" cy="50" r="48" fill="none"
-              stroke="var(--border-light)" strokeWidth="0.5" strokeDasharray="2 9" />
+              stroke="var(--accent-border)" strokeWidth="0.65" strokeDasharray="2 9" strokeOpacity="0.65" />
           </svg>
         </div>
         <div style={{
