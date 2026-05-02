@@ -158,41 +158,35 @@ export interface PriceDataPoint {
 }
 
 export async function fetchBlibliPrices(keyword: string): Promise<PriceDataPoint[]> {
-  try {
-    const params = new URLSearchParams({
-      searchTerm: keyword, channelId: "web",
-      start: "0", itemPerPage: "10", intent: "false",
+  return new Promise((resolve) => {
+    const scriptPath = path.resolve(process.cwd(), "..", "neru-scrapper", "blibli_json.py");
+
+    // On WSL: use python.exe (Windows Python) to bypass WSL network block
+    // On Windows: use python directly
+    const pythonCmd = process.platform === "win32" ? "python" : "python.exe";
+
+    const proc = spawn(pythonCmd, [scriptPath, keyword], {
+      stdio: ["pipe", "pipe", "pipe"],
+      shell: process.platform === "win32",
     });
-    const res = await fetch(
-      `https://www.blibli.com/backend/search/products?${params}`,
-      {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-          Accept: "application/json, text/plain, */*",
-          Referer: `https://www.blibli.com/jual/${keyword.replace(/ /g, "-")}`,
-          Origin: "https://www.blibli.com",
-        },
+
+    let stdout = "";
+    proc.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
+    proc.on("error", (e) => {
+      console.error(`[Blibli] spawn error for "${keyword}":`, e.message);
+      resolve([]);
+    });
+    proc.on("close", () => {
+      try {
+        const items = JSON.parse(stdout.trim());
+        console.log(`[Blibli] "${keyword}" → ${Array.isArray(items) ? items.length : 0} items`);
+        resolve(Array.isArray(items) ? items.filter((p: PriceDataPoint) => p.price > 500000) : []);
+      } catch {
+        console.error(`[Blibli] JSON parse error for "${keyword}": ${stdout.slice(0, 100)}`);
+        resolve([]);
       }
-    );
-    if (!res.ok) {
-      console.error(`[Blibli] HTTP ${res.status} for "${keyword}"`);
-      return [];
-    }
-    const data = await res.json();
-    const items: any[] = data?.data?.products ?? [];
-    console.log(`[Blibli] "${keyword}" → ${items.length} items`);
-    return items
-      .map((item) => ({
-        name:   (item.name ?? "").slice(0, 60),
-        price:  parseInt((item.price?.priceDisplay ?? "0").replace(/[^\d]/g, ""), 10),
-        source: "Blibli",
-      }))
-      .filter((p) => p.price > 0)
-      .slice(0, 8);
-  } catch (e) {
-    console.error(`[Blibli] Error for "${keyword}":`, e);
-    return [];
-  }
+    });
+  });
 }
 
 export async function fetchSerpApiPrices(keyword: string): Promise<PriceDataPoint[]> {
@@ -214,6 +208,8 @@ export async function fetchSerpApiPrices(keyword: string): Promise<PriceDataPoin
     const data = await res.json();
     const items: any[] = data?.shopping_results ?? [];
     console.log(`[SerpAPI] "${keyword}" → ${items.length} shopping results`);
+    // Log raw prices untuk debug
+    items.slice(0, 5).forEach(item => console.log(`  [SerpAPI raw] "${item.title?.slice(0,40)}" price="${item.price}"`));
     return items
       .map((item) => {
         const raw   = String(item.price ?? "0").replace(/[^\d]/g, "");
@@ -295,12 +291,16 @@ export function summarizePrices(points: PriceDataPoint[], keyword: string): stri
   // Rough median for outlier detection (robust even with a few outliers)
   const sorted0     = [...rawPrices].sort((a, b) => a - b);
   const roughMedian = sorted0[Math.floor(sorted0.length / 2)];
+  const fmt0 = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
+  console.log(`[summarize] "${keyword}" rawPrices (${rawPrices.length}): ${sorted0.map(fmt0).join(", ")}`);
+  console.log(`[summarize] roughMedian=${fmt0(roughMedian)}, filter range: ${fmt0(roughMedian*0.1)} – ${fmt0(roughMedian*10)}`);
 
   // Remove prices below 10% or above 1000% of rough median
   // This catches per-unit prices mixed with per-roll/bulk prices (e.g. Rp 31.234/m vs Rp 3.250.000/roll)
   const prices = rawPrices.filter(
     (p) => p >= roughMedian * 0.1 && p <= roughMedian * 10
   );
+  console.log(`[summarize] after filter (${prices.length}): ${[...prices].sort((a,b)=>a-b).map(fmt0).join(", ")}`);
   if (!prices.length) return null;
 
   const filteredPoints = points.filter(
@@ -328,34 +328,6 @@ export function summarizePrices(points: PriceDataPoint[], keyword: string): stri
   Median  : ${fmt(median)}${outlierNote}
   Contoh:
 ${examples}`;
-}
-
-async function fetchAllMarketPrices(keywords: string[]): Promise<string> {
-  if (!keywords.length) return "";
-
-  // Fetch semua sumber secara paralel per keyword
-  const allResults = await Promise.all(
-    keywords.map(async (kw) => {
-      const [blibli, serp, cse] = await Promise.all([
-        fetchBlibliPrices(kw),
-        fetchSerpApiPrices(kw),
-        fetchGoogleCsePrices(kw),
-      ]);
-      const combined = [...blibli, ...serp, ...cse];
-      return summarizePrices(combined, kw);
-    })
-  );
-
-  const valid = allResults.filter(Boolean) as string[];
-  if (!valid.length) return "";
-
-  const sources = [
-    "Blibli.com",
-    process.env.SERPAPI_KEY    ? "Google Shopping (SerpAPI)" : null,
-    process.env.GOOGLE_CSE_KEY ? "Google Search (CSE)" : null,
-  ].filter(Boolean).join(", ");
-
-  return `=== DATA HARGA PASAR REAL (${sources}) ===\n\n${valid.join("\n\n")}\n`;
 }
 
 // ─── Stage 1: Detect Contract Type ──────────────────────────────────────────

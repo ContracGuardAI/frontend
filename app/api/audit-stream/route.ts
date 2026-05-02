@@ -43,7 +43,7 @@ const CONTRACT_TYPE_LABELS: Record<string, { id: string; en: string; icon: strin
   jasa_lainnya:     { id: "Jasa Lainnya",           en: "Other Services",       icon: "📋" },
 };
 
-const AGENT_TIMEOUT_MS = 85_000;
+const AGENT_TIMEOUT_MS = 110_000;
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
         let preloadedMarketData = "";
 
         if (detection.items_to_check.length > 0) {
-          const keywords = [...new Set(detection.items_to_check)].slice(0, 6);
+          const keywords = [...new Set(detection.items_to_check)].slice(0, 4);
 
           send({
             type: "progress",
@@ -125,42 +125,80 @@ export async function POST(req: NextRequest) {
               : `Ditemukan ${keywords.length} item untuk dicek harga: ${keywords.join(", ")}`,
           });
 
-          // Fetch per sumber secara paralel tapi tampilkan progress per sumber
+          // Fetch semua sumber secara paralel sekaligus
           const allPoints: Record<string, PriceDataPoint[]> = {};
 
-          // Blibli — selalu aktif
           send({ type: "fetching", source: "Blibli", status: "loading",
             message: isEn ? "Blibli — fetching prices..." : "Blibli — mengambil data harga..." });
-          const blibliResults = await Promise.all(keywords.map(kw => fetchBlibliPrices(kw)));
-          const blibliTotal   = blibliResults.reduce((s, r) => s + r.length, 0);
-          keywords.forEach((kw, i) => { allPoints[kw] = [...(allPoints[kw] ?? []), ...blibliResults[i]]; });
+          if (process.env.SERPAPI_KEY)
+            send({ type: "fetching", source: "Google Shopping", status: "loading",
+              message: isEn ? "Google Shopping — fetching prices..." : "Google Shopping — mengambil data harga..." });
+          if (process.env.GOOGLE_CSE_KEY && process.env.GOOGLE_CSE_ID)
+            send({ type: "fetching", source: "Google Search", status: "loading",
+              message: isEn ? "Google Search — fetching prices..." : "Google Search — mengambil data harga..." });
+
+          // Semua sumber jalan paralel
+          const [blibliResults, serpResults, cseResults] = await Promise.all([
+            Promise.all(keywords.map(kw => fetchBlibliPrices(kw))),
+            process.env.SERPAPI_KEY
+              ? Promise.all(keywords.map(kw => fetchSerpApiPrices(kw)))
+              : Promise.resolve(keywords.map(() => [] as PriceDataPoint[])),
+            process.env.GOOGLE_CSE_KEY && process.env.GOOGLE_CSE_ID
+              ? Promise.all(keywords.map(kw => fetchGoogleCsePrices(kw)))
+              : Promise.resolve(keywords.map(() => [] as PriceDataPoint[])),
+          ]);
+
+          // Gabungkan per keyword — cross-validate Blibli vs SerpAPI
+          keywords.forEach((kw, i) => {
+            const serp   = serpResults[i];
+            const blibli = blibliResults[i];
+
+            let validBlibli = blibli;
+
+            if (blibli.length > 0) {
+              const blibliPrices = blibli.map(p => p.price).sort((a, b) => a - b);
+              const bm = blibliPrices[Math.floor(blibliPrices.length / 2)];
+
+              if (serp.length > 0) {
+                // Case 1: SerpAPI ada data — buang Blibli kalau mediannya < 5% median SerpAPI
+                const serpPrices = serp.map(p => p.price).sort((a, b) => a - b);
+                const serpMedian = serpPrices[Math.floor(serpPrices.length / 2)];
+                if (bm < serpMedian * 0.05) {
+                  console.log(`[cross-validate] "${kw}" Blibli median Rp ${bm.toLocaleString("id-ID")} << SerpAPI Rp ${serpMedian.toLocaleString("id-ID")} → Blibli dibuang`);
+                  validBlibli = [];
+                }
+              } else {
+                // Case 2: SerpAPI tidak ada data — cek apakah semua harga Blibli clustered rendah
+                // Jika max harga < 5x min harga DAN max < Rp 5 juta → kemungkinan semua aksesori
+                const maxP = blibliPrices[blibliPrices.length - 1];
+                const minP = blibliPrices[0];
+                if (maxP < 5_000_000 && maxP < minP * 5) {
+                  console.log(`[cross-validate] "${kw}" tidak ada SerpAPI, Blibli clustered rendah (max Rp ${maxP.toLocaleString("id-ID")}) → kemungkinan aksesori, dibuang`);
+                  validBlibli = [];
+                }
+              }
+            }
+
+            allPoints[kw] = [...validBlibli, ...serp, ...cseResults[i]];
+          });
+
+          // Kirim status per sumber
+          const blibliTotal = blibliResults.reduce((s, r) => s + r.length, 0);
           send({ type: "fetching", source: "Blibli", status: blibliTotal > 0 ? "done" : "empty",
             message: blibliTotal > 0
               ? (isEn ? `Blibli — ${blibliTotal} prices found` : `Blibli — ${blibliTotal} data harga ditemukan`)
               : (isEn ? "Blibli — no data found" : "Blibli — tidak ada data"),
           });
-
-          // SerpAPI (Google Shopping)
           if (process.env.SERPAPI_KEY) {
-            send({ type: "fetching", source: "Google Shopping", status: "loading",
-              message: isEn ? "Google Shopping — fetching prices..." : "Google Shopping — mengambil data harga..." });
-            const serpResults = await Promise.all(keywords.map(kw => fetchSerpApiPrices(kw)));
-            const serpTotal   = serpResults.reduce((s, r) => s + r.length, 0);
-            keywords.forEach((kw, i) => { allPoints[kw] = [...(allPoints[kw] ?? []), ...serpResults[i]]; });
+            const serpTotal = serpResults.reduce((s, r) => s + r.length, 0);
             send({ type: "fetching", source: "Google Shopping", status: serpTotal > 0 ? "done" : "empty",
               message: serpTotal > 0
                 ? (isEn ? `Google Shopping — ${serpTotal} prices found` : `Google Shopping — ${serpTotal} data harga ditemukan`)
                 : (isEn ? "Google Shopping — no data found" : "Google Shopping — tidak ada data"),
             });
           }
-
-          // Google CSE
           if (process.env.GOOGLE_CSE_KEY && process.env.GOOGLE_CSE_ID) {
-            send({ type: "fetching", source: "Google Search", status: "loading",
-              message: isEn ? "Google Search — fetching prices..." : "Google Search — mengambil data harga..." });
-            const cseResults = await Promise.all(keywords.map(kw => fetchGoogleCsePrices(kw)));
-            const cseTotal   = cseResults.reduce((s, r) => s + r.length, 0);
-            keywords.forEach((kw, i) => { allPoints[kw] = [...(allPoints[kw] ?? []), ...cseResults[i]]; });
+            const cseTotal = cseResults.reduce((s, r) => s + r.length, 0);
             send({ type: "fetching", source: "Google Search", status: cseTotal > 0 ? "done" : "empty",
               message: cseTotal > 0
                 ? (isEn ? `Google Search — ${cseTotal} prices found` : `Google Search — ${cseTotal} data harga ditemukan`)
