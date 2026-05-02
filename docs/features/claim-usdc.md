@@ -7,7 +7,6 @@ ContractGuard runs on Solana Devnet with a custom **mock USDC token** for testin
 ## How to Claim
 
 ![Navbar — Wallet Connected with Claim Button](../assets/screenshots/navbar-claim.png)
-*Wallet connected: address pill (left) + "Claim 1,000" button (right) in the navbar*
 
 1. Connect your Phantom wallet (set to Devnet)
 2. The **Claim 1,000** button appears to the right of your wallet address in the navbar
@@ -40,7 +39,6 @@ stateDiagram-v2
 ## Wallet Popup
 
 ![Navbar — Wallet Popup with Balances](../assets/screenshots/wallet-popup.png)
-*Popup showing SOL balance, USDC balance, and Disconnect button — opens when address pill is clicked*
 
 Click your wallet **address pill** (left of the claim button) to open a popup showing:
 - **SOL balance** — your Devnet SOL for transaction fees

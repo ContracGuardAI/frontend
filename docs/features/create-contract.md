@@ -8,7 +8,6 @@ The Create page deploys a contract on-chain as a Solana escrow. Funds are locked
 ---
 
 ![Create Contract — Form Overview](../assets/screenshots/create-page.png)
-*Multi-step contract deployment form: parties, amount, milestone definitions*
 
 ---
 
@@ -39,7 +38,6 @@ Before creating a contract:
 ## Defining Milestones
 
 ![Create Contract — Milestone Definition](../assets/screenshots/create-milestones.png)
-*Milestone form: title, deliverable description, and USDC amount per milestone*
 
 A contract must have at least one milestone. Milestone amounts must add up to the total contract value.
 
@@ -78,7 +76,6 @@ sequenceDiagram
 ## What Gets Created On-Chain
 
 ![Contract Created — Success State](../assets/screenshots/create-success.png)
-*Transaction confirmed: contract PDA address shown, link to dashboard*
 
 After deployment, two accounts are created on Solana:
 

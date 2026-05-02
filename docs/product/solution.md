@@ -54,7 +54,6 @@ flowchart TD
 Upload your contract (PDF or paste text). In under 30 seconds, ContractGuard's AI gives you a complete analysis.
 
 ![Contract Audit — Results Page](../assets/screenshots/audit-results.png)
-*AI audit results: fairness score 6/10, 2 high-risk clauses flagged, market price comparison per line item*
 
 **What the AI checks:**
 
@@ -71,7 +70,6 @@ A single number that tells you how balanced the contract is — before you sign 
 Every clause that could hurt you is flagged with exact text, the reason it's risky (in plain language), and a specific revision suggestion.
 
 ![Risky Clauses — Highlighted with Risk Level](../assets/screenshots/audit-risky-clauses.png)
-*High-risk clause flagged: unlimited revisions with no compensation, suggested rewrite shown*
 
 ### Market Price Comparison
 Every line item is compared against real Indonesian market data pulled from Blibli, Google Shopping, and other sources.
@@ -88,7 +86,6 @@ The AI checks your contract type against Indonesian laws and flags any non-compl
 Once the contract is agreed and audited, deploy it to Solana in one click.
 
 ![Create Contract — Multi-step Form](../assets/screenshots/create-contract.png)
-*Contract deployment form: parties, amount, milestones defined upfront*
 
 **What happens on-chain:**
 1. Client's USDC transfers into a **smart contract escrow** — locked, inaccessible to either party
@@ -104,7 +101,6 @@ Once the contract is agreed and audited, deploy it to Solana in one click.
 When the contractor finishes a milestone, they submit evidence directly in the dashboard.
 
 ![Dashboard — Milestone Submission](../assets/screenshots/milestone-submit.png)
-*Contractor submits evidence; AI verification result shown with compliance score and findings*
 
 **The AI reviews evidence automatically:**
 - Checks evidence against the original contract specification

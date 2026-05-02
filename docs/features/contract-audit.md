@@ -8,7 +8,6 @@ The Audit page is the starting point for every contract workflow. It analyzes a 
 ---
 
 ![Audit Page — Upload Interface](../assets/screenshots/audit-page.png)
-*Audit page with PDF upload and text paste options, language toggle visible in navbar*
 
 ---
 
@@ -48,7 +47,6 @@ For long contracts, the streaming endpoint (`/api/audit-stream`) shows live prog
 ### Fairness Score
 
 ![Audit Results — Fairness Score](../assets/screenshots/audit-score.png)
-*Fairness score 6/10 displayed prominently with color indicator and summary*
 
 A single score from **1–10** representing overall contract balance:
 
@@ -63,7 +61,6 @@ A single score from **1–10** representing overall contract balance:
 ### Risky Clauses
 
 ![Audit Results — Risky Clauses](../assets/screenshots/audit-clauses.png)
-*2 high-risk and 1 medium-risk clause highlighted, each with explanation and suggested rewrite*
 
 Each flagged clause includes:
 - **Risk level** badge: `HIGH` / `MEDIUM` / `LOW`
@@ -76,7 +73,6 @@ Each flagged clause includes:
 ### Price Analysis
 
 ![Audit Results — Price Analysis](../assets/screenshots/audit-prices.png)
-*Line-item comparison: contracted price vs. market range from Indonesian sources, status badge per item*
 
 Line-by-line comparison against real Indonesian market data:
 - Item name and contracted price
@@ -107,7 +103,6 @@ Checks relevant Indonesian laws based on the detected contract type. Each check 
 After analysis, a **SHA-256 hash** of the audit result is displayed.
 
 ![Audit Hash — On-chain Recording](../assets/screenshots/audit-hash.png)
-*Audit hash shown after analysis — copy and paste into contract deployment form*
 
 This hash:
 - Proves the contract was audited before deployment

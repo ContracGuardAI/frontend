@@ -7,7 +7,6 @@ There are AI tools. There are escrow services. There are contract templates. But
 ---
 
 ![Why ContractGuard — Comparison Overview](../assets/screenshots/landing-features.png)
-*ContractGuard feature overview section on the landing page*
 
 ---
 

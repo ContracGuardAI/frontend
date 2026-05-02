@@ -10,7 +10,6 @@ The Dashboard is your command center — showing all active and completed contra
 ## Dashboard List (`/dashboard`)
 
 ![Dashboard — Contract List](../assets/screenshots/dashboard-list.png)
-*Dashboard list: 3 active contracts shown with status badges, amounts, and quick navigation*
 
 ### What You'll See
 - All contracts where your wallet is client or contractor
@@ -21,7 +20,6 @@ The Dashboard is your command center — showing all active and completed contra
 ### Empty State
 
 ![Dashboard — Empty State](../assets/screenshots/dashboard-empty.png)
-*Empty dashboard with guided CTAs: "Audit a Contract" and "Create Contract"*
 
 If you have no contracts yet, two action buttons guide you through the right flow:
 1. **Audit a Contract** → `/audit` *(start here — always audit before deploying)*
@@ -32,7 +30,6 @@ If you have no contracts yet, two action buttons guide you through the right flo
 ## Contract Detail (`/dashboard/[id]`)
 
 ![Contract Detail — Overview Panel](../assets/screenshots/contract-detail.png)
-*Contract detail: parties, status, total value, audit hash link, and milestone list*
 
 ### Contract Overview Panel
 - Title, description, status badge
@@ -76,7 +73,6 @@ sequenceDiagram
 ### As Contractor
 
 ![Milestone — Evidence Submission](../assets/screenshots/milestone-submit.png)
-*Contractor evidence submission form with text area for links, files, and description*
 
 1. Complete the deliverable for the milestone
 2. Click **Submit Evidence** on the milestone card
@@ -86,7 +82,6 @@ sequenceDiagram
 **AI Verification Result shows:**
 
 ![Milestone — AI Verification Result](../assets/screenshots/milestone-ai-result.png)
-*AI verdict: APPROVED with compliance score 91/10, approved items listed*
 
 - Status badge: `APPROVED` / `NEEDS REVISION` / `MAJOR ISSUE`
 - Compliance score (0–100)
@@ -97,7 +92,6 @@ sequenceDiagram
 ### As Client
 
 ![Milestone — Client Approval](../assets/screenshots/milestone-approve.png)
-*Client view: AI verdict shown, "Approve Release" button triggers Solana transaction*
 
 1. Review the submitted evidence and AI verdict
 2. Click **Approve Release** when satisfied
@@ -129,7 +123,6 @@ flowchart LR
 ## Contract Chat (Q&A)
 
 ![Contract Chat — Q&A Interface](../assets/screenshots/contract-chat.png)
-*Chat tab: user asks about penalty clauses, AI answers referencing specific contract text*
 
 On the contract detail page, the **Chat** tab lets you ask anything about the contract:
 
