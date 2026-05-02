@@ -1,0 +1,109 @@
+# Create & Deploy Contract
+
+**Route:** `/create`  
+**File:** `app/create/page.tsx`
+
+The Create page deploys a contract on-chain as a Solana escrow. Funds are locked in the smart contract and can only be released when milestones are approved.
+
+---
+
+![Create Contract — Form Overview](../assets/screenshots/create-page.png)
+*Multi-step contract deployment form: parties, amount, milestone definitions*
+
+---
+
+## Prerequisites
+
+Before creating a contract:
+- Wallet connected (Phantom, set to Devnet)
+- Sufficient USDC balance — [claim 1,000 mock USDC](claim-usdc.md) from the navbar
+- Contract audited (recommended — paste the audit hash for on-chain proof)
+
+---
+
+## Form Fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| Contract Title | Yes | Human-readable name |
+| Description | Yes | Scope of work |
+| Client Wallet | Yes | Payer's Solana public key |
+| Contractor Wallet | Yes | Service provider's public key |
+| Total Amount (USDC) | Yes | Full contract value |
+| Milestones | Yes | At least one with title + amount |
+| Audit Hash | No | SHA-256 from the Audit page |
+| Start Date / End Date | No | Contract period |
+
+---
+
+## Defining Milestones
+
+![Create Contract — Milestone Definition](../assets/screenshots/create-milestones.png)
+*Milestone form: title, deliverable description, and USDC amount per milestone*
+
+A contract must have at least one milestone. Milestone amounts must add up to the total contract value.
+
+**Example breakdown:**
+```
+Milestone 1: UI Design Mockups              500 USDC
+Milestone 2: Backend API Development      1,500 USDC
+Milestone 3: Testing & Deployment           500 USDC
+──────────────────────────────────────────────────
+Total                                     2,500 USDC
+```
+
+---
+
+## Deployment Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Create Page
+    participant Sol as Solana Devnet
+    participant P as Phantom Wallet
+
+    U->>UI: Fill form + click Deploy
+    UI->>Sol: Build create_contract transaction
+    UI->>P: Request transaction approval
+    P-->>U: Show transaction details
+    U->>P: Approve ✓
+    P->>Sol: Submit transaction
+    Sol-->>UI: Confirmation + Contract PDA address
+    UI-->>U: Redirect to Dashboard
+```
+
+---
+
+## What Gets Created On-Chain
+
+![Contract Created — Success State](../assets/screenshots/create-success.png)
+*Transaction confirmed: contract PDA address shown, link to dashboard*
+
+After deployment, two accounts are created on Solana:
+
+| Account | Address | Content |
+|---------|---------|---------|
+| Contract PDA | Derived from `[client, contractor, created_at]` | Contract data, milestones, status |
+| USDC Escrow ATA | ATA owned by Contract PDA | Locked USDC funds |
+
+---
+
+## Contract Statuses
+
+```mermaid
+stateDiagram-v2
+    [*] --> Active : Deploy contract
+    Active --> Completed : All milestones approved
+    Active --> Disputed : Milestone rejected
+    Disputed --> Active : Contractor revises
+    Active --> Cancelled : Client cancels (funds returned)
+    Completed --> [*]
+    Cancelled --> [*]
+```
+
+---
+
+## Next Step
+
+Manage milestones and release funds → [Dashboard & Milestones](dashboard.md)
