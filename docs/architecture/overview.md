@@ -4,25 +4,25 @@
 
 ```mermaid
 graph TB
-    subgraph Browser["🌐 User Browser"]
+    subgraph Browser["User Browser"]
         UI["Next.js Frontend\nApp Router\n/audit · /create · /dashboard"]
         Wallet["Phantom Wallet\nExtension"]
     end
 
-    subgraph NextAPI["⚙️ Next.js API Routes (Server-side)"]
+    subgraph NextAPI["Next.js API Routes"]
         upload["/api/upload\npdf-parse"]
         audit["/api/audit\n/api/audit-stream"]
         checkpoint["/api/checkpoint"]
         chat["/api/chat-contract"]
     end
 
-    subgraph AI["🤖 AI Layer"]
+    subgraph AI["AI Layer"]
         cli["Claude Code CLI\nSubprocess\nclaude -p '...'"]
         prompt["agent/CLAUDE.md\nSystem Prompt\nExpert Personas · Law Refs"]
         prices["Market Price APIs\nBlibli · SerpAPI\nGoogle Shopping"]
     end
 
-    subgraph Solana["⛓️ Solana Devnet"]
+    subgraph Solana["Solana Devnet"]
         program["ContractGuard Program\n2Htsz7Xf4YWZTc8t..."]
         config["Config PDA"]
         contract["Contract PDA\n+ USDC Escrow"]

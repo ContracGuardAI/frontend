@@ -2,20 +2,18 @@
 
 ### Stop signing contracts blind. Deploy trustless escrow in minutes.
 
+---
+
+![ContractGuard AI — Landing Page](assets/screenshots/landing.png)
+
+---
+
 ContractGuard AI is the first platform that combines **AI contract auditing** with **on-chain escrow** — built specifically for freelancers, vendors, and procurement teams in Indonesia.
 
 Before you sign anything, ContractGuard tells you exactly what's risky, what's unfair, and what the market price should be. After you sign, your payment is locked on Solana and released automatically when work is verified.
 
----
-
-> **🔗 Live Demo** — [contractguard.vercel.app](https://contractguard.vercel.app)
-> 
+> **🔗 Live Demo** — [contractguard.vercel.app](https://contractguard.vercel.app)  
 > **🎬 Video Walkthrough** — [Watch 2-minute demo](https://youtube.com)
-
----
-
-![ContractGuard AI — Landing Page](assets/screenshots/landing.png)
-*Landing page — dark mode, bilingual EN/ID, Phantom wallet connected*
 
 ---
 
@@ -37,7 +35,7 @@ Every year, thousands of freelancers and vendors in Indonesia sign contracts the
 ```mermaid
 flowchart LR
     A([📄 Upload Contract]) --> B([🤖 AI Audit])
-    B --> C([🚀 Deploy Escrow])
+    B --> C([Deploy Escrow])
     C --> D([📋 Submit Evidence])
     D --> E([✅ Release Funds])
 

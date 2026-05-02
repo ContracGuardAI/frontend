@@ -110,9 +110,9 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    CA["💳 Client ATA\n(USDC)"]
+    CA["Client ATA\n(USDC)"]
     ESC["🔒 Contract Escrow PDA\n(USDC locked)"]
-    CTA["💰 Contractor ATA\n(USDC)"]
+    CTA["Contractor ATA\n(USDC)"]
 
     CA -- "Deploy Contract\n(all funds)" --> ESC
     ESC -- "Approve Milestone\n(per milestone amount)" --> CTA

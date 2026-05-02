@@ -15,7 +15,7 @@ flowchart TD
     subgraph AUDIT ["Phase 1 — AI Audit"]
         B([🤖 Claude analyzes\nin under 30 seconds]) --> C1([📊 Fairness Score\n1–10])
         B --> C2([⚠️ Risky Clauses\nflagged & explained])
-        B --> C3([💰 Market Prices\nvs. real Indonesian data])
+        B --> C3([Market Prices\nvs. real Indonesian data])
         B --> C4([📋 Regulation Check\nUU · PP · Perpres])
     end
 
@@ -24,22 +24,22 @@ flowchart TD
     D -->|Contract OK| E
 
     subgraph DEPLOY ["Phase 2 — Deploy Escrow"]
-        E([🚀 Deploy to Solana]) --> F1([🔒 USDC locked\nin smart contract])
-        E --> F2([🔗 Audit hash\nrecorded on-chain])
+        E([Deploy to Solana]) --> F1([🔒 USDC locked\nin smart contract])
+        E --> F2([Audit hash\nrecorded on-chain])
     end
 
     F1 & F2 --> G
 
     subgraph MILESTONE ["Phase 3 — Milestone Loop"]
-        G([👷 Contractor works\non milestone]) --> H([📋 Submit evidence\nlinks · files · desc])
+        G([Contractor works\non milestone]) --> H([📋 Submit evidence\nlinks · files · desc])
         H --> I([🤖 AI verifies\ncompliance score 0–100])
         I --> J{Verdict}
         J -->|NEEDS REVISION| G
         J -->|APPROVED| K([✅ Client approves\none transaction])
-        K --> L([💸 Funds released\ninstantly])
+        K --> L([Funds released\ninstantly])
         L --> M{More\nmilestones?}
         M -->|Yes| G
-        M -->|No| N([🎉 Contract complete])
+        M -->|No| N([Contract complete])
     end
 
     style AUDIT fill:#1a1a2e,stroke:#9945FF

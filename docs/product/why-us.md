@@ -60,19 +60,19 @@ Platform escrow locks you into their ecosystem and their fees. ContractGuard is 
 
 ```mermaid
 flowchart LR
-    subgraph OLD ["❌ Old Way (BAST)"]
+    subgraph OLD ["Manual BAST Process"]
         direction TB
         O1([Fill Word/PDF docs]) --> O2([Get physical signatures])
         O2 --> O3([File with procurement office])
         O3 --> O4([Wait for approval committee])
-        O4 --> O5([⏳ Weeks pass...])
+        O4 --> O5([⏳ Weeks pass])
     end
 
-    subgraph NEW ["✅ ContractGuard"]
+    subgraph NEW ["ContractGuard"]
         direction TB
         N1([Submit evidence in dashboard]) --> N2([AI reviews in seconds])
-        N2 --> N3([Client approves: 1 click])
-        N3 --> N4([💸 Funds released instantly])
+        N2 --> N3([Client approves — 1 click])
+        N3 --> N4([Funds released instantly])
     end
 
     style OLD fill:#2d1b1b,stroke:#ff4444
@@ -118,11 +118,11 @@ The smart contract does everything. We just built the interface.
 graph TD
     CG(["ContractGuard AI"])
 
-    CG --> F(["👨‍💻 Freelancers\n& Contractors\n\nWeb devs, designers,\nconsultants, creators\nwho need payment\nprotection"])
+    CG --> F(["Freelancers\n& Contractors\n\nWeb devs, designers,\nconsultants, creators\nwho need payment\nprotection"])
 
-    CG --> B(["🏢 SMBs & Vendors\n\nCompanies hiring\nsubcontractors who want\nfair prices and\nmilestone accountability"])
+    CG --> B(["SMBs & Vendors\n\nCompanies hiring\nsubcontractors who want\nfair prices and\nmilestone accountability"])
 
-    CG --> P(["🏛️ Procurement Teams\n\nGovernment & corporate\nprocurement needing\nregulation compliance\n& audit trails"])
+    CG --> P(["Procurement Teams\n\nGovernment & corporate\nprocurement needing\nregulation compliance\n& audit trails"])
 
     style CG fill:#1a1a2e,stroke:#9945FF,color:#f0f0ff,font-weight:bold
     style F fill:#1a1a2e,stroke:#38BDF8,color:#f0f0ff

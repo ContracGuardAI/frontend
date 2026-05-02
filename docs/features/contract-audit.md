@@ -30,7 +30,7 @@ The Audit page is the starting point for every contract workflow. It analyzes a 
 ```mermaid
 flowchart LR
     A([📄 Contract Text]) --> B([🔍 Detect\nContract Type])
-    B --> C([💰 Fetch Market\nPrices])
+    B --> C([Fetch Market\nPrices])
     B --> D([🤖 Claude Analyzes\nwith Expert Persona])
     C --> D
     D --> E([📊 Structured\nJSON Result])

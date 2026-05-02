@@ -10,17 +10,17 @@ The Indonesian freelance and procurement market is growing fast — but the cont
 
 ```mermaid
 flowchart TD
-    A([📝 Contract Drafted\nby one party]) --> B([😶 Other party\nsigns blindly])
-    B --> C([💼 Work begins\nbefore payment secured])
+    A([Contract drafted\nby one party]) --> B([Counterparty\nsigns blindly])
+    B --> C([Work begins\nbefore payment secured])
     C --> D{Milestone done?}
-    D -->|Client says 'not done yet'| E([🔄 Revise for free\ninfinitely])
+    D -->|Client says not done yet| E([Revise for free\nrepeatedly])
     E --> D
-    D -->|Client agrees| F([📨 Invoice sent])
+    D -->|Client agrees| F([Invoice sent])
     F --> G([⏳ Wait 30–90 days\nfor payment])
     G --> H{Payment arrives?}
-    H -->|No| I([😤 Chase payment\nno enforcement])
+    H -->|No| I([Chase payment\nno enforcement])
     I --> H
-    H -->|Yes| J([✅ Finally paid\nbut months later])
+    H -->|Yes| J([Paid — but months later])
 
     style A fill:#2d1b1b,stroke:#ff4444,color:#ffcccc
     style B fill:#2d1b1b,stroke:#ff4444,color:#ffcccc
@@ -92,9 +92,9 @@ Most people drafting or signing these contracts have no idea whether they're com
 
 ```mermaid
 graph LR
-    A["🏢 77 Million\nMSMEs in Indonesia"] --> D
-    B["💰 $2.3B+\nFreelance transactions 2023"] --> D
-    C["🏛️ Rp 2,000T+\nGovernment procurement/year"] --> D
+    A["77 Million\nMSMEs in Indonesia"] --> D
+    B["$2.3B+\nFreelance transactions 2023"] --> D
+    C["Rp 2,000T+\nGovernment procurement/year"] --> D
     D(["⚠️ Most contracts reviewed\nby zero legal experts"])
 
     style D fill:#2d1b1b,stroke:#ff4444,color:#ffcccc,font-weight:bold
