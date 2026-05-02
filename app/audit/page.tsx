@@ -21,11 +21,14 @@ const glass = {
 
 type FileState = "idle" | "dragging" | "uploading" | "analyzing" | "done" | "error";
 
+type FetchStatus = "loading" | "done" | "empty";
+
 type AuditChatMsg =
   | { role: "user"; kind: "file"; name: string }
   | { role: "user"; kind: "question"; text: string }
   | { role: "ai"; kind: "text"; text: string; variant?: "normal" | "error" | "success" }
   | { role: "ai"; kind: "answer"; text: string }
+  | { role: "ai"; kind: "fetching"; sources: { source: string; status: FetchStatus; message: string }[] }
   | { role: "ai"; kind: "score"; result: ContractReviewResult }
   | { role: "ai"; kind: "risks"; result: ContractReviewResult }
   | { role: "ai"; kind: "action"; result: ContractReviewResult }
@@ -183,6 +186,56 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
           whiteSpace: "pre-line",
         }}>
           {msg.text}
+        </div>
+      </div>
+    );
+  }
+
+  if (msg.kind === "fetching") {
+    return (
+      <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", marginBottom: "12px", ...anim }}>
+        <AiAvatar />
+        <div style={{
+          background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: "4px 12px 12px 12px", padding: "12px 16px", minWidth: "220px",
+        }}>
+          <div style={{ fontSize: "10.5px", letterSpacing: "1.3px", color: "var(--accent-text-dim)", marginBottom: "10px" }}>
+            {lang === "en" ? "FETCHING MARKET PRICES" : "MENGAMBIL HARGA PASAR"}
+          </div>
+          {msg.sources.map((s, i) => (
+            <div key={i} style={{
+              display: "flex", alignItems: "center", gap: "9px",
+              padding: "6px 0",
+              borderBottom: i < msg.sources.length - 1 ? "1px solid var(--border-light)" : "none",
+            }}>
+              {/* Status icon */}
+              {s.status === "loading" && (
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
+                  style={{ flexShrink: 0, animation: "spinRing 1s linear infinite" }}>
+                  <circle cx="6.5" cy="6.5" r="5" stroke="var(--accent-border)" strokeWidth="1.5" />
+                  <path d="M6.5 1.5 A5 5 0 0 1 11.5 6.5" stroke="var(--accent-text)" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              )}
+              {s.status === "done" && (
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0 }}>
+                  <circle cx="6.5" cy="6.5" r="5" fill="rgba(80,220,140,0.12)" stroke="rgba(80,220,140,0.5)" strokeWidth="1.2" />
+                  <path d="M4 6.5L6 8.5L9.5 5" stroke="rgba(80,220,140,0.9)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+              {s.status === "empty" && (
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0 }}>
+                  <circle cx="6.5" cy="6.5" r="5" fill="rgba(150,150,150,0.08)" stroke="rgba(150,150,150,0.3)" strokeWidth="1.2" />
+                  <path d="M4.5 4.5L8.5 8.5M8.5 4.5L4.5 8.5" stroke="rgba(150,150,150,0.6)" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+              )}
+              <span style={{
+                fontSize: "12.5px",
+                color: s.status === "done" ? "rgba(80,220,140,0.85)" : s.status === "empty" ? "var(--text-4)" : "var(--text-2)",
+              }}>
+                {s.message}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -679,7 +732,26 @@ export default function AuditPage() {
 
           if (event.type === "progress" && event.message) {
             setChatTyping(false);
-            addMsg({ role: "ai", kind: "text", text: event.message });
+            addMsg({ role: "ai", kind: "text", text: event.message as string });
+            setChatTyping(true);
+          }
+
+          if (event.type === "fetching") {
+            const { source, status, message } = event as { source: string; status: FetchStatus; message: string };
+            setChatTyping(false);
+            setChatMsgs(prev => {
+              const last = prev[prev.length - 1];
+              // Kalau bubble terakhir sudah "fetching", update in-place
+              if (last?.role === "ai" && last?.kind === "fetching") {
+                const existing = last.sources.find(s => s.source === source);
+                const updated  = existing
+                  ? last.sources.map(s => s.source === source ? { source, status, message } : s)
+                  : [...last.sources, { source, status, message }];
+                return [...prev.slice(0, -1), { ...last, sources: updated }];
+              }
+              // Kalau belum ada bubble fetching, buat baru
+              return [...prev, { role: "ai", kind: "fetching", sources: [{ source, status, message }] }];
+            });
             setChatTyping(true);
           }
 

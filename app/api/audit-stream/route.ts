@@ -1,5 +1,13 @@
 import { NextRequest } from "next/server";
-import { analyzeContract } from "../../lib/contractAgent";
+import {
+  analyzeContract,
+  detectContractType,
+  fetchBlibliPrices,
+  fetchSerpApiPrices,
+  fetchGoogleCsePrices,
+  summarizePrices,
+  type PriceDataPoint,
+} from "../../lib/contractAgent";
 import { createHash } from "crypto";
 
 export const runtime = "nodejs";
@@ -24,7 +32,17 @@ function hasInjection(text: string): boolean {
   return INJECTION_PATTERNS.some(p => p.test(text));
 }
 
-// ── Agent timeout (ms) ────────────────────────────────────────────────────────
+const CONTRACT_TYPE_LABELS: Record<string, { id: string; en: string; icon: string }> = {
+  pengadaan_barang: { id: "Pengadaan Barang",      en: "Goods Procurement",    icon: "📦" },
+  konstruksi:       { id: "Konstruksi / Sipil",    en: "Construction",         icon: "🏗️" },
+  jasa_it:          { id: "Jasa IT / Software",    en: "IT / Software",        icon: "💻" },
+  jasa_konsultasi:  { id: "Jasa Konsultasi",        en: "Consulting Services",  icon: "📊" },
+  jasa_hukum:       { id: "Jasa Hukum",            en: "Legal Services",       icon: "⚖️" },
+  jasa_pendidikan:  { id: "Pelatihan / Pendidikan", en: "Education / Training", icon: "📚" },
+  ketenagakerjaan:  { id: "Kontrak Kerja",          en: "Employment",           icon: "👔" },
+  jasa_lainnya:     { id: "Jasa Lainnya",           en: "Other Services",       icon: "📋" },
+};
+
 const AGENT_TIMEOUT_MS = 85_000;
 
 export async function POST(req: NextRequest) {
@@ -45,7 +63,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── Jailbreak guard ──────────────────────────────────────────────────────────
   if (hasInjection(contractText)) {
     const errMsg = isEn
       ? "Suspicious content detected in the contract. Analysis aborted for security."
@@ -59,54 +76,148 @@ export async function POST(req: NextRequest) {
   const wordCount = Math.ceil((charCount ?? contractText.length) / 5);
   const encoder   = new TextEncoder();
 
-  // ── Progress stage messages (localised) ──────────────────────────────────────
-  const stages = isEn ? [
-    { delay: 1200, message: "Scanning payment clauses and terms..." },
-    { delay: 2400, message: "Checking price markups against market estimates..." },
-    { delay: 3800, message: "Detecting one-sided clauses and risky terms..." },
-    { delay: 5400, message: "Evaluating escrow security and protection gaps..." },
-    { delay: 7200, message: "Calculating fairness score and writing report..." },
-  ] : [
-    { delay: 1200, message: "Menganalisis klausul pembayaran dan termin..." },
-    { delay: 2400, message: "Memeriksa markup harga terhadap estimasi pasar..." },
-    { delay: 3800, message: "Mendeteksi klausul sepihak dan terms berisiko..." },
-    { delay: 5400, message: "Mengevaluasi keamanan escrow dan celah perlindungan..." },
-    { delay: 7200, message: "Menghitung fairness score dan menyusun laporan..." },
-  ];
-
   const stream = new ReadableStream({
     async start(controller) {
       const send = (event: object) => {
-        try {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-        } catch { /* stream already closed */ }
+        try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`)); }
+        catch { /* stream closed */ }
       };
 
       const timers: ReturnType<typeof setTimeout>[] = [];
 
       try {
+        // ── Stage 1: Acknowledge ────────────────────────────────────────────
         send({
           type: "progress",
           message: isEn
             ? `Contract received. Scanning ~${wordCount} words...`
             : `Kontrak diterima. Memindai ~${wordCount} kata...`,
         });
-        await sleep(400);
+        await sleep(300);
 
-        // Agent call wrapped with timeout
+        // ── Stage 2: Detect contract type ───────────────────────────────────
+        send({
+          type: "progress",
+          message: isEn ? "Identifying contract type..." : "Mengidentifikasi jenis kontrak...",
+        });
+
+        const detection = await detectContractType(contractText.trim());
+        const typeLabel = CONTRACT_TYPE_LABELS[detection.contract_type] ?? CONTRACT_TYPE_LABELS.jasa_lainnya;
+
+        send({
+          type: "progress",
+          message: isEn
+            ? `${typeLabel.icon} Detected: ${typeLabel.en} — loading expert profile...`
+            : `${typeLabel.icon} Terdeteksi: ${typeLabel.id} — memuat profil expert...`,
+        });
+        await sleep(300);
+
+        // ── Stage 3: Market price fetch per source with live progress ──────
+        let preloadedMarketData = "";
+
+        if (detection.items_to_check.length > 0) {
+          const keywords = [...new Set(detection.items_to_check)].slice(0, 6);
+
+          send({
+            type: "progress",
+            message: isEn
+              ? `Found ${keywords.length} item(s) to price-check: ${keywords.join(", ")}`
+              : `Ditemukan ${keywords.length} item untuk dicek harga: ${keywords.join(", ")}`,
+          });
+
+          // Fetch per sumber secara paralel tapi tampilkan progress per sumber
+          const allPoints: Record<string, PriceDataPoint[]> = {};
+
+          // Blibli — selalu aktif
+          send({ type: "fetching", source: "Blibli", status: "loading",
+            message: isEn ? "Blibli — fetching prices..." : "Blibli — mengambil data harga..." });
+          const blibliResults = await Promise.all(keywords.map(kw => fetchBlibliPrices(kw)));
+          const blibliTotal   = blibliResults.reduce((s, r) => s + r.length, 0);
+          keywords.forEach((kw, i) => { allPoints[kw] = [...(allPoints[kw] ?? []), ...blibliResults[i]]; });
+          send({ type: "fetching", source: "Blibli", status: blibliTotal > 0 ? "done" : "empty",
+            message: blibliTotal > 0
+              ? (isEn ? `Blibli — ${blibliTotal} prices found` : `Blibli — ${blibliTotal} data harga ditemukan`)
+              : (isEn ? "Blibli — no data found" : "Blibli — tidak ada data"),
+          });
+
+          // SerpAPI (Google Shopping)
+          if (process.env.SERPAPI_KEY) {
+            send({ type: "fetching", source: "Google Shopping", status: "loading",
+              message: isEn ? "Google Shopping — fetching prices..." : "Google Shopping — mengambil data harga..." });
+            const serpResults = await Promise.all(keywords.map(kw => fetchSerpApiPrices(kw)));
+            const serpTotal   = serpResults.reduce((s, r) => s + r.length, 0);
+            keywords.forEach((kw, i) => { allPoints[kw] = [...(allPoints[kw] ?? []), ...serpResults[i]]; });
+            send({ type: "fetching", source: "Google Shopping", status: serpTotal > 0 ? "done" : "empty",
+              message: serpTotal > 0
+                ? (isEn ? `Google Shopping — ${serpTotal} prices found` : `Google Shopping — ${serpTotal} data harga ditemukan`)
+                : (isEn ? "Google Shopping — no data found" : "Google Shopping — tidak ada data"),
+            });
+          }
+
+          // Google CSE
+          if (process.env.GOOGLE_CSE_KEY && process.env.GOOGLE_CSE_ID) {
+            send({ type: "fetching", source: "Google Search", status: "loading",
+              message: isEn ? "Google Search — fetching prices..." : "Google Search — mengambil data harga..." });
+            const cseResults = await Promise.all(keywords.map(kw => fetchGoogleCsePrices(kw)));
+            const cseTotal   = cseResults.reduce((s, r) => s + r.length, 0);
+            keywords.forEach((kw, i) => { allPoints[kw] = [...(allPoints[kw] ?? []), ...cseResults[i]]; });
+            send({ type: "fetching", source: "Google Search", status: cseTotal > 0 ? "done" : "empty",
+              message: cseTotal > 0
+                ? (isEn ? `Google Search — ${cseTotal} prices found` : `Google Search — ${cseTotal} data harga ditemukan`)
+                : (isEn ? "Google Search — no data found" : "Google Search — tidak ada data"),
+            });
+          }
+
+          // Gabungkan semua data per keyword
+          const summaries = keywords.map(kw => summarizePrices(allPoints[kw] ?? [], kw)).filter(Boolean) as string[];
+          if (summaries.length > 0) {
+            const sources = ["Blibli", process.env.SERPAPI_KEY ? "Google Shopping" : null, process.env.GOOGLE_CSE_KEY ? "Google Search" : null]
+              .filter(Boolean).join(", ");
+            preloadedMarketData = `=== DATA HARGA PASAR REAL (${sources}) ===\n\n${summaries.join("\n\n")}\n`;
+            send({
+              type: "progress",
+              message: isEn
+                ? "Market price data collected — passing to AI expert..."
+                : "Data harga pasar terkumpul — meneruskan ke AI expert...",
+            });
+          } else {
+            send({
+              type: "progress",
+              message: isEn
+                ? "No market price data found — AI will use internal knowledge"
+                : "Data harga pasar tidak ditemukan — AI akan menggunakan pengetahuan internal",
+            });
+          }
+        }
+
+        // ── Stage 4: Background progress ticks ─────────────────────────────
+        const stages = isEn ? [
+          { delay: 2000,  message: "Reviewing clauses against relevant regulations..." },
+          { delay: 4500,  message: "Detecting one-sided clauses and risky terms..." },
+          { delay: 7000,  message: "Evaluating payment security and protection gaps..." },
+          { delay: 10000, message: "Calculating fairness score and drafting report..." },
+        ] : [
+          { delay: 2000,  message: "Memeriksa klausul terhadap regulasi yang berlaku..." },
+          { delay: 4500,  message: "Mendeteksi klausul sepihak dan terms berisiko..." },
+          { delay: 7000,  message: "Mengevaluasi keamanan pembayaran dan celah perlindungan..." },
+          { delay: 10000, message: "Menghitung fairness score dan menyusun laporan..." },
+        ];
+
+        for (const s of stages) {
+          timers.push(setTimeout(() => send({ type: "progress", message: s.message }), s.delay));
+        }
+
+        // ── Stage 5: Full analysis ──────────────────────────────────────────
         let agentDone = false;
-        const agentPromise = analyzeContract(contractText.trim(), model, lang ?? "id")
-          .then(r => { agentDone = true; return r; });
+        const agentPromise = analyzeContract(
+          contractText.trim(), model, lang ?? "id", detection, preloadedMarketData
+        ).then(r => { agentDone = true; return r; });
 
         const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(() => {
             if (!agentDone) reject(new Error(isEn ? "Analysis timed out." : "Analisis timeout."));
           }, AGENT_TIMEOUT_MS)
         );
-
-        for (const s of stages) {
-          timers.push(setTimeout(() => send({ type: "progress", message: s.message }), s.delay));
-        }
 
         const result = await Promise.race([agentPromise, timeoutPromise]);
         timers.forEach(clearTimeout);
@@ -117,10 +228,11 @@ export async function POST(req: NextRequest) {
           type: "result",
           data: result,
           meta: {
-            analysis_hash: analysisHash,
-            analyzed_at: new Date().toISOString(),
-            char_count: contractText.length,
-            model_used: model ?? process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6",
+            analysis_hash:  analysisHash,
+            analyzed_at:    new Date().toISOString(),
+            char_count:     contractText.length,
+            contract_type:  detection.contract_type,
+            model_used:     model ?? process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6",
           },
         });
 
