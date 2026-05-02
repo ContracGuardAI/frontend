@@ -125,7 +125,6 @@ When Claude reviews pricing in a contract, it can optionally benchmark against r
 |--------|----------|-------------|
 | Blibli.com | `fetchBlibliPrices(keyword)` | No (web scraping) |
 | Google Shopping | `fetchSerpApiPrices(keyword)` | `SERPAPI_KEY` |
-| Google Custom Search | `fetchGoogleCsePrices(keyword)` | `GOOGLE_CSE_KEY` + `GOOGLE_CSE_ID` |
 
 All three run in parallel via `fetchAllMarketPrices(keywords)`. Results are summarized via `summarizePrices()` which filters outliers and formats a human-readable price range.
 

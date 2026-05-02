@@ -31,7 +31,7 @@ There are AI tools. There are escrow services. There are contract templates. But
 |--|------------|--------------|
 | Indonesian law knowledge | Generic phrases | **Deep — UU, PP, Perpres, KUH Perdata** |
 | Contract-type expertise | Generic | **8 specialized Indonesian contract types** |
-| Market price benchmarking | No | **Yes — Blibli, SerpAPI, Google Shopping** |
+| Market price benchmarking | No | **Yes — Blibli + SerpAPI (Google Shopping)** |
 | Structured audit output | No | **Yes — scores, clause-by-clause JSON** |
 | Blockchain integration | No | **Yes — direct Solana deployment** |
 | Milestone verification | No | **Yes — AI reviews submitted evidence** |

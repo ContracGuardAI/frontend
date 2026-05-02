@@ -46,36 +46,14 @@ Get a key at: [serpapi.com](https://serpapi.com)
 
 ---
 
-### `GOOGLE_CSE_KEY` (Optional)
-
-Google Cloud API key for Custom Search Engine price lookups.
-
-```env
-GOOGLE_CSE_KEY=your_google_api_key_here
-```
-
----
-
-### `GOOGLE_CSE_ID` (Optional)
-
-Your Google Custom Search Engine ID.
-
-```env
-GOOGLE_CSE_ID=your_cse_id_here
-```
-
----
-
 ## Example `.env.local`
 
 ```env
 # Required
 CLAUDE_MODEL=claude-sonnet-4-6
 
-# Optional — market price APIs
-SERPAPI_KEY=abc123xyz
-GOOGLE_CSE_KEY=AIzaSy...
-GOOGLE_CSE_ID=0123456789abc:example
+# Optional — market price API
+SERPAPI_KEY=your_serpapi_key_here
 
 # Optional — override agent directory
 # AGENT_DIR=/absolute/path/to/agent

@@ -19,7 +19,7 @@ graph TB
     subgraph AI["AI Layer"]
         cli["Claude Code CLI\nSubprocess\nclaude -p '...'"]
         prompt["agent/CLAUDE.md\nSystem Prompt\nExpert Personas · Law Refs"]
-        prices["Market Price APIs\nBlibli · SerpAPI\nGoogle Shopping"]
+        prices["Market Price APIs\nBlibli · SerpAPI"]
     end
 
     subgraph Solana["Solana Devnet"]

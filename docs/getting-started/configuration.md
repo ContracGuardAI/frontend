@@ -31,13 +31,9 @@ ContractGuard can benchmark contract prices against real market data. To enable:
 ```env
 # SerpAPI — Google Shopping results
 SERPAPI_KEY=your_serpapi_key_here
-
-# Google Custom Search Engine
-GOOGLE_CSE_KEY=your_google_api_key_here
-GOOGLE_CSE_ID=your_cse_engine_id_here
 ```
 
-> Without these keys, price analysis still runs but uses internal heuristics only.
+> Without this key, price analysis still runs using Blibli data only.
 
 ### Optional — Agent Path Override
 
