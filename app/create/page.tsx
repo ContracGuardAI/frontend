@@ -47,6 +47,7 @@ interface Checkpoint {
   name: string;
   description: string;
   payment: string;
+  deadline: string; // format YYYY-MM-DD
 }
 
 const PROGRAM_ID = "2Htsz7Xf4YWZTc8tupBTgsFHwZNZDzi59FRr9AWmxdNq";
@@ -70,10 +71,14 @@ export default function CreatePage() {
   const pdfFileRef = useRef<File | null>(null);
 
   /* Step 2 state */
+  const defaultDeadline = (plusDays: number) => {
+    const d = new Date(); d.setDate(d.getDate() + plusDays);
+    return d.toISOString().slice(0, 10);
+  };
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([
-    { name: "Foundation & Structure", description: "Pondasi dan struktur bangunan selesai", payment: "30" },
-    { name: "Roofing & Walls", description: "Atap dan dinding selesai", payment: "40" },
-    { name: "Finishing", description: "Pengecatan, lantai, dan finishing", payment: "30" },
+    { name: "Foundation & Structure", description: "Pondasi dan struktur bangunan selesai", payment: "30", deadline: defaultDeadline(30) },
+    { name: "Roofing & Walls", description: "Atap dan dinding selesai", payment: "40", deadline: defaultDeadline(60) },
+    { name: "Finishing", description: "Pengecatan, lantai, dan finishing", payment: "30", deadline: defaultDeadline(90) },
   ]);
 
   /* Pre-fill dari hasil audit — auto-extract jika ada contractText */
@@ -162,7 +167,7 @@ export default function CreatePage() {
   };
 
   const addCheckpoint = () => {
-    setCheckpoints([...checkpoints, { name: "", description: "", payment: "" }]);
+    setCheckpoints([...checkpoints, { name: "", description: "", payment: "", deadline: defaultDeadline(30 * (checkpoints.length + 1)) }]);
   };
 
   const removeCheckpoint = (i: number) => {
@@ -215,7 +220,10 @@ export default function CreatePage() {
       const cpInputs = checkpoints.map((cp, i) => {
         const pct     = parseFloat(cp.payment) || 0;
         const payment = new BN(Math.round((pct / 100) * totalUnits.toNumber()));
-        const deadline = new BN(Math.floor(Date.now() / 1000) + (i + 1) * 30 * 86400);
+        const deadlineTs = cp.deadline
+          ? Math.floor(new Date(cp.deadline).getTime() / 1000)
+          : Math.floor(Date.now() / 1000) + (i + 1) * 30 * 86400;
+        const deadline = new BN(deadlineTs);
         return {
           descriptionHash: (cp.description || `Checkpoint ${i + 1}`).slice(0, 64),
           paymentAmount: payment,
@@ -592,7 +600,7 @@ export default function CreatePage() {
                         </button>
                       )}
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px", gap: "12px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 130px 100px", gap: "12px" }}>
                       <div>
                         <label style={labelStyle}>{t("create.labelMilestone")}</label>
                         <input style={inputStyle} placeholder={t("create.phMilestone")}
@@ -602,6 +610,11 @@ export default function CreatePage() {
                         <label style={labelStyle}>{t("create.labelMilestoneDesc")}</label>
                         <input style={inputStyle} placeholder={t("create.phMilestoneDesc")}
                           value={cp.description} onChange={e => updateCheckpoint(i, "description", e.target.value)} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>DEADLINE</label>
+                        <input style={inputStyle} type="date"
+                          value={cp.deadline} onChange={e => updateCheckpoint(i, "deadline", e.target.value)} />
                       </div>
                       <div>
                         <label style={labelStyle}>{t("create.labelPayment")}</label>

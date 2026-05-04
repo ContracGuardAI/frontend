@@ -29,6 +29,7 @@ interface CPEntry {
   description: string;
   payment: string;
   status: CPStatus;
+  deadline: string | null;
   submittedAt: string | null;
   approvedAt: string | null;
   evidence: string | null;
@@ -83,6 +84,7 @@ const CONTRACT: ContractData = {
       description: "Pondasi, kolom, dan struktur bangunan utama selesai. Termasuk penggalian, pengecoran fondasi, dan pemasangan kolom beton bertulang.",
       payment: "30",
       status: "approved" as CPStatus,
+      deadline: "30 Apr 2025",
       submittedAt: "Apr 25, 2025",
       approvedAt: "Apr 26, 2025",
       evidence: "Foto fondasi sudah dicor + laporan pengawas lapangan.pdf",
@@ -99,6 +101,7 @@ const CONTRACT: ContractData = {
       description: "Pemasangan atap, dinding bata, dan plester. Termasuk rangka atap baja ringan dan genteng metal.",
       payment: "40",
       status: "submitted" as CPStatus,
+      deadline: "30 May 2025",
       submittedAt: "May 2, 2025",
       approvedAt: null,
       evidence: "Video progress atap + foto dinding.zip",
@@ -115,6 +118,7 @@ const CONTRACT: ContractData = {
       description: "Pengecatan, pemasangan lantai keramik, dan finishing akhir.",
       payment: "30",
       status: "pending" as CPStatus,
+      deadline: null,
       submittedAt: null,
       approvedAt: null,
       evidence: null,
@@ -175,7 +179,7 @@ export default function ContractDetailPage() {
     status: Record<string, unknown>; createdAt: BN; bump: number;
     checkpoints: Array<{
       checkpointNumber: number; descriptionHash: string; evidenceHash: string;
-      paymentAmount: BN; status: Record<string, unknown>;
+      paymentAmount: BN; status: Record<string, unknown>; deadline: BN;
       submittedAt: BN; reviewedAt: BN;
     }>;
   };
@@ -210,6 +214,7 @@ export default function ContractDetailPage() {
           description: cp.descriptionHash,
           payment: usdcTotal > 0 ? ((unitsToUsdc(cp.paymentAmount) / usdcTotal) * 100).toFixed(0) : "0",
           status: mapCPStatus(cp.status),
+          deadline: cp.deadline.toNumber() > 0 ? new Date(cp.deadline.toNumber() * 1000).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) : null,
           submittedAt: cp.submittedAt.toNumber() > 0 ? new Date(cp.submittedAt.toNumber() * 1000).toLocaleDateString() : null,
           approvedAt: cp.reviewedAt.toNumber() > 0 ? new Date(cp.reviewedAt.toNumber() * 1000).toLocaleDateString() : null,
           evidence: cp.evidenceHash || null,
@@ -689,8 +694,17 @@ export default function ContractDetailPage() {
                         </div>
                         <div>
                           <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--text)", marginBottom: "4px" }}>{cp.name}</div>
-                          <div style={{ fontSize: "12px", color: "var(--text-3)" }}>
-                            {(parseFloat(cp.payment) / 100 * totalAmount).toFixed(2)} USDC ({cp.payment}%)
+                          <div style={{ fontSize: "12px", color: "var(--text-3)", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                            <span>{(parseFloat(cp.payment) / 100 * totalAmount).toFixed(2)} USDC ({cp.payment}%)</span>
+                            {cp.deadline && (
+                              <span style={{
+                                color: cp.status === "pending" || cp.status === "revision"
+                                  ? new Date(cp.deadline) < new Date() ? "rgba(255,100,100,0.85)" : "rgba(255,210,80,0.80)"
+                                  : "var(--text-4)",
+                              }}>
+                                · Deadline: {cp.deadline}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
