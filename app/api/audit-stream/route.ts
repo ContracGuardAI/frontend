@@ -11,7 +11,7 @@ import {
 import { createHash } from "crypto";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -43,7 +43,7 @@ const CONTRACT_TYPE_LABELS: Record<string, { id: string; en: string; icon: strin
   jasa_lainnya:     { id: "Jasa Lainnya",           en: "Other Services",       icon: "📋" },
 };
 
-const AGENT_TIMEOUT_MS = 110_000;
+const AGENT_TIMEOUT_MS = 270_000;
 
 export async function POST(req: NextRequest) {
   const body = await req.json();

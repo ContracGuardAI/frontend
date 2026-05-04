@@ -1,5 +1,8 @@
 import { spawn } from "child_process";
 import path from "path";
+import { supabaseAdmin } from "./supabase";
+
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
 
 const AGENT_DIR = (() => {
   if (process.env.AGENT_DIR) return process.env.AGENT_DIR;
@@ -139,6 +142,69 @@ function runClaude(prompt: string, model?: string): Promise<string> {
   });
 }
 
+export interface ExtractedContract {
+  title: string;
+  description: string;
+  totalAmount: number;
+  checkpoints: { name: string; description: string; payment: string }[];
+}
+
+export async function runClaudeExtract(contractText: string): Promise<ExtractedContract> {
+  const prompt = `Kamu adalah asisten ekstraksi data kontrak. Baca teks kontrak berikut dan ekstrak informasi penting ke dalam format JSON.
+
+INSTRUKSI:
+- "title": judul singkat kontrak (maks 80 karakter), bisa dari judul dokumen atau buat ringkasan singkat
+- "description": ringkasan kontrak dalam 2-4 kalimat — apa yang dikerjakan, siapa pihaknya, apa risikonya
+- "totalAmount": nilai kontrak dalam angka (angka saja, tanpa Rp/IDR/simbol). 0 jika tidak disebutkan.
+- "checkpoints": daftar milestone/tahapan pekerjaan. Setiap checkpoint:
+  - "name": nama tahapan (maks 50 karakter)
+  - "description": deskripsi singkat deliverable (maks 120 karakter)
+  - "payment": persentase pembayaran sebagai string angka (misal "30"). Total semua harus = 100.
+  Jika tidak ada tahapan eksplisit, buat 3 checkpoint logis berdasarkan jenis pekerjaan.
+  Maksimal 6 checkpoint.
+
+PENTING: Jawab HANYA dengan JSON valid, tanpa teks lain.
+
+Format:
+{
+  "title": "...",
+  "description": "...",
+  "totalAmount": 0,
+  "checkpoints": [
+    { "name": "...", "description": "...", "payment": "30" },
+    { "name": "...", "description": "...", "payment": "40" },
+    { "name": "...", "description": "...", "payment": "30" }
+  ]
+}
+
+Teks Kontrak:
+${contractText}`;
+
+  const raw = await runClaude(prompt, CLAUDE_MODELS.haiku);
+  const parsed = parseJson(raw) as unknown as ExtractedContract;
+
+  // Normalize checkpoints agar total = 100%
+  const cps = Array.isArray(parsed.checkpoints) ? parsed.checkpoints : [];
+  const total = cps.reduce((s, cp) => s + (parseFloat(cp.payment) || 0), 0);
+  if (total > 0 && Math.abs(total - 100) > 1) {
+    cps.forEach(cp => {
+      cp.payment = ((parseFloat(cp.payment) / total) * 100).toFixed(0);
+    });
+    // Fix rounding on last item
+    const fixedTotal = cps.reduce((s, cp) => s + parseFloat(cp.payment), 0);
+    if (fixedTotal !== 100 && cps.length > 0) {
+      cps[cps.length - 1].payment = String(parseFloat(cps[cps.length - 1].payment) + (100 - fixedTotal));
+    }
+  }
+
+  return {
+    title:       String(parsed.title ?? "").slice(0, 80),
+    description: String(parsed.description ?? ""),
+    totalAmount: Number(parsed.totalAmount ?? 0),
+    checkpoints: cps.slice(0, 6),
+  };
+}
+
 function parseJson(raw: string): Record<string, unknown> {
   let text = raw.trim();
   if (text.startsWith("```json")) text = text.split("```json")[1].split("```")[0].trim();
@@ -157,71 +223,66 @@ export interface PriceDataPoint {
   source: string;
 }
 
-export async function fetchBlibliPrices(keyword: string): Promise<PriceDataPoint[]> {
-  return new Promise((resolve) => {
-    const scriptPath = path.resolve(process.cwd(), "..", "neru-scrapper", "blibli_json.py");
-
-    // On WSL: use python.exe (Windows Python) to bypass WSL network block
-    // On Windows: use python directly
-    const pythonCmd = process.platform === "win32" ? "python" : "python.exe";
-
-    const proc = spawn(pythonCmd, [scriptPath, keyword], {
-      stdio: ["pipe", "pipe", "pipe"],
-      shell: process.platform === "win32",
-    });
-
-    let stdout = "";
-    proc.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
-    proc.on("error", (e) => {
-      console.error(`[Blibli] spawn error for "${keyword}":`, e.message);
-      resolve([]);
-    });
-    proc.on("close", () => {
-      try {
-        const items = JSON.parse(stdout.trim());
-        console.log(`[Blibli] "${keyword}" → ${Array.isArray(items) ? items.length : 0} items`);
-        resolve(Array.isArray(items) ? items.filter((p: PriceDataPoint) => p.price > 500000) : []);
-      } catch {
-        console.error(`[Blibli] JSON parse error for "${keyword}": ${stdout.slice(0, 100)}`);
-        resolve([]);
-      }
-    });
-  });
+async function getPriceCache(query: string, source: string): Promise<PriceDataPoint[] | null> {
+  const { data } = await supabaseAdmin
+    .from("market_price_cache")
+    .select("results")
+    .eq("query", query)
+    .eq("source", source)
+    .maybeSingle();
+  return (data?.results as PriceDataPoint[]) ?? null;
 }
 
-export async function fetchSerpApiPrices(keyword: string): Promise<PriceDataPoint[]> {
-  const key = process.env.SERPAPI_KEY;
-  if (!key) return [];
+async function savePriceCache(query: string, source: string, results: PriceDataPoint[]) {
+  await supabaseAdmin
+    .from("market_price_cache")
+    .upsert({ query, source, results }, { onConflict: "query,source" });
+}
+
+export async function fetchBlibliPrices(keyword: string): Promise<PriceDataPoint[]> {
+  const cached = await getPriceCache(keyword, "blibli");
+  if (cached) {
+    console.log(`[Blibli] "${keyword}" → ${cached.length} items (cache)`);
+    return cached;
+  }
   try {
-    const params = new URLSearchParams({
-      q:       `harga ${keyword}`,
-      tbm:     "shop",
-      gl:      "id",
-      hl:      "id",
-      api_key: key,
+    const res = await fetch(`${BACKEND_URL}/scrape/blibli?q=${encodeURIComponent(keyword)}`, {
+      signal: AbortSignal.timeout(8_000),
     });
-    const res  = await fetch(`https://serpapi.com/search?${params}`, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) {
-      console.error(`[SerpAPI] HTTP ${res.status} for "${keyword}"`);
-      return [];
-    }
-    const data = await res.json();
-    const items: any[] = data?.shopping_results ?? [];
-    console.log(`[SerpAPI] "${keyword}" → ${items.length} shopping results`);
-    // Log raw prices untuk debug
-    items.slice(0, 5).forEach(item => console.log(`  [SerpAPI raw] "${item.title?.slice(0,40)}" price="${item.price}"`));
-    return items
-      .map((item) => {
-        const raw   = String(item.price ?? "0").replace(/[^\d]/g, "");
-        const price = parseInt(raw, 10);
-        return { name: (item.title ?? "").slice(0, 60), price, source: "Google Shopping" };
-      })
-      .filter((p) => p.price > 50000) // filter harga tidak masuk akal (< Rp 50.000 biasanya per-unit/satuan)
-      .slice(0, 8);
-  } catch {
+    if (!res.ok) return [];
+    const data = await res.json() as { results?: PriceDataPoint[] };
+    const results = data.results ?? [];
+    console.log(`[Blibli] "${keyword}" → ${results.length} items`);
+    if (results.length) await savePriceCache(keyword, "blibli", results);
+    return results;
+  } catch (e) {
+    console.error(`[Blibli] fetch error for "${keyword}":`, e);
     return [];
   }
 }
+
+export async function fetchSerpApiPrices(keyword: string): Promise<PriceDataPoint[]> {
+  const cached = await getPriceCache(keyword, "serpapi");
+  if (cached) {
+    console.log(`[SerpAPI] "${keyword}" → ${cached.length} items (cache)`);
+    return cached;
+  }
+  try {
+    const res = await fetch(`${BACKEND_URL}/scrape/serpapi?q=${encodeURIComponent(keyword)}`, {
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return [];
+    const data = await res.json() as { results?: PriceDataPoint[] };
+    const results = data.results ?? [];
+    console.log(`[SerpAPI] "${keyword}" → ${results.length} items`);
+    if (results.length) await savePriceCache(keyword, "serpapi", results);
+    return results;
+  } catch (e) {
+    console.error(`[SerpAPI] fetch error for "${keyword}":`, e);
+    return [];
+  }
+}
+
 
 export async function fetchGoogleCsePrices(keyword: string): Promise<PriceDataPoint[]> {
   const key = process.env.GOOGLE_CSE_KEY;

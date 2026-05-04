@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { toast } from "../components/Toast";
@@ -10,6 +10,7 @@ import {
   usdcToUnits, hashString, BN, PublicKey,
   TOKEN_PROGRAM_ID,
 } from "../lib/useContractProgram";
+import { pdfStore } from "../lib/pdfStore";
 
 const glass = {
   background: "var(--surface)",
@@ -51,7 +52,7 @@ interface Checkpoint {
 const PROGRAM_ID = "2Htsz7Xf4YWZTc8tupBTgsFHwZNZDzi59FRr9AWmxdNq";
 
 export default function CreatePage() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { program, wallet } = useContractProgram();
   const [step, setStep] = useState(1);
   const [deploying, setDeploying] = useState(false);
@@ -64,6 +65,9 @@ export default function CreatePage() {
   const [contractorWallet, setContractorWallet] = useState("");
   const [totalAmount, setTotalAmount] = useState("");
   const [usdcBalance, setUsdcBalance] = useState(0);
+  const [extracting, setExtracting] = useState(false);
+  const [fromAudit, setFromAudit] = useState(false);
+  const pdfFileRef = useRef<File | null>(null);
 
   /* Step 2 state */
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([
@@ -72,18 +76,90 @@ export default function CreatePage() {
     { name: "Finishing", description: "Pengecatan, lantai, dan finishing", payment: "30" },
   ]);
 
-  /* Pre-fill dari hasil audit */
+  /* Pre-fill dari hasil audit — auto-extract jika ada contractText */
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem("contractguard_prefill");
       if (!raw) return;
       sessionStorage.removeItem("contractguard_prefill");
-      const data = JSON.parse(raw) as { title?: string; description?: string; checkpoints?: Checkpoint[] };
+      const data = JSON.parse(raw) as {
+        title?: string; description?: string;
+        checkpoints?: Checkpoint[]; contractText?: string;
+      };
+
+      // Isi sementara dari data audit
       if (data.title) setTitle(data.title);
       if (data.description) setDescription(data.description);
       if (data.checkpoints?.length) setCheckpoints(data.checkpoints);
+
+      // Kalau ada contractText, auto-extract yang lebih baik via Claude
+      if (data.contractText) {
+        setFromAudit(true);
+        // Ambil File object dari pdfStore (tersedia jika navigasi langsung dari audit)
+        const storedFile = pdfStore.get();
+        if (storedFile) {
+          pdfFileRef.current = storedFile;
+          pdfStore.clear();
+        }
+        setExtracting(true);
+        fetch("/api/extract-contract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contractText: data.contractText }),
+        })
+          .then(r => r.json())
+          .then(json => {
+            if (json.success) {
+              const { title: t, description: d, totalAmount: amt, checkpoints: cps } = json.data;
+              if (t) setTitle(t);
+              if (d) setDescription(d);
+              if (amt) setTotalAmount(String(amt));
+              if (cps?.length) setCheckpoints(cps);
+            }
+          })
+          .catch(() => {/* gunakan data audit yang sudah diisi */})
+          .finally(() => setExtracting(false));
+      }
     } catch {}
   }, []);
+
+  const handlePdfExtract = async (file: File) => {
+    if (file.type !== "application/pdf") {
+      toast.error("Format salah", "Hanya file PDF yang diterima.");
+      return;
+    }
+    pdfFileRef.current = file;
+    setExtracting(true);
+    toast.info("Membaca PDF...", "Claude sedang mengekstrak data kontrak");
+    try {
+      // Step 1: upload & extract text
+      const form = new FormData();
+      form.append("file", file);
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: form });
+      const uploadJson = await uploadRes.json();
+      if (!uploadJson.success) throw new Error(uploadJson.error);
+
+      // Step 2: Claude extract structure
+      const extractRes = await fetch("/api/extract-contract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contractText: uploadJson.data.contract_text }),
+      });
+      const extractJson = await extractRes.json();
+      if (!extractJson.success) throw new Error(extractJson.error);
+
+      const { title: t, description: d, totalAmount: amt, checkpoints: cps } = extractJson.data;
+      if (t)   setTitle(t);
+      if (d)   setDescription(d);
+      if (amt) setTotalAmount(String(amt));
+      if (cps?.length) setCheckpoints(cps);
+      toast.success("Auto-fill selesai!", "Judul, deskripsi, dan checkpoint sudah diisi otomatis");
+    } catch (err) {
+      toast.error("Gagal ekstrak PDF", err instanceof Error ? err.message : "Coba lagi");
+    } finally {
+      setExtracting(false);
+    }
+  };
 
   const addCheckpoint = () => {
     setCheckpoints([...checkpoints, { name: "", description: "", payment: "" }]);
@@ -172,10 +248,42 @@ export default function CreatePage() {
         tokenProgram:         TOKEN_PROGRAM_ID,
       }).rpc();
 
-      setContractPDA(pda.toBase58());
+      const pdaStr = pda.toBase58();
+      setContractPDA(pdaStr);
       setDeploying(false);
       setDeployed(true);
       toast.success("Contract deployed!", `${usdcAmt} USDC locked in escrow`);
+
+      // Simpan metadata → lalu upload PDF (dirantai agar pdf_path update tidak race)
+      const pdfFile = pdfFileRef.current;
+      fetch("/api/contracts/save-metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pdaAddress: pdaStr,
+          title,
+          description,
+          clientWallet: wallet.publicKey!.toBase58(),
+          contractorWallet,
+          totalAmount: usdcAmt,
+          checkpoints: checkpoints.map((cp, i) => ({
+            index: i,
+            name: cp.name || `Checkpoint ${i + 1}`,
+            description: cp.description,
+            paymentPercent: parseFloat(cp.payment) || 0,
+          })),
+        }),
+      })
+        .then(() => {
+          if (!pdfFile) return;
+          const pdfForm = new FormData();
+          pdfForm.append("file", pdfFile);
+          pdfForm.append("pdaAddress", pdaStr);
+          return fetch("/api/contracts/upload-pdf", { method: "POST", body: pdfForm })
+            .then(r => r.json())
+            .then(j => { if (!j.success) console.warn("[upload-pdf] failed:", j.error); });
+        })
+        .catch(e => console.warn("[save-metadata/upload-pdf] failed:", e));
     } catch (err: unknown) {
       setDeploying(false);
       const msg = err instanceof Error ? err.message : String(err);
@@ -282,6 +390,70 @@ export default function CreatePage() {
             <h2 style={{ fontSize: "20px", fontWeight: 700, color: "var(--text)", marginBottom: "32px", letterSpacing: "-0.025em" }}>
               {t("create.s1Title")}
             </h2>
+
+            {/* ── PDF Auto-fill Zone — tersembunyi kalau datang dari audit ── */}
+            {!fromAudit && <label
+              htmlFor="pdf-autofill"
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handlePdfExtract(f); }}
+              style={{
+                display: "flex", alignItems: "center", gap: "14px",
+                border: "1.5px dashed var(--border)",
+                borderRadius: "10px", padding: "16px 20px",
+                cursor: extracting ? "not-allowed" : "pointer",
+                marginBottom: "28px",
+                background: extracting ? "rgba(80,220,140,0.04)" : "transparent",
+                transition: "background 0.2s",
+                opacity: extracting ? 0.7 : 1,
+              }}
+            >
+              <input id="pdf-autofill" type="file" accept=".pdf" style={{ display: "none" }}
+                disabled={extracting}
+                onChange={e => { const f = e.target.files?.[0]; if (f) handlePdfExtract(f); e.target.value = ""; }} />
+              <div style={{
+                width: "38px", height: "38px", borderRadius: "8px", flexShrink: 0,
+                background: "rgba(80,220,140,0.10)", border: "1px solid rgba(80,220,140,0.25)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {extracting ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(80,220,140,0.8)" strokeWidth="2" strokeLinecap="round">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83">
+                      <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
+                    </path>
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(80,220,140,0.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>
+                    <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9,15 12,12 15,15"/>
+                  </svg>
+                )}
+              </div>
+              <div>
+                <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-2)" }}>
+                  {extracting ? "Claude sedang membaca kontrak..." : "Upload PDF untuk auto-fill"}
+                </div>
+                <div style={{ fontSize: "12px", color: "var(--text-4)", marginTop: "2px" }}>
+                  {extracting ? "Judul, deskripsi & checkpoint akan diisi otomatis" : "Drag & drop atau klik — Claude ekstrak judul, deskripsi & checkpoint"}
+                </div>
+              </div>
+            </label>}
+
+            {/* Loading indicator saat auto-extract dari audit */}
+            {fromAudit && extracting && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: "10px",
+                padding: "12px 16px", marginBottom: "20px",
+                background: "rgba(80,220,140,0.06)", border: "1px solid rgba(80,220,140,0.20)",
+                borderRadius: "8px", fontSize: "13px", color: "rgba(80,220,140,0.85)",
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83">
+                    <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
+                  </path>
+                </svg>
+                Claude sedang mengekstrak checkpoint & detail dari PDF kontrak...
+              </div>
+            )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
               <div>

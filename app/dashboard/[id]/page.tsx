@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "../../components/Navbar";
@@ -10,6 +10,7 @@ import {
   useContractProgram, unitsToUsdc, formatUsdc, BN, PublicKey,
   getUsdcMintPDA, getATA, TOKEN_PROGRAM_ID,
 } from "../../lib/useContractProgram";
+import { Transaction, TransactionInstruction } from "@solana/web3.js";
 
 const glass = {
   background: "var(--surface)",
@@ -148,11 +149,18 @@ export default function ContractDetailPage() {
   const params = useParams();
   const idParam = typeof params?.id === "string" ? params.id : (Array.isArray(params?.id) ? params.id[0] : "");
 
-  const { program, wallet } = useContractProgram();
+  const { program, wallet, connection } = useContractProgram();
   const [activeCP, setActiveCP] = useState<number | null>(1);
   const [submitMode, setSubmitMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [evidenceHash, setEvidenceHash] = useState("");
+  const [reviewing, setReviewing] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<{ name: string; cid: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [submissionId, setSubmissionId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [escrowReady, setEscrowReady] = useState(false);
   const [onchainLoaded, setOnchainLoaded] = useState(false);
   const [contract, setContract] = useState<ContractData>(CONTRACT);
@@ -234,12 +242,105 @@ export default function ContractDetailPage() {
     return { escrowATA, clientATA, contractorATA };
   };
 
+  const handleAiReview = useCallback(async (cp: CPEntry) => {
+    if (!cp.evidence) { toast.error("Tidak ada bukti", "Contractor belum submit evidence"); return; }
+    setReviewing(true);
+    toast.info("AI Review dimulai...", "Menganalisis bukti kerja vs kontrak");
+    try {
+      // Pakai endpoint baru yang bandingkan evidence vs PDF kontrak di Supabase
+      const body = submissionId
+        ? { submissionId, pdaAddress: idParam, checkpointIndex: cp.id - 1 }
+        : { cid: cp.evidence, checkpointName: cp.name, checkpointDescription: cp.description, contractTitle: contract.title, totalAmount: parseFloat(contract.totalAmount), paymentPercent: parseFloat(cp.payment) };
+
+      const endpoint = submissionId ? "/api/review/checkpoint-with-contract" : "/api/review-checkpoint";
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json() as {
+        recommendation?: string;
+        score?: number; finding?: string; details?: string[];
+        confidence?: number; summary?: string; notes?: string[];
+        status?: string; compliance_score?: number; findings?: string;
+        required_fixes?: string[]; approved_items?: string[];
+        error?: string;
+      };
+      if (!res.ok || data.error) throw new Error(data.error ?? "Review gagal");
+
+      const aiReport = {
+        status: data.recommendation ?? data.status ?? "REVISION",
+        score: data.score ?? Math.round(data.confidence ?? 0) ?? data.compliance_score ?? 0,
+        finding: data.finding ?? data.summary ?? data.findings ?? "",
+        details: data.details ?? data.notes ?? [
+          ...(data.approved_items ?? []),
+          ...(data.required_fixes ?? []).map(f => `PERHATIAN: ${f}`),
+        ],
+      };
+
+      setContract(prev => ({
+        ...prev,
+        checkpoints: prev.checkpoints.map(c =>
+          c.id === cp.id ? { ...c, aiReport, status: "awaiting" as CPStatus } : c
+        ),
+      }));
+      toast.success(`Review selesai: ${aiReport.status}`, `Score: ${aiReport.score}/100`);
+    } catch (err) {
+      toast.error("Review gagal", err instanceof Error ? err.message.slice(0, 200) : "Coba lagi");
+    } finally {
+      setReviewing(false);
+    }
+  }, [submissionId, idParam, contract.title, contract.totalAmount]);
+
+  const handleFileUpload = useCallback(async (file: File) => {
+    const ALLOWED = ["image/jpeg", "image/png", "image/jpg", "application/pdf"];
+    if (!ALLOWED.includes(file.type)) {
+      setUploadError("Format tidak didukung. Gunakan JPG, PNG, atau PDF.");
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      setUploadError("File terlalu besar (max 50MB).");
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+    setUploadedFile(null);
+    setEvidenceHash("");
+    setSubmissionId(null);
+
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("pdaAddress", idParam);
+      fd.append("checkpointIndex", String((activeCP ?? 1) - 1));
+      fd.append("contractorWallet", wallet.publicKey?.toBase58() ?? "");
+
+      // Pakai endpoint baru yang upload ke Supabase + Pinata sekaligus
+      const res = await fetch("/api/evidence/upload", { method: "POST", body: fd });
+      const json = await res.json() as { ipfsCid?: string; submissionId?: string; error?: string };
+      if (!res.ok || !json.ipfsCid) throw new Error(json.error ?? "Upload gagal");
+
+      setUploadedFile({ name: file.name, cid: json.ipfsCid });
+      setEvidenceHash(json.ipfsCid);
+      if (json.submissionId) setSubmissionId(json.submissionId);
+      toast.success("File ter-upload!", `CID: ${json.ipfsCid.slice(0, 20)}...`);
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Upload gagal");
+    } finally {
+      setUploading(false);
+    }
+  }, [idParam, activeCP, wallet.publicKey]);
+
   const handleSubmit = async () => {
     const cpIdx = activeCP !== null ? activeCP - 1 : -1;
-    if (!program || !wallet.publicKey || !onchainAcc || cpIdx < 0) {
-      toast.info("Submitting evidence...", "AI review will begin shortly");
-      setSubmitting(true);
-      setTimeout(() => { setSubmitting(false); setSubmitMode(false); toast.success("Evidence submitted", "AI review in progress"); }, 2000);
+    if (!program || !wallet.publicKey) {
+      toast.error("Wallet tidak terhubung", "Hubungkan Phantom wallet terlebih dahulu");
+      return;
+    }
+    if (!onchainAcc || cpIdx < 0) {
+      toast.error("Data kontrak belum dimuat", "Refresh halaman dan coba lagi");
       return;
     }
     if (!evidenceHash.trim()) { toast.error("Missing hash", "Enter an evidence hash"); return; }
@@ -257,7 +358,7 @@ export default function ContractDetailPage() {
       setEvidenceHash("");
       await fetchOnchain();
     } catch (err: unknown) {
-      toast.error("Submit failed", (err instanceof Error ? err.message : String(err)).slice(0, 80));
+      toast.error("Submit failed", (err instanceof Error ? err.message : String(err)).slice(0, 200));
     } finally { setSubmitting(false); }
   };
 
@@ -272,6 +373,30 @@ export default function ContractDetailPage() {
       const { escrowATA, clientATA, contractorATA } = getTokenAccounts(
         onchainAcc.mint, onchainAcc.client, onchainAcc.contractor, pdaPubkey
       );
+
+      // Buat ATA contractor jika belum ada (create_idempotent)
+      const ataInfo = await connection.getAccountInfo(contractorATA);
+      if (!ataInfo) {
+        toast.info("Menyiapkan wallet contractor...", "Membuat USDC token account");
+        const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1bE8");
+        const SYSTEM_PROGRAM_ID = new PublicKey("11111111111111111111111111111111");
+        const createATAIx = new TransactionInstruction({
+          programId: ASSOCIATED_TOKEN_PROGRAM_ID,
+          keys: [
+            { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
+            { pubkey: contractorATA, isSigner: false, isWritable: true },
+            { pubkey: onchainAcc.contractor, isSigner: false, isWritable: false },
+            { pubkey: onchainAcc.mint, isSigner: false, isWritable: false },
+            { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
+            { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+          ],
+          data: Buffer.from([1]), // create_idempotent
+        });
+        const tx = new Transaction().add(createATAIx);
+        const sig = await wallet.sendTransaction(tx, connection);
+        await connection.confirmTransaction(sig, "confirmed");
+      }
+
       type M = { approveCheckpoint: (i: number, h: string) => { accounts: (a: object) => { rpc: () => Promise<string> } } };
       await (program.methods as never as M).approveCheckpoint(cpIdx, "ai_approved").accounts({
         client: wallet.publicKey, contractor: onchainAcc.contractor, contract: pdaPubkey,
@@ -282,7 +407,7 @@ export default function ContractDetailPage() {
       toast.success("Checkpoint approved!", "USDC released to contractor");
       await fetchOnchain();
     } catch (err: unknown) {
-      toast.error("Approve failed", (err instanceof Error ? err.message : String(err)).slice(0, 80));
+      toast.error("Approve failed", (err instanceof Error ? err.message : String(err)).slice(0, 200));
     }
   };
 
@@ -301,7 +426,26 @@ export default function ContractDetailPage() {
       toast.warning("Revision requested!", "Contractor notified on-chain");
       await fetchOnchain();
     } catch (err: unknown) {
-      toast.error("Revision failed", (err instanceof Error ? err.message : String(err)).slice(0, 80));
+      toast.error("Revision failed", (err instanceof Error ? err.message : String(err)).slice(0, 200));
+    }
+  };
+
+  const handleAccept = async () => {
+    if (!program || !wallet.publicKey || !onchainAcc) {
+      toast.error("Wallet tidak terhubung", "Hubungkan Phantom wallet terlebih dahulu");
+      return;
+    }
+    try {
+      const pdaPubkey = new PublicKey(idParam);
+      type M = { acceptContract: () => { accounts: (a: object) => { rpc: () => Promise<string> } } };
+      await (program.methods as never as M).acceptContract().accounts({
+        contractor: wallet.publicKey,
+        contract: pdaPubkey,
+      }).rpc();
+      toast.success("Kontrak diterima!", "Status berubah ke Active — kamu bisa submit checkpoint sekarang");
+      await fetchOnchain();
+    } catch (err: unknown) {
+      toast.error("Accept failed", (err instanceof Error ? err.message : String(err)).slice(0, 200));
     }
   };
 
@@ -324,7 +468,7 @@ export default function ContractDetailPage() {
       toast.success("Contract cancelled", "USDC refunded to client");
       await fetchOnchain();
     } catch (err: unknown) {
-      toast.error("Cancel failed", (err instanceof Error ? err.message : String(err)).slice(0, 80));
+      toast.error("Cancel failed", (err instanceof Error ? err.message : String(err)).slice(0, 200));
     }
   };
 
@@ -431,6 +575,31 @@ export default function ContractDetailPage() {
                 <span style={{ color: "rgba(80,220,140,0.70)" }}>Released: {paidAmount.toFixed(2)} USDC</span>
                 <span style={{ color: "var(--text-4)" }}>Locked: {lockedAmount.toFixed(2)} USDC</span>
               </div>
+              {/* Accept Contract — hanya untuk contractor saat status Draft */}
+              {contract.status === "Draft" && onchainAcc && wallet.publicKey?.toBase58() === onchainAcc.contractor.toBase58() && (
+                <button onClick={handleAccept} style={{
+                  width: "100%", padding: "9px", borderRadius: "7px",
+                  background: "rgba(80,220,140,0.12)",
+                  border: "1px solid rgba(80,220,140,0.35)",
+                  color: "rgba(80,220,140,0.95)",
+                  fontSize: "12px", fontWeight: 700, cursor: "pointer",
+                  fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
+                  marginBottom: "8px",
+                  transition: "background 0.2s, border-color 0.2s",
+                }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "rgba(80,220,140,0.20)";
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(80,220,140,0.55)";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "rgba(80,220,140,0.12)";
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(80,220,140,0.35)";
+                  }}
+                >
+                  ✓ Accept Contract
+                </button>
+              )}
+
               {(contract.status === "Active" || contract.status === "Draft") && (
                 <button onClick={handleCancel} style={{
                   width: "100%", padding: "9px", borderRadius: "7px",
@@ -536,7 +705,91 @@ export default function ContractDetailPage() {
 
                         {/* Action buttons */}
                         {cp.status === "submitted" && (
-                          <div style={{ display: "flex", gap: "8px" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+
+                            {/* Evidence link + AI Review */}
+                            <div style={{ display: "flex", gap: "8px" }}>
+                              {cp.evidence && (
+                                <a
+                                  href={`https://gateway.pinata.cloud/ipfs/${cp.evidence}`}
+                                  target="_blank" rel="noopener noreferrer"
+                                  onClick={e => e.stopPropagation()}
+                                  style={{
+                                    flex: 1, padding: "9px 0", borderRadius: "7px", textDecoration: "none",
+                                    background: "var(--surface-2)", border: "1px solid var(--border)",
+                                    color: "var(--text-3)", fontWeight: 600, fontSize: "12.5px",
+                                    display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                                    transition: "border-color 0.2s, color 0.2s",
+                                  }}
+                                  onMouseEnter={e => {
+                                    (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--border-strong)";
+                                    (e.currentTarget as HTMLAnchorElement).style.color = "var(--text)";
+                                  }}
+                                  onMouseLeave={e => {
+                                    (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--border)";
+                                    (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-3)";
+                                  }}
+                                >
+                                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                                    <path d="M1 6a5 5 0 1 0 10 0A5 5 0 0 0 1 6Z" stroke="currentColor" strokeWidth="1.3"/>
+                                    <path d="M6 3v3l2 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                                  </svg>
+                                  Lihat Bukti
+                                </a>
+                              )}
+                              {!cp.aiReport && (
+                                <button
+                                  onClick={e => { e.stopPropagation(); handleAiReview(cp); }}
+                                  disabled={reviewing}
+                                  style={{
+                                    flex: 2, padding: "9px 0", borderRadius: "7px",
+                                    background: reviewing ? "var(--surface-2)" : "rgba(160,80,255,0.12)",
+                                    border: `1px solid ${reviewing ? "var(--border)" : "rgba(160,80,255,0.30)"}`,
+                                    color: reviewing ? "var(--text-4)" : "rgba(200,140,255,0.90)",
+                                    fontWeight: 700, fontSize: "12.5px", cursor: reviewing ? "not-allowed" : "pointer",
+                                    fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
+                                    display: "flex", alignItems: "center", justifyContent: "center", gap: "7px",
+                                    transition: "background 0.2s, transform 0.15s",
+                                  } as React.CSSProperties}
+                                  onMouseEnter={e => { if (!reviewing) (e.currentTarget as HTMLButtonElement).style.background = "rgba(160,80,255,0.20)"; }}
+                                  onMouseLeave={e => { if (!reviewing) (e.currentTarget as HTMLButtonElement).style.background = "rgba(160,80,255,0.12)"; }}
+                                >
+                                  {reviewing ? (
+                                    <>
+                                      <svg width="12" height="12" viewBox="0 0 44 44" fill="none" style={{ animation: "spinRing 1s linear infinite" }}>
+                                        <circle cx="22" cy="22" r="18" stroke="currentColor" strokeWidth="5" strokeOpacity="0.3"/>
+                                        <path d="M22 4 A18 18 0 0 1 40 22" stroke="currentColor" strokeWidth="5" strokeLinecap="round"/>
+                                      </svg>
+                                      AI sedang menganalisis...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                                        <path d="M7 1.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11Z" stroke="currentColor" strokeWidth="1.5"/>
+                                        <path d="M5 7l1.5 1.5L9.5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                      </svg>
+                                      Start AI Review
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                              {cp.aiReport && (
+                                <div style={{
+                                  flex: 2, padding: "9px 0", borderRadius: "7px", textAlign: "center",
+                                  background: "rgba(80,220,140,0.08)", border: "1px solid rgba(80,220,140,0.25)",
+                                  color: "rgba(80,220,140,0.80)", fontSize: "12.5px", fontWeight: 600,
+                                  display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                                }}>
+                                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                                    <path d="M2 7L5.5 10.5L12 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                  AI Review selesai
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Approve / Revision */}
+                            <div style={{ display: "flex", gap: "8px" }}>
                             <button
                               onClick={e => { e.stopPropagation(); handleApprove(); }}
                               style={{
@@ -589,6 +842,7 @@ export default function ContractDetailPage() {
                               <IconX size={14} color="rgba(255,120,120,0.90)" strokeWidth={2.2} />
                               Request Revision
                             </button>
+                            </div>
                           </div>
                         )}
 
@@ -655,7 +909,13 @@ export default function ContractDetailPage() {
                   <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>
                     Submit Evidence
                   </h3>
-                  <button onClick={() => setSubmitMode(false)} style={{
+                  <button onClick={() => {
+                    setSubmitMode(false);
+                    setUploadedFile(null);
+                    setEvidenceHash("");
+                    setUploadError(null);
+                    setSubmissionId(null);
+                  }} style={{
                     background: "transparent", border: "none", cursor: "pointer",
                     color: "var(--text-3)", padding: "4px",
                     transition: "color 0.2s",
@@ -669,62 +929,142 @@ export default function ContractDetailPage() {
                     </svg>
                   </button>
                 </div>
-                <div style={{
-                  background: "var(--surface-2)",
-                  border: "1px dashed var(--border)",
-                  borderRadius: "10px", padding: "32px",
-                  textAlign: "center", marginBottom: "16px", cursor: "pointer",
-                  transition: "border-color 0.2s, background 0.2s",
-                }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-strong)";
-                    (e.currentTarget as HTMLDivElement).style.background = "var(--surface)";
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  style={{ display: "none" }}
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file);
+                    e.target.value = "";
                   }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
-                    (e.currentTarget as HTMLDivElement).style.background = "var(--surface-2)";
+                />
+
+                {/* Drop zone */}
+                <div
+                  onClick={() => !uploading && fileInputRef.current?.click()}
+                  onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={e => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) handleFileUpload(file);
+                  }}
+                  style={{
+                    background: dragOver ? "var(--surface)" : uploadedFile ? "rgba(80,220,140,0.06)" : "var(--surface-2)",
+                    border: `1px dashed ${dragOver ? "var(--accent)" : uploadedFile ? "rgba(80,220,140,0.40)" : "var(--border)"}`,
+                    borderRadius: "10px", padding: "28px 24px",
+                    textAlign: "center", marginBottom: "14px",
+                    cursor: uploading ? "wait" : "pointer",
+                    transition: "border-color 0.2s, background 0.2s",
                   }}
                 >
-                  <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-2)", marginBottom: "6px" }}>
-                    Upload photos / documents
-                  </div>
-                  <div style={{ fontSize: "12px", color: "var(--text-4)" }}>
-                    JPG, PNG, PDF · Max 50MB
-                  </div>
+                  {uploading ? (
+                    <>
+                      <svg width="24" height="24" viewBox="0 0 44 44" fill="none" style={{ animation: "spinRing 1s linear infinite", margin: "0 auto 10px" }}>
+                        <circle cx="22" cy="22" r="18" stroke="var(--text-4)" strokeWidth="5" />
+                        <path d="M22 4 A18 18 0 0 1 40 22" stroke="var(--accent)" strokeWidth="5" strokeLinecap="round" />
+                      </svg>
+                      <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-3)" }}>Uploading ke IPFS...</div>
+                    </>
+                  ) : uploadedFile ? (
+                    <>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ margin: "0 auto 8px", display: "block" }}>
+                        <circle cx="12" cy="12" r="11" stroke="rgba(80,220,140,0.70)" strokeWidth="1.5" />
+                        <path d="M7 12.5L10.5 16L17 9" stroke="rgba(80,220,140,0.90)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "rgba(80,220,140,0.90)", marginBottom: "4px" }}>
+                        {uploadedFile.name}
+                      </div>
+                      <div style={{ fontSize: "11px", color: "var(--text-4)", fontFamily: "monospace" }}>
+                        {uploadedFile.cid.slice(0, 24)}...
+                      </div>
+                      <div style={{ fontSize: "11px", color: "var(--text-4)", marginTop: "6px" }}>
+                        Klik untuk ganti file
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ margin: "0 auto 10px", display: "block", opacity: 0.4 }}>
+                        <path d="M12 16V8M12 8L9 11M12 8L15 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M20 16.7A4 4 0 0 0 18 9h-1.26A7 7 0 1 0 4 15.65" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      </svg>
+                      <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-2)", marginBottom: "4px" }}>
+                        Klik atau drag file ke sini
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--text-4)" }}>
+                        JPG, PNG, PDF · Max 50MB · Disimpan di IPFS
+                      </div>
+                    </>
+                  )}
                 </div>
+
+                {/* Upload error */}
+                {uploadError && (
+                  <div style={{ fontSize: "12px", color: "rgba(255,100,100,0.90)", marginBottom: "10px", padding: "8px 12px", background: "rgba(255,80,80,0.08)", borderRadius: "7px", border: "1px solid rgba(255,80,80,0.20)" }}>
+                    {uploadError}
+                  </div>
+                )}
+
+                {/* CID field (readonly setelah upload, manual jika belum upload) */}
                 <input
                   style={{
                     width: "100%", background: "var(--input-bg)",
                     border: "1px solid var(--input-border)",
                     borderRadius: "8px", padding: "12px 14px",
-                    color: "var(--input-text)", fontSize: "13px", outline: "none",
+                    color: uploadedFile ? "rgba(80,220,140,0.85)" : "var(--input-text)",
+                    fontSize: "12px", outline: "none",
                     fontFamily: "monospace", boxSizing: "border-box" as const,
-                    marginBottom: "14px",
+                    marginBottom: "14px", transition: "border-color 0.2s",
                   }}
-                  placeholder="Evidence hash (e.g. SHA-256 of your file or IPFS CID)"
+                  placeholder="IPFS CID akan otomatis terisi setelah upload..."
                   value={evidenceHash}
-                  onChange={e => setEvidenceHash(e.target.value)}
+                  onChange={e => { setEvidenceHash(e.target.value); setUploadedFile(null); }}
+                  readOnly={!!uploadedFile}
                 />
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  style={{
-                    width: "100%", padding: "13px", borderRadius: "7px", border: "none",
-                    background: submitting ? "var(--surface)" : "var(--btn-primary-bg)",
-                    color: "var(--btn-primary-text)", fontWeight: 700, fontSize: "14px",
-                    cursor: submitting ? "not-allowed" : "pointer",
-                    fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                    transition: "opacity 0.2s, transform 0.15s",
-                    boxShadow: "var(--glass-shadow)",
-                  } as React.CSSProperties}
-                  onMouseEnter={e => { if (!submitting) (e.currentTarget as HTMLButtonElement).style.opacity = "0.88"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
-                  onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.98)"; }}
-                  onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)"; }}
-                >
-                  {submitting ? "Submitting..." : "Submit for AI Review"}
-                </button>
+
+                {/* Submit button */}
+                {(() => {
+                  const needsHash = !!program && !!wallet.publicKey && !evidenceHash.trim();
+                  const isDisabled = submitting || uploading || needsHash;
+                  return (
+                    <button
+                      onClick={handleSubmit}
+                      disabled={isDisabled}
+                      style={{
+                        width: "100%", padding: "13px", borderRadius: "7px", border: "none",
+                        background: isDisabled ? "var(--surface-2)" : "var(--btn-primary-bg)",
+                        color: isDisabled ? "var(--text-4)" : "var(--btn-primary-text)",
+                        fontWeight: 700, fontSize: "14px",
+                        cursor: isDisabled ? "not-allowed" : "pointer",
+                        fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                        transition: "opacity 0.2s, transform 0.15s, background 0.2s",
+                        boxShadow: isDisabled ? "none" : "var(--glass-shadow)",
+                        opacity: isDisabled && !submitting ? 0.5 : 1,
+                      } as React.CSSProperties}
+                      onMouseEnter={e => { if (!isDisabled) (e.currentTarget as HTMLButtonElement).style.opacity = "0.88"; }}
+                      onMouseLeave={e => { if (!isDisabled) (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+                      onMouseDown={e => { if (!isDisabled) (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.98)"; }}
+                      onMouseUp={e => { if (!isDisabled) (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)"; }}
+                    >
+                      {submitting ? (
+                        <>
+                          <svg width="14" height="14" viewBox="0 0 44 44" fill="none" style={{ animation: "spinRing 1s linear infinite" }}>
+                            <circle cx="22" cy="22" r="18" stroke="currentColor" strokeWidth="5" strokeOpacity="0.3" />
+                            <path d="M22 4 A18 18 0 0 1 40 22" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+                          </svg>
+                          Submitting on-chain...
+                        </>
+                      ) : uploading ? "Uploading ke IPFS..."
+                        : needsHash ? "Upload file bukti terlebih dahulu"
+                        : "Submit for AI Review"}
+                    </button>
+                  );
+                })()}
               </div>
             )}
 
@@ -737,7 +1077,7 @@ export default function ContractDetailPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                   <div>
                     <div style={{ fontSize: "22px", fontWeight: 900, color: "var(--text)", letterSpacing: "-0.04em" }}>
-                      {currentCP.aiReport.score}/10
+                      {currentCP.aiReport.score}/100
                     </div>
                     <div style={{ fontSize: "11.5px", color: "var(--text-3)" }}>
                       Compliance Score
@@ -836,6 +1176,12 @@ export default function ContractDetailPage() {
         </div>
       </div>
       <Footer />
+      <style>{`
+        @keyframes spinRing {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+      `}</style>
     </main>
   );
 }

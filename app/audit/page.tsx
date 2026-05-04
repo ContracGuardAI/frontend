@@ -9,6 +9,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "../components/WalletProvider";
 import type { ContractReviewResult } from "../lib/contractAgent";
 import { useLanguage } from "../components/LanguageProvider";
+import { pdfStore } from "../lib/pdfStore";
 
 const glass = {
   background: "var(--surface)",
@@ -32,7 +33,7 @@ type AuditChatMsg =
   | { role: "ai"; kind: "score"; result: ContractReviewResult }
   | { role: "ai"; kind: "risks"; result: ContractReviewResult }
   | { role: "ai"; kind: "action"; result: ContractReviewResult }
-  | { role: "ai"; kind: "cta"; analysisHash: string; result: ContractReviewResult; suggestedTitle: string };
+  | { role: "ai"; kind: "cta"; analysisHash: string; result: ContractReviewResult; suggestedTitle: string; contractText: string };
 
 const MAX_FREE_CHATS = 3;
 
@@ -511,30 +512,14 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
 
   if (msg.kind === "cta") {
     const handlePrefill = () => {
-      const items = msg.result.price_analysis;
-      let checkpoints: { name: string; description: string; payment: string }[];
-      if (items.length >= 2) {
-        const total = items.reduce((s, x) => s + x.contract_price, 0);
-        checkpoints = items.map(p => ({
-          name: p.item,
-          description: p.notes.slice(0, 64),
-          payment: String(total > 0 ? Math.round((p.contract_price / total) * 100) : Math.round(100 / items.length)),
-        }));
-        // Fix rounding so total = 100
-        const sum = checkpoints.reduce((s, c) => s + Number(c.payment), 0);
-        if (sum !== 100) {
-          checkpoints[checkpoints.length - 1].payment = String(Number(checkpoints[checkpoints.length - 1].payment) + (100 - sum));
-        }
-      } else {
-        checkpoints = [
-          { name: "Deliverable 1", description: "Tahap pertama", payment: "50" },
-          { name: "Deliverable 2", description: "Tahap kedua", payment: "50" },
-        ];
-      }
       sessionStorage.setItem("contractguard_prefill", JSON.stringify({
         title: msg.suggestedTitle,
         description: msg.result.overall_summary,
-        checkpoints,
+        checkpoints: [
+          { name: "Deliverable 1", description: "Tahap pertama", payment: "50" },
+          { name: "Deliverable 2", description: "Tahap kedua", payment: "50" },
+        ],
+        contractText: msg.contractText,
       }));
     };
 
@@ -671,6 +656,7 @@ export default function AuditPage() {
       charCount    = uploadJson.data.char_count;
       setFileHash(fHash);
       contractTextRef.current = contractText;
+      pdfStore.set(file); // simpan File untuk upload ke Supabase Storage nanti
     } catch (err) {
       if ((err as Error).name === "AbortError") { setChatTyping(false); setFileState("idle"); return; }
       const msg = err instanceof Error ? err.message : "Upload failed.";
@@ -695,9 +681,9 @@ export default function AuditPage() {
       lang === "en" ? "AI is reading every clause" : "AI sedang membaca setiap klausul"
     );
 
-    // 90s client-side timeout (server has 85s, so this is a safety net)
+    // 3 minute client-side timeout
     let timedOut = false;
-    const timeoutId = setTimeout(() => { timedOut = true; abort.abort(); }, 90_000);
+    const timeoutId = setTimeout(() => { timedOut = true; abort.abort(); }, 180_000);
 
     try {
       const res = await fetch("/api/audit-stream", {
@@ -771,6 +757,7 @@ export default function AuditPage() {
               analysisHash: event.meta!.analysis_hash,
               result,
               suggestedTitle: file.name.replace(/\.pdf$/i, "").replace(/[-_]/g, " "),
+              contractText: contractTextRef.current,
             }), 1700);
           }
 
@@ -790,8 +777,8 @@ export default function AuditPage() {
           addMsg({
             role: "ai", kind: "text", variant: "error",
             text: lang === "en"
-              ? "Analysis timed out after 90 seconds. The contract may be too long or the AI service is busy. Please try again."
-              : "Analisis timeout setelah 90 detik. Kontrak mungkin terlalu panjang atau AI sedang sibuk. Coba lagi.",
+              ? "Analysis timed out after 3 minutes. The contract may be too long or the AI service is busy. Please try again."
+              : "Analisis timeout setelah 3 menit. Kontrak mungkin terlalu panjang atau AI sedang sibuk. Coba lagi.",
           });
           setFileState("error");
           toast.error("Timeout", lang === "en" ? "Analysis took too long" : "Analisis terlalu lama");
