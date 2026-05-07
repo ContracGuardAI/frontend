@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useContractProgram, getConfigPDA, getUsdcMintPDA, getMintRecordPDA, getATA, TOKEN_PROGRAM_ID, MINT_AMOUNT_USDC } from "../lib/useContractProgram";
-import { BN } from "@anchor-lang/core";
+import { BN } from "@coral-xyz/anchor";
 import { toast } from "./Toast";
 
 const COOLDOWN_SECS = 86_400;

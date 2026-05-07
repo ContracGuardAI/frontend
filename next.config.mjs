@@ -13,6 +13,12 @@ const nextConfig = {
         canvas: false,
         encoding: false,
       };
+      // QVAC menggunakan native Node addons + Bare worker — jangan di-bundle webpack
+      config.externals = [
+        ...(Array.isArray(config.externals) ? config.externals : []),
+        "@qvac/sdk",
+        "@qvac/cli",
+      ];
     }
     // Izinkan import dari contractguard-agent/ yang ada di luar frontend/
     config.resolve.modules = [

@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { TransactionInstruction, Transaction, SystemProgram } from "@solana/web3.js";
-import { BN } from "@anchor-lang/core";
+import { BN } from "@coral-xyz/anchor";
 import { useWalletModal } from "./WalletProvider";
 import { useContractProgram, getUsdcMintPDA, getATA, getMintRecordPDA, getConfigPDA, TOKEN_PROGRAM_ID, ASSOC_TOKEN_PID, PROGRAM_ID, MINT_AMOUNT_USDC } from "../lib/useContractProgram";
 import { toast } from "./Toast";

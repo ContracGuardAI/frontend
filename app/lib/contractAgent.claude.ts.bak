@@ -1,158 +1,24 @@
+import { spawn } from "child_process";
+import path from "path";
 import { supabaseAdmin } from "./supabase";
-import {
-  loadModel,
-  unloadModel,
-  completion,
-  close,
-  LLAMA_3_2_1B_INST_Q4_0,
-  QWEN3_4B_INST_Q4_K_M,
-  QWEN3_8B_INST_Q4_K_M,
-} from "@qvac/sdk";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
 
-// ─── Model Registry ──────────────────────────────────────────────────────────
+const AGENT_DIR = (() => {
+  if (process.env.AGENT_DIR) return process.env.AGENT_DIR;
+  const sibling = path.resolve(process.cwd(), "..", "contractguard-agent");
+  const bundled = path.resolve(process.cwd(), "agent");
+  const { existsSync } = require("fs") as typeof import("fs");
+  return existsSync(path.join(sibling, "CLAUDE.md")) ? sibling : bundled;
+})();
 
-export const QVAC_MODELS = {
-  fast:  LLAMA_3_2_1B_INST_Q4_0,  // ~773MB — extract, detect
-  smart: QWEN3_4B_INST_Q4_K_M,    // ~2.5GB — analyze, chat, checkpoint
-  best:  QWEN3_8B_INST_Q4_K_M,    // ~4.9GB — best quality
+export const CLAUDE_MODELS = {
+  haiku:  "claude-haiku-4-5-20251001",
+  sonnet: "claude-sonnet-4-6",
+  opus:   "claude-opus-4-7",
 } as const;
 
-export type QvacModelKey = keyof typeof QVAC_MODELS;
-
-// ─── Model Lifecycle (singleton per tier) ────────────────────────────────────
-
-type LoadedModel = { modelId: string; refCount: number };
-const modelCache = new Map<QvacModelKey, LoadedModel>();
-const loadingPromises = new Map<QvacModelKey, Promise<string>>();
-
-async function getOrLoadModel(tier: QvacModelKey): Promise<string> {
-  const cached = modelCache.get(tier);
-  if (cached) {
-    cached.refCount++;
-    return cached.modelId;
-  }
-
-  const existing = loadingPromises.get(tier);
-  if (existing) return existing;
-
-  const descriptor = QVAC_MODELS[tier];
-  const modelConfig = { ctx_size: 8192, device: "gpu" };
-  // loadModel overloads are complex — cast to avoid TS union resolution failure
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const promise = (loadModel as any)({
-    modelSrc: descriptor,
-    modelConfig,
-    onProgress: (p: { stage?: string; current?: number; total?: number }) => {
-      if (p.stage === "download" && p.total) {
-        const pct = Math.round(((p.current ?? 0) / p.total) * 100);
-        console.log(`[QVAC] Downloading ${descriptor.name}: ${pct}%`);
-      }
-    },
-  }).then((modelId: string) => {
-    modelCache.set(tier, { modelId, refCount: 1 });
-    loadingPromises.delete(tier);
-    console.log(`[QVAC] Model ${descriptor.name} ready: ${modelId}`);
-    return modelId;
-  }).catch((err: unknown) => {
-    loadingPromises.delete(tier);
-    throw err;
-  });
-
-  loadingPromises.set(tier, promise);
-  return promise;
-}
-
-function releaseModel(tier: QvacModelKey): void {
-  const cached = modelCache.get(tier);
-  if (!cached) return;
-  cached.refCount--;
-  // Keep model loaded for reuse — only unload on process exit
-}
-
-process.on("exit", async () => {
-  for (const m of Array.from(modelCache.values())) {
-    await unloadModel({ modelId: m.modelId }).catch(() => {});
-  }
-  await close().catch(() => {});
-});
-
-// ─── Input Truncation ────────────────────────────────────────────────────────
-// ctx 8192 − ~1800 system prompt − ~200 response buffer = ~6200 token budget
-// Qwen3 tokenizes Indonesian legal text at ~1.4 chars/token (subword-heavy)
-// Budget: ctx 8192 − 1500 overhead − 1300 market data = ~5400 tokens → ~5000 chars
-const MAX_CONTRACT_CHARS = 5_000;
-
-function truncateContract(text: string): string {
-  if (text.length <= MAX_CONTRACT_CHARS) return text;
-  const half = Math.floor(MAX_CONTRACT_CHARS / 2);
-  return (
-    text.slice(0, half) +
-    "\n\n[... CONTRACT TRUNCATED FOR LENGTH — MIDDLE SECTION OMITTED ...]\n\n" +
-    text.slice(text.length - half)
-  );
-}
-
-// ─── Core Runner ─────────────────────────────────────────────────────────────
-
-const SYSTEM_PROMPT_AUDITOR = `# ContractGuard AI Auditor
-
-Kamu adalah auditor kontrak kerja profesional dengan pengalaman lebih dari 10 tahun di industri konstruksi, jasa IT, pengadaan barang/jasa, dan layanan profesional di Indonesia. Kamu memahami praktik bisnis nyata, dinamika negosiasi, dan landasan hukum yang berlaku.
-
-**Filosofi analisis:**
-- Selalu analisis dari DUA sisi: kepentingan pemberi kerja (klien) DAN kontraktor/penyedia jasa
-- Tujuan adalah kontrak yang ADIL dan SALING MENGUNTUNGKAN — bukan hanya melindungi satu pihak
-- Berikan solusi konkret, bukan sekadar menandai masalah
-- Gunakan perspektif industri: "Dalam kontrak sejenis yang umum dijumpai...", "Praktik standar di industri ini..."
-
-## Referensi Hukum Indonesia
-| Topik | Dasar Hukum |
-|-------|-------------|
-| Syarat sah perjanjian | KUH Perdata Pasal 1320 |
-| Asas kebebasan berkontrak | KUH Perdata Pasal 1338 ayat (1) |
-| Asas itikad baik | KUH Perdata Pasal 1338 ayat (3) |
-| Wanprestasi & ganti rugi | KUH Perdata Pasal 1234–1252, 1243–1252 |
-| Kontrak konstruksi | UU No. 2/2017 tentang Jasa Konstruksi, Pasal 46–51 |
-| Kontrak kerja (PKWT) | UU No. 13/2003 jo. PP No. 35/2021 Pasal 8–15 |
-| Klausul baku dilarang | UU No. 8/1999 Perlindungan Konsumen Pasal 18 |
-| Arbitrase & sengketa | UU No. 30/1999 tentang Arbitrase & ADR |
-| Kontrak elektronik | UU ITE No. 11/2008 jo. 19/2016 Pasal 18–19 |
-| Pengadaan jasa pemerintah | Perpres No. 16/2018 jo. 12/2021 |
-| Hak kekayaan intelektual | UU No. 28/2014 tentang Hak Cipta, Pasal 36–37 |
-| Perlindungan data pribadi | UU No. 27/2022 tentang Perlindungan Data Pribadi |
-
-## Aturan Output Wajib
-- Mode 1 & 2: Respond HANYA dengan JSON valid. Tanpa teks, komentar, atau markdown di luar JSON. Jangan tambahkan backtick.
-- Mode 3: Respond dalam plain text profesional. Bukan JSON.
-- Gunakan bahasa yang diminta (EN atau ID).
-- Jadilah objektif untuk kepentingan KEDUA pihak.
-- Jika kontrak tidak lengkap: analisis sebaik mungkin; catat keterbatasan di overall_summary.`;
-
-async function runQVAC(
-  userPrompt: string,
-  tier: QvacModelKey = "smart"
-): Promise<string> {
-  const modelId = await getOrLoadModel(tier);
-  try {
-    const run = completion({
-      modelId,
-      stream: true,
-      captureThinking: true,
-      history: [
-        { role: "system", content: "/no_think " + SYSTEM_PROMPT_AUDITOR },
-        { role: "user", content: userPrompt },
-      ],
-    });
-
-    const final = await run.final;
-    const text = final.contentText ?? "";
-    console.log(`[QVAC] ${tier} | ${final.stats?.tokensPerSecond?.toFixed(0)} tok/s | ${text.length} chars`);
-    return text.trim();
-  } finally {
-    releaseModel(tier);
-  }
-}
+export type ClaudeModelKey = keyof typeof CLAUDE_MODELS;
 
 // ─── Contract Types ──────────────────────────────────────────────────────────
 
@@ -244,7 +110,100 @@ const REGULATIONS: Record<ContractType, string[]> = {
   ],
 };
 
-// ─── JSON Parser ──────────────────────────────────────────────────────────────
+// ─── Runner ──────────────────────────────────────────────────────────────────
+
+function resolveModel(modelOrKey?: string): string {
+  if (!modelOrKey) return process.env.CLAUDE_MODEL ?? CLAUDE_MODELS.sonnet;
+  return CLAUDE_MODELS[modelOrKey as ClaudeModelKey] ?? modelOrKey;
+}
+
+function runClaude(prompt: string, model?: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const isWindows = process.platform === "win32";
+    const claudeProcess = spawn(
+      "claude",
+      ["-p", "--model", resolveModel(model), "--output-format", "text", "--allowedTools", "Read"],
+      { cwd: AGENT_DIR, stdio: ["pipe", "pipe", "pipe"], shell: isWindows }
+    );
+
+    let stdout = "";
+    let stderr = "";
+    claudeProcess.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
+    claudeProcess.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
+    claudeProcess.on("error", (err: Error) => reject(new Error(`Gagal menjalankan Claude: ${err.message}`)));
+    claudeProcess.on("close", (code: number | null) => {
+      if (code !== 0 && !stdout.trim()) {
+        return reject(new Error(`Claude exit ${code}: ${stderr.slice(0, 300)}`));
+      }
+      resolve(stdout.trim());
+    });
+    claudeProcess.stdin.write(prompt);
+    claudeProcess.stdin.end();
+  });
+}
+
+export interface ExtractedContract {
+  title: string;
+  description: string;
+  totalAmount: number;
+  checkpoints: { name: string; description: string; payment: string }[];
+}
+
+export async function runClaudeExtract(contractText: string): Promise<ExtractedContract> {
+  const prompt = `Kamu adalah asisten ekstraksi data kontrak. Baca teks kontrak berikut dan ekstrak informasi penting ke dalam format JSON.
+
+INSTRUKSI:
+- "title": judul singkat kontrak (maks 80 karakter), bisa dari judul dokumen atau buat ringkasan singkat
+- "description": ringkasan kontrak dalam 2-4 kalimat — apa yang dikerjakan, siapa pihaknya, apa risikonya
+- "totalAmount": nilai kontrak dalam angka (angka saja, tanpa Rp/IDR/simbol). 0 jika tidak disebutkan.
+- "checkpoints": daftar milestone/tahapan pekerjaan. Setiap checkpoint:
+  - "name": nama tahapan (maks 50 karakter)
+  - "description": deskripsi singkat deliverable (maks 120 karakter)
+  - "payment": persentase pembayaran sebagai string angka (misal "30"). Total semua harus = 100.
+  Jika tidak ada tahapan eksplisit, buat 3 checkpoint logis berdasarkan jenis pekerjaan.
+  Maksimal 6 checkpoint.
+
+PENTING: Jawab HANYA dengan JSON valid, tanpa teks lain.
+
+Format:
+{
+  "title": "...",
+  "description": "...",
+  "totalAmount": 0,
+  "checkpoints": [
+    { "name": "...", "description": "...", "payment": "30" },
+    { "name": "...", "description": "...", "payment": "40" },
+    { "name": "...", "description": "...", "payment": "30" }
+  ]
+}
+
+Teks Kontrak:
+${contractText}`;
+
+  const raw = await runClaude(prompt, CLAUDE_MODELS.haiku);
+  const parsed = parseJson(raw) as unknown as ExtractedContract;
+
+  // Normalize checkpoints agar total = 100%
+  const cps = Array.isArray(parsed.checkpoints) ? parsed.checkpoints : [];
+  const total = cps.reduce((s, cp) => s + (parseFloat(cp.payment) || 0), 0);
+  if (total > 0 && Math.abs(total - 100) > 1) {
+    cps.forEach(cp => {
+      cp.payment = ((parseFloat(cp.payment) / total) * 100).toFixed(0);
+    });
+    // Fix rounding on last item
+    const fixedTotal = cps.reduce((s, cp) => s + parseFloat(cp.payment), 0);
+    if (fixedTotal !== 100 && cps.length > 0) {
+      cps[cps.length - 1].payment = String(parseFloat(cps[cps.length - 1].payment) + (100 - fixedTotal));
+    }
+  }
+
+  return {
+    title:       String(parsed.title ?? "").slice(0, 80),
+    description: String(parsed.description ?? ""),
+    totalAmount: Number(parsed.totalAmount ?? 0),
+    checkpoints: cps.slice(0, 6),
+  };
+}
 
 function parseJson(raw: string): Record<string, unknown> {
   let text = raw.trim();
@@ -324,25 +283,53 @@ export async function fetchSerpApiPrices(keyword: string): Promise<PriceDataPoin
   }
 }
 
+
 export async function fetchGoogleCsePrices(keyword: string): Promise<PriceDataPoint[]> {
   const key = process.env.GOOGLE_CSE_KEY;
   const cx  = process.env.GOOGLE_CSE_ID;
   if (!key || !cx) return [];
   try {
-    const params = new URLSearchParams({ key, cx, q: `harga ${keyword} indonesia`, num: "10", gl: "id", lr: "lang_id" });
+    const params = new URLSearchParams({
+      key,
+      cx,
+      q:   `harga ${keyword} indonesia`,
+      num: "10",
+      gl:  "id",
+      lr:  "lang_id",
+    });
     const res  = await fetch(`https://www.googleapis.com/customsearch/v1?${params}`, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error(`[GoogleCSE] HTTP ${res.status} for "${keyword}": ${errText.slice(0, 200)}`);
+      return [];
+    }
     const data = await res.json();
     const items: any[] = data?.items ?? [];
+    console.log(`[GoogleCSE] "${keyword}" → ${items.length} results`);
+    // Log snippet pertama untuk debug
+    if (items[0]) console.log(`[GoogleCSE] Sample snippet: ${items[0].snippet?.slice(0, 150)}`);
+
+    // Ekstrak harga dari snippet Google CSE
+    // Cek dulu apakah ada pagemap pricing data (lebih akurat)
     const results: PriceDataPoint[] = [];
     for (const item of items) {
       const text = `${item.title ?? ""} ${item.snippet ?? ""}`;
-      const pricePatterns = [/Rp\.?\s*(\d[\d.]{3,})/gi, /(\d{1,3}(?:\.\d{3}){2,})/g, /IDR\s*(\d[\d.,]{3,})/gi];
+
+      // Pola 1: "Rp 1.500.000" atau "Rp1.500.000" atau "Rp1500000"
+      // Pola 2: angka dengan separator titik Indonesia "1.500.000"
+      // Pola 3: harga dengan koma "1,500,000"
+      const pricePatterns = [
+        /Rp\.?\s*(\d[\d.]{3,})/gi,           // Rp 1.500.000 atau Rp1500000
+        /(\d{1,3}(?:\.\d{3}){2,})/g,         // 1.500.000 (min 2 separator → ≥ 1 juta)
+        /IDR\s*(\d[\d.,]{3,})/gi,             // IDR 1.500.000
+      ];
+
       let found = false;
       for (const pattern of pricePatterns) {
-        const matches = Array.from(text.matchAll(pattern));
+        const matches = [...text.matchAll(pattern)];
         for (const m of matches) {
-          const price = parseInt(m[1].replace(/[.,]/g, ""), 10);
+          const raw   = m[1].replace(/[.,]/g, "");
+          const price = parseInt(raw, 10);
           if (price > 50000 && price < 5_000_000_000) {
             results.push({ name: (item.title ?? "").slice(0, 60), price, source: "Google Search" });
             found = true;
@@ -362,21 +349,35 @@ export function summarizePrices(points: PriceDataPoint[], keyword: string): stri
   const rawPrices = points.map((p) => p.price).filter((p) => p > 0);
   if (!rawPrices.length) return null;
 
+  // Rough median for outlier detection (robust even with a few outliers)
   const sorted0     = [...rawPrices].sort((a, b) => a - b);
   const roughMedian = sorted0[Math.floor(sorted0.length / 2)];
   const fmt0 = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
+  console.log(`[summarize] "${keyword}" rawPrices (${rawPrices.length}): ${sorted0.map(fmt0).join(", ")}`);
+  console.log(`[summarize] roughMedian=${fmt0(roughMedian)}, filter range: ${fmt0(roughMedian*0.1)} – ${fmt0(roughMedian*10)}`);
 
-  const prices = rawPrices.filter((p) => p >= roughMedian * 0.1 && p <= roughMedian * 10);
+  // Remove prices below 10% or above 1000% of rough median
+  // This catches per-unit prices mixed with per-roll/bulk prices (e.g. Rp 31.234/m vs Rp 3.250.000/roll)
+  const prices = rawPrices.filter(
+    (p) => p >= roughMedian * 0.1 && p <= roughMedian * 10
+  );
+  console.log(`[summarize] after filter (${prices.length}): ${[...prices].sort((a,b)=>a-b).map(fmt0).join(", ")}`);
   if (!prices.length) return null;
 
-  const filteredPoints = points.filter((p) => p.price >= roughMedian * 0.1 && p.price <= roughMedian * 10);
-  const outlierCount   = rawPrices.length - prices.length;
+  const filteredPoints = points.filter(
+    (p) => p.price >= roughMedian * 0.1 && p.price <= roughMedian * 10
+  );
+  const outlierCount  = rawPrices.length - prices.length;
+
   const sorted  = [...prices].sort((a, b) => a - b);
   const avg     = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
   const median  = sorted[Math.floor(sorted.length / 2)];
   const fmt     = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
-  const sources = Array.from(new Set(filteredPoints.map((p) => p.source))).join(", ");
-  const examples = filteredPoints.slice(0, 2).map((p) => `    - [${p.source}] ${p.name} — ${fmt(p.price)}`).join("\n");
+  const sources = [...new Set(filteredPoints.map((p) => p.source))].join(", ");
+  const examples = filteredPoints.slice(0, 4)
+    .map((p) => `    - [${p.source}] ${p.name} — ${fmt(p.price)}`)
+    .join("\n");
+
   const outlierNote = outlierCount > 0
     ? `\n  (${outlierCount} data outlier diabaikan — kemungkinan harga per unit/satuan, bukan per paket)`
     : "";
@@ -390,89 +391,23 @@ export function summarizePrices(points: PriceDataPoint[], keyword: string): stri
 ${examples}`;
 }
 
-// ─── Stage 1: Extract Contract ───────────────────────────────────────────────
+// ─── Stage 1: Detect Contract Type ──────────────────────────────────────────
 
-export interface ExtractedContract {
-  title: string;
-  description: string;
-  totalAmount: number;
-  checkpoints: { name: string; description: string; payment: string }[];
-}
-
-export async function runClaudeExtract(contractText: string): Promise<ExtractedContract> {
-  const prompt = `Kamu adalah asisten ekstraksi data kontrak. Baca teks kontrak berikut dan ekstrak informasi penting ke dalam format JSON.
-
-INSTRUKSI:
-- "title": judul singkat kontrak (maks 80 karakter)
-- "description": ringkasan kontrak dalam 2-4 kalimat — apa yang dikerjakan, siapa pihaknya, apa risikonya
-- "totalAmount": nilai kontrak dalam angka saja (tanpa Rp/IDR/simbol). 0 jika tidak disebutkan.
-- "checkpoints": daftar milestone/tahapan. Setiap checkpoint: "name" (maks 50 karakter), "description" (maks 120 karakter), "payment" (persentase sebagai string angka, misal "30"). Total semua = 100. Jika tidak ada tahapan eksplisit, buat 3 checkpoint logis. Maksimal 6 checkpoint.
-
-PENTING: Jawab HANYA dengan JSON valid, tanpa teks lain.
-
-Format:
-{
-  "title": "...",
-  "description": "...",
-  "totalAmount": 0,
-  "checkpoints": [
-    { "name": "...", "description": "...", "payment": "30" },
-    { "name": "...", "description": "...", "payment": "40" },
-    { "name": "...", "description": "...", "payment": "30" }
-  ]
-}
-
-Teks Kontrak:
-${truncateContract(contractText)}`;
-
-  const raw    = await runQVAC(prompt, "fast");
-  const parsed = parseJson(raw) as unknown as ExtractedContract;
-
-  const cps   = Array.isArray(parsed.checkpoints) ? parsed.checkpoints : [];
-  const total = cps.reduce((s, cp) => s + (parseFloat(cp.payment) || 0), 0);
-  if (total > 0 && Math.abs(total - 100) > 1) {
-    cps.forEach(cp => { cp.payment = ((parseFloat(cp.payment) / total) * 100).toFixed(0); });
-    const fixedTotal = cps.reduce((s, cp) => s + parseFloat(cp.payment), 0);
-    if (fixedTotal !== 100 && cps.length > 0) {
-      cps[cps.length - 1].payment = String(parseFloat(cps[cps.length - 1].payment) + (100 - fixedTotal));
-    }
-  }
-
-  return {
-    title:       String(parsed.title ?? "").slice(0, 80),
-    description: String(parsed.description ?? ""),
-    totalAmount: Number(parsed.totalAmount ?? 0),
-    checkpoints: cps.slice(0, 6),
-  };
-}
-
-// ─── Stage 2: Detect Contract Type ──────────────────────────────────────────
-
-export async function detectContractType(contractText: string): Promise<ContractDetection> {
-  const snippet = contractText.slice(0, 8000);
-  const tier    = ENV_DEFAULT_TIER in QVAC_MODELS ? ENV_DEFAULT_TIER : "smart";
+export async function detectContractType(
+  contractText: string
+): Promise<ContractDetection> {
+  const snippet = contractText.slice(0, 5000);
   const prompt  = `Deteksi Jenis Kontrak
 
-Analisis teks kontrak berikut dan tentukan jenisnya. Respond HANYA dengan JSON valid:
-{
-  "contract_type": "pengadaan_barang|konstruksi|jasa_it|jasa_konsultasi|jasa_hukum|jasa_pendidikan|ketenagakerjaan|jasa_lainnya",
-  "items_to_check": ["item yang perlu dicek harganya", "..."],
-  "confidence": 0.9
-}
+Analisis teks kontrak berikut dan tentukan jenisnya. Lakukan Mode 0: Deteksi Jenis Kontrak sesuai instruksi di CLAUDE.md.
 
-PENTING — ATURAN PRIORITAS:
-- Jika judul/isi mengandung kata "Pengembangan Website", "Sistem Informasi", "Aplikasi", "Software", "RAB IT", "RAB Website" → contract_type = "jasa_it"
-- Jika kontrak berisi pembelian barang/perangkat FISIK (laptop, komputer, printer, furnitur, kendaraan) → contract_type = "pengadaan_barang"
-- "jasa_it" untuk: pembuatan software/website/aplikasi/sistem, RAB pengembangan IT
-- "ketenagakerjaan" untuk: kontrak kerja, PKWT, outsourcing tenaga kerja
-- "jasa_lainnya" hanya jika benar-benar tidak cocok dengan kategori lain
-- "items_to_check" wajib diisi (maks 3 item) dengan nama barang/jasa yang ada harganya dalam kontrak
+PENTING: Jika kontrak berisi pembelian barang/perangkat (laptop, komputer, printer, furnitur, kendaraan, dll) maka contract_type = "pengadaan_barang" meskipun barangnya berupa perangkat IT/elektronik. "jasa_it" HANYA untuk pembuatan software/website/aplikasi.
 
 Teks Kontrak (cuplikan):
 ${snippet}`;
 
   try {
-    const raw    = await runQVAC(prompt, tier);
+    const raw    = await runClaude(prompt, CLAUDE_MODELS.haiku);
     const parsed = parseJson(raw) as unknown as ContractDetection;
     return {
       contract_type:  parsed.contract_type  ?? "jasa_lainnya",
@@ -484,7 +419,7 @@ ${snippet}`;
   }
 }
 
-// ─── Stage 3: Full Contract Review ───────────────────────────────────────────
+// ─── Stage 2: Full Contract Review ───────────────────────────────────────────
 
 export interface PriceItem {
   item: string;
@@ -536,47 +471,38 @@ export async function analyzeContract(
 
   const contractType = detection?.contract_type ?? "jasa_lainnya";
   const persona      = EXPERT_PERSONAS[contractType];
-  const regulations  = REGULATIONS[contractType] ?? [];
-  const marketData   = preloadedMarketData ?? "";
+  const regulations  = REGULATIONS[contractType];
+
+  // Gunakan data yang sudah di-fetch dari route (lebih efisien — progress bisa ditampilkan ke user)
+  const marketData = preloadedMarketData ?? "";
+
   const marketSection = marketData
     ? `\n${marketData}\nGunakan data di atas sebagai referensi UTAMA untuk price_analysis. Sebutkan median, rentang harga, dan selisih % secara eksplisit. Berikan WARNING JELAS jika ada harga yang tidak wajar (>20% di atas median pasar).\n`
     : "";
 
   const regulationList = regulations.map(r => `- ${r}`).join("\n");
+
   const langInstruction = lang === "en"
     ? "IMPORTANT: Respond ONLY in English. All JSON text fields must be in English."
-    : "PENTING: Respond HANYA dalam Bahasa Indonesia.";
+    : "PENTING: Respond HANYA dalam Bahasa Indonesia. Semua field teks dalam JSON harus dalam Bahasa Indonesia.";
 
-  // Resolve model tier
-  const tier = resolveModelTier(model);
-
-  const prompt = `Contract Review Request (Mode 1)
+  const prompt = `Contract Review Request
 
 ${langInstruction}
 
 Kamu adalah: ${persona}
 
-Regulasi yang relevan:
+Regulasi yang relevan untuk kontrak ini:
 ${regulationList}
 ${marketSection}
-Analisis kontrak berikut secara menyeluruh dari sudut pandang keahlianmu. Gunakan regulasi di atas untuk mengidentifikasi klausul yang tidak sesuai hukum. Jika ada informasi yang kurang, masukkan pertanyaan ke field uncertainty_questions.
-
-Respond HANYA dengan JSON valid sesuai format Mode 1.
-BATASAN OUTPUT: MAKSIMAL 3 item di price_analysis, MAKSIMAL 3 item di risky_clauses, MAKSIMAL 3 item di revision_suggestions. overall_summary: 2-3 kalimat saja. Singkat dan padat.
-
-{
-  "analysis_type": "contract_review",
-  "fairness_score": <1-10>,
-  "price_analysis": [{ "item": "...", "contract_price": 0, "market_estimate": "...", "status": "overpriced|fair|underpriced", "notes": "..." }],
-  "risky_clauses": [{ "clause": "...", "risk_level": "high|medium|low", "issue": "...", "potential_impact": "...", "suggestion": "..." }],
-  "revision_suggestions": ["..."],
-  "overall_summary": "..."
-}
+Lakukan analisis kontrak berikut secara menyeluruh dari sudut pandang keahlianmu. Gunakan regulasi di atas untuk mengidentifikasi klausul yang tidak sesuai hukum. Jika ada informasi yang kurang, masukkan pertanyaan ke field uncertainty_questions.
 
 ${lang === "en" ? "Contract Text:" : "Teks Kontrak:"}
-${truncateContract(contractText)}`;
+${contractText}
 
-  const raw    = await runQVAC(prompt, tier);
+Lakukan Contract Review sesuai instruksi Mode 1 di CLAUDE.md.`;
+
+  const raw    = await runClaude(prompt, model);
   const parsed = parseJson(raw) as unknown as ContractReviewResult;
 
   if (parsed.analysis_type !== "contract_review") {
@@ -584,11 +510,6 @@ ${truncateContract(contractText)}`;
       ? "Agent output does not match Contract Review format."
       : "Output agent tidak sesuai format Contract Review.");
   }
-
-  // Ensure array fields are never undefined (model may omit them)
-  parsed.price_analysis        = parsed.price_analysis        ?? [];
-  parsed.risky_clauses         = parsed.risky_clauses         ?? [];
-  parsed.revision_suggestions  = parsed.revision_suggestions  ?? [];
 
   return parsed;
 }
@@ -612,31 +533,31 @@ export async function chatContract(
     ? "IMPORTANT: Respond ONLY in English. Write in plain text, not JSON."
     : "PENTING: Respond HANYA dalam Bahasa Indonesia. Tulis dalam plain text, bukan JSON.";
 
-  const contractSnippet = truncateContract(contractText);
+  const contractSnippet = contractText.length > 6000
+    ? contractText.slice(0, 6000) + "\n...[teks dipotong]"
+    : contractText;
 
-  const expertContext = analysisResult?.contract_type
+  const expertContext = analysisResult?.expert_role
     ? `\nKamu adalah ${EXPERT_PERSONAS[(analysisResult.contract_type ?? "jasa_lainnya") as ContractType] ?? "auditor kontrak profesional"}.`
     : "";
 
   const analysisContext = analysisResult
-    ? `\n\nRingkasan analisis sebelumnya:\n- Fairness score: ${analysisResult.fairness_score}/10\n- Jenis kontrak: ${analysisResult.contract_type ?? "-"}\n- Ringkasan: ${analysisResult.overall_summary}\n- Klausul risiko tinggi: ${analysisResult.risky_clauses.filter(c => c.risk_level === "high").map(c => c.clause).join(", ") || "tidak ada"}\n- Item overpriced: ${analysisResult.price_analysis.filter(p => p.status === "overpriced").map(p => p.item).join(", ") || "tidak ada"}`
+    ? `\n\nRingkasan analisis sebelumnya:\n- Fairness score: ${analysisResult.fairness_score}/10\n- Jenis kontrak: ${analysisResult.contract_type ?? "-"}\n- Expert role: ${analysisResult.expert_role ?? "-"}\n- Ringkasan: ${analysisResult.overall_summary}\n- Klausul risiko tinggi: ${analysisResult.risky_clauses.filter(c => c.risk_level === "high").map(c => c.clause).join(", ") || "tidak ada"}\n- Item overpriced: ${analysisResult.price_analysis.filter(p => p.status === "overpriced").map(p => p.item).join(", ") || "tidak ada"}`
     : "";
 
-  const tier = resolveModelTier(model);
-
-  const prompt = `Contract Q&A Request (Mode 3)
+  const prompt = `Contract Q&A Request
 ${expertContext}
 ${langInstruction}
-
-Jawab dalam plain text profesional (150–350 kata). Referensikan pasal kontrak dan dasar hukum jika relevan. Pertimbangkan sudut pandang KEDUA pihak.
 
 Teks kontrak:
 ${contractSnippet}
 ${analysisContext}
 
-Pertanyaan: ${userQuestion.trim()}`;
+Pertanyaan user: ${userQuestion.trim()}
 
-  const raw = await runQVAC(prompt, tier);
+Jawab pertanyaan ini secara profesional sesuai instruksi di CLAUDE.md.`;
+
+  const raw = await runClaude(prompt, model);
   return { answer: raw.trim() };
 }
 
@@ -667,29 +588,19 @@ export async function reviewCheckpoint(
     ? "IMPORTANT: Respond ONLY in English."
     : "PENTING: Respond HANYA dalam Bahasa Indonesia.";
 
-  const tier = resolveModelTier(model);
-
-  const prompt = `Checkpoint Review Request (Mode 2)
+  const prompt = `Checkpoint Review Request
 
 ${langInstruction}
-
-Respond HANYA dengan JSON valid:
-{
-  "analysis_type": "checkpoint_review",
-  "status": "APPROVED|NEEDS_REVISION|MAJOR_ISSUE",
-  "compliance_score": <0-100>,
-  "findings": "...",
-  "required_fixes": ["..."],
-  "approved_items": ["..."]
-}
 
 ${lang === "en" ? "Contract work specification:" : "Spesifikasi pekerjaan dari kontrak:"}
 ${contractSpec}
 
 ${lang === "en" ? "Work evidence submitted by contractor:" : "Bukti pekerjaan yang disubmit oleh kontraktor:"}
-${evidenceText}`;
+${evidenceText}
 
-  const raw    = await runQVAC(prompt, tier);
+${lang === "en" ? "Follow the Checkpoint Review instructions in CLAUDE.md." : "Lakukan Checkpoint Review sesuai instruksi Mode 2 di CLAUDE.md."}`;
+
+  const raw    = await runClaude(prompt, model);
   const parsed = parseJson(raw) as unknown as CheckpointReviewResult;
 
   if (parsed.analysis_type !== "checkpoint_review") {
@@ -700,26 +611,3 @@ ${evidenceText}`;
 
   return parsed;
 }
-
-// ─── Model Key Resolver ──────────────────────────────────────────────────────
-
-const ENV_DEFAULT_TIER = (process.env.QVAC_MODEL_DEFAULT ?? "fast") as QvacModelKey;
-
-function resolveModelTier(modelOrKey?: string): QvacModelKey {
-  if (!modelOrKey) return ENV_DEFAULT_TIER in QVAC_MODELS ? ENV_DEFAULT_TIER : "fast";
-  // Accept old Claude key names for backward compatibility
-  if (modelOrKey === "haiku"  || modelOrKey.includes("haiku"))  return "fast";
-  if (modelOrKey === "opus"   || modelOrKey.includes("opus"))   return "best";
-  if (modelOrKey === "sonnet" || modelOrKey.includes("sonnet")) return "smart";
-  // Accept new QVAC tier names
-  if (modelOrKey in QVAC_MODELS) return modelOrKey as QvacModelKey;
-  return "smart";
-}
-
-// ─── Legacy export aliases (backward compat) ─────────────────────────────────
-export const CLAUDE_MODELS = {
-  haiku:  "fast",
-  sonnet: "smart",
-  opus:   "best",
-} as const;
-export type ClaudeModelKey = keyof typeof CLAUDE_MODELS;

@@ -43,7 +43,7 @@ const CONTRACT_TYPE_LABELS: Record<string, { id: string; en: string; icon: strin
   jasa_lainnya:     { id: "Jasa Lainnya",           en: "Other Services",       icon: "📋" },
 };
 
-const AGENT_TIMEOUT_MS = 270_000;
+const AGENT_TIMEOUT_MS = 600_000; // 10 min — local QVAC inference can be slow
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -113,9 +113,22 @@ export async function POST(req: NextRequest) {
         await sleep(300);
 
         // ── Stage 3: Market price fetch per source with live progress ──────
+        // Only scrape e-commerce for physical goods/construction — not for services
+        const GOODS_TYPES = new Set(["pengadaan_barang", "konstruksi"]);
+        const canScrapeMarket = GOODS_TYPES.has(detection.contract_type);
+
         let preloadedMarketData = "";
 
-        if (detection.items_to_check.length > 0) {
+        if (!canScrapeMarket && detection.items_to_check.length > 0) {
+          send({
+            type: "progress",
+            message: isEn
+              ? "Service contract — AI will use internal knowledge for rate benchmarks"
+              : "Kontrak jasa — AI akan menggunakan pengetahuan internal untuk estimasi tarif",
+          });
+        }
+
+        if (canScrapeMarket && detection.items_to_check.length > 0) {
           const keywords = [...new Set(detection.items_to_check)].slice(0, 4);
 
           send({

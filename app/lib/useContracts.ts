@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { PublicKey } from "@solana/web3.js";
-import { BN } from "@anchor-lang/core";
+import { BN } from "@coral-xyz/anchor";
 import { useContractProgram, unitsToUsdc } from "./useContractProgram";
 
 export type ContractStatus = "Active" | "Draft" | "Completed" | "Cancelled" | "Disputed";
