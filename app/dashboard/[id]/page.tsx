@@ -193,11 +193,40 @@ export default function ContractDetailPage() {
         contractAccount: { fetch: (pk: PublicKey) => Promise<ChainAcc> }
       }).contractAccount.fetch(pubkey);
 
+      // Resolve title: localStorage cache → Supabase → fallback to PDA prefix
+      let resolvedTitle = `Contract ${idParam.slice(0, 8)}...`;
+      let resolvedFairness = 0;
+      try {
+        const cached = localStorage.getItem(`cgmeta_${idParam}`);
+        if (cached) {
+          const m = JSON.parse(cached) as { title?: string; fairnessScore?: number };
+          if (m.title) resolvedTitle = m.title;
+          if (m.fairnessScore) resolvedFairness = m.fairnessScore;
+        }
+      } catch { /* ignore */ }
+      // Always check Supabase too (in case cache is stale or missing)
+      try {
+        const res = await fetch(`/api/contracts/${idParam}/metadata`, { signal: AbortSignal.timeout(5000) });
+        if (res.ok) {
+          const meta = await res.json() as { title?: string; fairness_score?: number };
+          if (meta.title) {
+            resolvedTitle = meta.title;
+            resolvedFairness = meta.fairness_score ?? resolvedFairness;
+            // Refresh cache
+            try {
+              localStorage.setItem(`cgmeta_${idParam}`, JSON.stringify({
+                title: meta.title, fairnessScore: meta.fairness_score ?? 0,
+              }));
+            } catch { /* ignore */ }
+          }
+        }
+      } catch { /* ignore network errors */ }
+
       const usdcTotal = unitsToUsdc(acc.totalAmount);
       setOnchainAcc({ client: acc.client, contractor: acc.contractor, mint: acc.mint, createdAt: acc.createdAt });
       setContract({
         id: idParam,
-        title: `Contract ${idParam.slice(0, 8)}...`,
+        title: resolvedTitle,
         contractor: acc.contractor.toBase58().slice(0, 8) + "...",
         contractorWallet: acc.contractor.toBase58(),
         clientWallet: acc.client.toBase58(),
@@ -207,7 +236,7 @@ export default function ContractDetailPage() {
         contractHash: acc.contractHash,
         aiReviewHash: acc.aiReviewHash,
         createdAt: new Date(acc.createdAt.toNumber() * 1000).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-        fairnessScore: 8,
+        fairnessScore: resolvedFairness || 8,
         checkpoints: acc.checkpoints.map((cp, i) => ({
           id: i + 1,
           name: `Checkpoint ${cp.checkpointNumber}`,
@@ -479,6 +508,16 @@ export default function ContractDetailPage() {
 
   const currentCP = activeCP !== null ? contract.checkpoints.find(c => c.id === activeCP) : null;
 
+  const walletAddress = wallet.publicKey?.toBase58() ?? "";
+  const isContractor = !!walletAddress && (
+    walletAddress === onchainAcc?.contractor.toBase58() ||
+    (!onchainAcc && walletAddress === contract.contractorWallet)
+  );
+  const isClient = !!walletAddress && (
+    walletAddress === onchainAcc?.client.toBase58() ||
+    (!onchainAcc && walletAddress === contract.clientWallet)
+  );
+
   return (
     <main style={{ background: "var(--bg)", minHeight: "100vh", color: "var(--text)" }}>
       <Navbar />
@@ -718,7 +757,7 @@ export default function ContractDetailPage() {
                         </p>
 
                         {/* Action buttons */}
-                        {cp.status === "submitted" && (
+                        {cp.status === "submitted" && isClient && (
                           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
 
                             {/* Evidence link + AI Review */}
@@ -860,7 +899,7 @@ export default function ContractDetailPage() {
                           </div>
                         )}
 
-                        {cp.status === "pending" && (
+                        {(cp.status === "pending" || cp.status === "revision") && isContractor && (
                           <button
                             onClick={e => { e.stopPropagation(); setSubmitMode(true); }}
                             style={{
@@ -890,6 +929,13 @@ export default function ContractDetailPage() {
                           </button>
                         )}
 
+                        {/* Role hint — shown when wallet is connected but not a party */}
+                        {!isClient && !isContractor && walletAddress && (cp.status === "submitted" || cp.status === "pending" || cp.status === "revision") && (
+                          <div style={{ fontSize: "12px", color: "var(--text-4)", padding: "8px 12px", background: "var(--surface-2)", borderRadius: "7px", border: "1px solid var(--border-light)" }}>
+                            Kamu bukan pihak dalam kontrak ini
+                          </div>
+                        )}
+
                         {cp.status === "approved" && (
                           <div style={{
                             display: "flex", alignItems: "center", gap: "8px",
@@ -912,8 +958,8 @@ export default function ContractDetailPage() {
           {/* RIGHT: AI report + contract info */}
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
 
-            {/* Submit evidence modal overlay */}
-            {submitMode && (
+            {/* Submit evidence modal overlay — contractor only */}
+            {submitMode && isContractor && (
               <div style={{
                 ...glass, padding: "28px 30px",
                 border: "1px solid var(--border-strong)",

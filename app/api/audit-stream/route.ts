@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (canScrapeMarket && detection.items_to_check.length > 0) {
-          const keywords = [...new Set(detection.items_to_check)].slice(0, 4);
+          const keywords = Array.from(new Set(detection.items_to_check)).slice(0, 4);
 
           send({
             type: "progress",

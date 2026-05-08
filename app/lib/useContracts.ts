@@ -58,10 +58,33 @@ function deriveStatus(acc: RawContractAccount): ContractStatus {
   return "Draft";
 }
 
-function loadMeta(pdaStr: string): { title?: string; contractorName?: string; fairnessScore?: number } | null {
+type ContractMeta = { title?: string; contractorName?: string; fairnessScore?: number };
+
+function loadMeta(pdaStr: string): ContractMeta | null {
   try {
     const raw = localStorage.getItem(`cgmeta_${pdaStr}`);
     return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveMeta(pdaStr: string, meta: ContractMeta): void {
+  try {
+    localStorage.setItem(`cgmeta_${pdaStr}`, JSON.stringify(meta));
+  } catch { /* ignore quota errors */ }
+}
+
+async function fetchSupabaseMeta(pdaStr: string): Promise<ContractMeta | null> {
+  try {
+    const res = await fetch(`/api/contracts/${pdaStr}/metadata`, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return null;
+    const data = await res.json() as { title?: string; fairness_score?: number; contractor_wallet?: string };
+    if (!data.title) return null;
+    return {
+      title: data.title,
+      fairnessScore: data.fairness_score ?? 0,
+    };
   } catch {
     return null;
   }
@@ -103,9 +126,17 @@ export function useContracts() {
       // Sort by createdAt descending (newest first)
       all.sort((a, b) => b.account.createdAt.toNumber() - a.account.createdAt.toNumber());
 
-      const mapped: OnChainContract[] = all.map(({ publicKey, account, role }) => {
+      // Fetch metadata: localStorage first (fast), Supabase fallback (untuk title yang belum di-cache)
+      const mapped: OnChainContract[] = await Promise.all(all.map(async ({ publicKey, account, role }) => {
         const pdaStr = publicKey.toBase58();
-        const meta = loadMeta(pdaStr);
+        let meta = loadMeta(pdaStr);
+        if (!meta?.title) {
+          const remote = await fetchSupabaseMeta(pdaStr);
+          if (remote?.title) {
+            meta = { ...meta, ...remote };
+            saveMeta(pdaStr, meta); // cache untuk load berikutnya
+          }
+        }
         const status = deriveStatus(account);
 
         const activeCheckpoint = account.checkpoints?.find(cp => {
@@ -137,7 +168,7 @@ export function useContracts() {
           fairnessScore: meta?.fairnessScore ?? 0,
           role,
         };
-      });
+      }));
 
       setContracts(mapped);
     } catch (e) {

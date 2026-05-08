@@ -52,8 +52,30 @@ interface Checkpoint {
 
 const PROGRAM_ID = "2Htsz7Xf4YWZTc8tupBTgsFHwZNZDzi59FRr9AWmxdNq";
 
+// Fetch USD/IDR rate dengan fallback
+async function fetchUsdToIdr(): Promise<number> {
+  try {
+    const res = await fetch("https://open.er-api.com/v6/latest/USD", { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error("rate fetch failed");
+    const data = await res.json() as { rates?: { IDR?: number } };
+    const rate = data.rates?.IDR;
+    if (rate && rate > 10_000 && rate < 30_000) return rate;
+    throw new Error("invalid rate");
+  } catch {
+    return 16_000; // fallback rate
+  }
+}
+
+// Konversi nilai kontrak ke USDC. Heuristik: nilai > 100.000 dianggap IDR.
+async function normalizeToUsdc(amount: number): Promise<number> {
+  if (!amount || amount <= 0) return 0;
+  if (amount < 100_000) return amount; // sudah USD/USDC
+  const rate = await fetchUsdToIdr();
+  return Math.round((amount / rate) * 100) / 100; // 2 decimal places
+}
+
 export default function CreatePage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { program, wallet } = useContractProgram();
   const [step, setStep] = useState(1);
   const [deploying, setDeploying] = useState(false);
@@ -90,17 +112,16 @@ export default function CreatePage() {
       const data = JSON.parse(raw) as {
         title?: string; description?: string;
         checkpoints?: Checkpoint[]; contractText?: string;
+        analysisResult?: { price_analysis?: { contract_price?: number }[] };
       };
 
-      // Isi sementara dari data audit
-      if (data.title) setTitle(data.title);
+      // Isi description sebagai placeholder; title & totalAmount akan diisi oleh AI extract
       if (data.description) setDescription(data.description);
       if (data.checkpoints?.length) setCheckpoints(data.checkpoints);
 
-      // Kalau ada contractText, auto-extract yang lebih baik via Claude
+      // Kalau ada contractText, lakukan AI extract untuk title, totalAmount, checkpoints
       if (data.contractText) {
         setFromAudit(true);
-        // Ambil File object dari pdfStore (tersedia jika navigasi langsung dari audit)
         const storedFile = pdfStore.get();
         if (storedFile) {
           pdfFileRef.current = storedFile;
@@ -113,12 +134,23 @@ export default function CreatePage() {
           body: JSON.stringify({ contractText: data.contractText }),
         })
           .then(r => r.json())
-          .then(json => {
+          .then(async json => {
             if (json.success) {
               const { title: t, description: d, totalAmount: amt, checkpoints: cps } = json.data;
               if (t) setTitle(t);
               if (d) setDescription(d);
-              if (amt) setTotalAmount(String(amt));
+
+              // Coba dari extract dulu, fallback ke sum price_analysis dari audit
+              let rawAmount = Number(amt) || 0;
+              if (!rawAmount && data.analysisResult?.price_analysis?.length) {
+                rawAmount = data.analysisResult.price_analysis
+                  .reduce((s, p) => s + (Number(p.contract_price) || 0), 0);
+              }
+              if (rawAmount > 0) {
+                const usdc = await normalizeToUsdc(rawAmount);
+                setTotalAmount(String(usdc));
+              }
+
               if (cps?.length) setCheckpoints(cps);
             }
           })
@@ -130,12 +162,18 @@ export default function CreatePage() {
 
   const handlePdfExtract = async (file: File) => {
     if (file.type !== "application/pdf") {
-      toast.error("Format salah", "Hanya file PDF yang diterima.");
+      toast.error(
+        lang === "en" ? "Wrong format" : "Format salah",
+        lang === "en" ? "Only PDF files are accepted." : "Hanya file PDF yang diterima."
+      );
       return;
     }
     pdfFileRef.current = file;
     setExtracting(true);
-    toast.info("Membaca PDF...", "Claude sedang mengekstrak data kontrak");
+    toast.info(
+      lang === "en" ? "Reading PDF..." : "Membaca PDF...",
+      lang === "en" ? "AI is extracting contract data" : "AI sedang mengekstrak data kontrak"
+    );
     try {
       // Step 1: upload & extract text
       const form = new FormData();
@@ -156,11 +194,20 @@ export default function CreatePage() {
       const { title: t, description: d, totalAmount: amt, checkpoints: cps } = extractJson.data;
       if (t)   setTitle(t);
       if (d)   setDescription(d);
-      if (amt) setTotalAmount(String(amt));
+      if (amt) {
+        const usdc = await normalizeToUsdc(Number(amt));
+        setTotalAmount(String(usdc));
+      }
       if (cps?.length) setCheckpoints(cps);
-      toast.success("Auto-fill selesai!", "Judul, deskripsi, dan checkpoint sudah diisi otomatis");
+      toast.success(
+        lang === "en" ? "Auto-fill complete!" : "Auto-fill selesai!",
+        lang === "en" ? "Title, description, and checkpoints have been filled automatically" : "Judul, deskripsi, dan checkpoint sudah diisi otomatis"
+      );
     } catch (err) {
-      toast.error("Gagal ekstrak PDF", err instanceof Error ? err.message : "Coba lagi");
+      toast.error(
+        lang === "en" ? "Failed to extract PDF" : "Gagal ekstrak PDF",
+        err instanceof Error ? err.message : (lang === "en" ? "Try again" : "Coba lagi")
+      );
     } finally {
       setExtracting(false);
     }
@@ -261,6 +308,14 @@ export default function CreatePage() {
       setDeploying(false);
       setDeployed(true);
       toast.success("Contract deployed!", `${usdcAmt} USDC locked in escrow`);
+
+      // Cache metadata di localStorage untuk dashboard load instan
+      try {
+        localStorage.setItem(`cgmeta_${pdaStr}`, JSON.stringify({
+          title: title || `Contract ${pdaStr.slice(0, 8)}...`,
+          fairnessScore: 0,
+        }));
+      } catch { /* ignore */ }
 
       // Simpan metadata → lalu upload PDF (dirantai agar pdf_path update tidak race)
       const pdfFile = pdfFileRef.current;
@@ -438,10 +493,14 @@ export default function CreatePage() {
               </div>
               <div>
                 <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-2)" }}>
-                  {extracting ? "Claude sedang membaca kontrak..." : "Upload PDF untuk auto-fill"}
+                  {extracting
+                    ? (lang === "en" ? "AI is reading the contract..." : "AI sedang membaca kontrak...")
+                    : (lang === "en" ? "Upload PDF for auto-fill" : "Upload PDF untuk auto-fill")}
                 </div>
                 <div style={{ fontSize: "12px", color: "var(--text-4)", marginTop: "2px" }}>
-                  {extracting ? "Judul, deskripsi & checkpoint akan diisi otomatis" : "Drag & drop atau klik — Claude ekstrak judul, deskripsi & checkpoint"}
+                  {extracting
+                    ? (lang === "en" ? "Title, description & checkpoints will be filled automatically" : "Judul, deskripsi & checkpoint akan diisi otomatis")
+                    : (lang === "en" ? "Drag & drop or click — AI extracts title, description & checkpoints" : "Drag & drop atau klik — AI ekstrak judul, deskripsi & checkpoint")}
                 </div>
               </div>
             </label>}
@@ -459,7 +518,9 @@ export default function CreatePage() {
                     <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
                   </path>
                 </svg>
-                Claude sedang mengekstrak checkpoint & detail dari PDF kontrak...
+                {lang === "en"
+                  ? "AI is extracting checkpoints & details from the contract PDF..."
+                  : "AI sedang mengekstrak checkpoint & detail dari PDF kontrak..."}
               </div>
             )}
 

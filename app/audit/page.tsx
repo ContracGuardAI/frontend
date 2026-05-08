@@ -505,6 +505,95 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
               ))}
             </div>
           )}
+
+          {/* Conclusion / Recap */}
+          {(() => {
+            const totalPrice   = r.price_analysis.length;
+            const overpricedN  = r.price_analysis.filter(p => p.status === "overpriced").length;
+            const fairN        = r.price_analysis.filter(p => p.status === "fair").length;
+            const highN        = r.risky_clauses.filter(c => c.risk_level === "high").length;
+            const medN         = r.risky_clauses.filter(c => c.risk_level === "medium").length;
+            const score        = r.fairness_score ?? 0;
+            const scoreColor   = score >= 7 ? "rgba(80,220,140,0.90)" : score >= 5 ? "rgba(255,210,80,0.90)" : "rgba(255,100,100,0.90)";
+            const priceOk      = overpricedN === 0;
+            const clauseOk     = highN === 0;
+
+            const rowStyle: React.CSSProperties = {
+              display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+              padding: "8px 0", borderBottom: "1px solid var(--border-light)", gap: "12px",
+            };
+            const labelStyle: React.CSSProperties = {
+              fontSize: "11.5px", color: "var(--text-4)", flexShrink: 0,
+            };
+            const valStyle: React.CSSProperties = {
+              fontSize: "12px", color: "var(--text-2)", textAlign: "right" as const, lineHeight: 1.55,
+            };
+
+            return (
+              <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--border-light)" }}>
+                <div style={{
+                  fontSize: "10.5px", letterSpacing: "1.1px",
+                  color: "rgba(100,180,255,0.60)", marginBottom: "12px",
+                  display: "flex", alignItems: "center", gap: "7px",
+                }}>
+                  <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+                    <circle cx="7" cy="7" r="6" stroke="rgba(100,180,255,0.60)" strokeWidth="1.3"/>
+                    <path d="M7 5v4M7 4h.01" stroke="rgba(100,180,255,0.60)" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  {lang === "en" ? "CONCLUSION" : "KESIMPULAN"}
+                </div>
+
+                {/* Recap rows */}
+                <div style={{ marginBottom: "12px" }}>
+                  {/* Fairness score */}
+                  <div style={rowStyle}>
+                    <span style={labelStyle}>{lang === "en" ? "Fairness Score" : "Skor Keadilan"}</span>
+                    <span style={{ ...valStyle, color: scoreColor, fontWeight: 700 }}>{score}/10</span>
+                  </div>
+
+                  {/* Price reasonableness */}
+                  {totalPrice > 0 && (
+                    <div style={rowStyle}>
+                      <span style={labelStyle}>{lang === "en" ? "Price Reasonableness" : "Kewajaran Harga"}</span>
+                      <span style={{ ...valStyle, color: priceOk ? "rgba(80,220,140,0.85)" : "rgba(255,130,100,0.90)" }}>
+                        {priceOk
+                          ? (lang === "en" ? `All ${fairN} items within market range` : `Semua ${fairN} item dalam rentang pasar`)
+                          : (lang === "en"
+                              ? `${overpricedN} of ${totalPrice} items overpriced`
+                              : `${overpricedN} dari ${totalPrice} item terlalu mahal`)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Contract compliance */}
+                  <div style={{ ...rowStyle, borderBottom: "none" }}>
+                    <span style={labelStyle}>{lang === "en" ? "Contract Safety" : "Keamanan Kontrak"}</span>
+                    <span style={{ ...valStyle, color: clauseOk ? "rgba(80,220,140,0.85)" : "rgba(255,130,100,0.90)" }}>
+                      {clauseOk && medN === 0
+                        ? (lang === "en" ? "No risky clauses found" : "Tidak ada klausul berisiko")
+                        : clauseOk
+                          ? (lang === "en" ? `${medN} clause(s) need review` : `${medN} klausul perlu dicermati`)
+                          : (lang === "en"
+                              ? `${highN} high-risk clause(s), ${medN} to review`
+                              : `${highN} klausul risiko tinggi, ${medN} perlu dicermati`)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* AI overall summary as closing paragraph */}
+                {r.overall_summary && (
+                  <p style={{
+                    fontSize: "12.5px", color: "var(--text-3)", lineHeight: 1.70,
+                    margin: 0, padding: "10px 13px",
+                    background: "var(--surface-2)", borderRadius: "8px",
+                    border: "1px solid var(--border-light)",
+                  }}>
+                    {r.overall_summary}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
     );
@@ -512,14 +601,11 @@ function AuditChatMessage({ msg, isNew }: { msg: AuditChatMsg; isNew: boolean })
 
   if (msg.kind === "cta") {
     const handlePrefill = () => {
+      // Don't pass filename as title — let AI extract pull the real title from PDF content
       sessionStorage.setItem("contractguard_prefill", JSON.stringify({
-        title: msg.suggestedTitle,
         description: msg.result.overall_summary,
-        checkpoints: [
-          { name: "Deliverable 1", description: "Tahap pertama", payment: "50" },
-          { name: "Deliverable 2", description: "Tahap kedua", payment: "50" },
-        ],
         contractText: msg.contractText,
+        analysisResult: msg.result,
       }));
     };
 
@@ -619,7 +705,10 @@ export default function AuditPage() {
     contractTextRef.current = "";
     analysisResultRef.current = null;
     if (file.type !== "application/pdf") {
-      toast.error("Invalid file", lang === "en" ? "Only PDF files are accepted." : "Hanya file PDF yang diterima.");
+      toast.error(
+        lang === "en" ? "Invalid file" : "File tidak valid",
+        lang === "en" ? "Only PDF files are accepted." : "Hanya file PDF yang diterima."
+      );
       return;
     }
 
@@ -723,7 +812,7 @@ export default function AuditPage() {
           }
 
           if (event.type === "fetching") {
-            const { source, status, message } = event as { source: string; status: FetchStatus; message: string };
+            const { source, status, message } = event as unknown as { source: string; status: FetchStatus; message: string };
             setChatTyping(false);
             setChatMsgs(prev => {
               const last = prev[prev.length - 1];
@@ -781,7 +870,10 @@ export default function AuditPage() {
               : "Analisis timeout setelah 3 menit. Kontrak mungkin terlalu panjang atau AI sedang sibuk. Coba lagi.",
           });
           setFileState("error");
-          toast.error("Timeout", lang === "en" ? "Analysis took too long" : "Analisis terlalu lama");
+          toast.error(
+            lang === "en" ? "Timeout" : "Waktu Habis",
+            lang === "en" ? "Analysis took too long" : "Analisis terlalu lama"
+          );
         } else {
           setFileState("idle");
         }
@@ -873,8 +965,12 @@ export default function AuditPage() {
     : (lang === "en" ? "AI is analyzing every clause..." : "AI sedang menganalisis setiap klausul...");
 
   const statusLabel  = isLoading
-    ? (fileState === "uploading" ? "UPLOADING" : "ANALYZING")
-    : fileState === "done" ? "DONE" : "READY";
+    ? (fileState === "uploading"
+        ? (lang === "en" ? "UPLOADING" : "MENGUPLOAD")
+        : (lang === "en" ? "ANALYZING" : "MENGANALISIS"))
+    : fileState === "done"
+        ? (lang === "en" ? "DONE" : "SELESAI")
+        : (lang === "en" ? "READY" : "SIAP");
   const statusColor  = isLoading ? "rgba(255,210,80,0.90)" : "rgba(80,220,140,0.90)";
   const statusBorder = isLoading ? "rgba(255,210,80,0.22)" : "rgba(80,220,140,0.22)";
   const statusBg     = isLoading ? "rgba(255,210,80,0.08)" : "rgba(80,220,140,0.08)";
@@ -976,7 +1072,7 @@ export default function AuditPage() {
                     </svg>
                   </div>
                   <div style={{ fontSize: "14px", fontWeight: 600, color: "rgba(80,220,140,0.90)", marginBottom: "6px" }}>
-                    Review complete
+                    {lang === "en" ? "Review complete" : "Review selesai"}
                   </div>
                   <div style={{ fontSize: "12px", color: "var(--text-3)", marginBottom: "12px" }}>{fileName}</div>
                   <div style={{ fontSize: "11px", color: "var(--text-4)", wordBreak: "break-all", padding: "0 8px" }}>
@@ -1004,7 +1100,7 @@ export default function AuditPage() {
               {fileState === "error" && (
                 <>
                   <div style={{ marginBottom: "16px", color: "rgba(255,100,100,0.80)", fontSize: "14px", fontWeight: 600 }}>
-                    Analysis failed
+                    {lang === "en" ? "Analysis failed" : "Analisis gagal"}
                   </div>
                   <button onClick={e => { e.stopPropagation(); setFileState("idle"); }} style={{
                     fontSize: "12px", color: "var(--text-2)",
@@ -1012,7 +1108,7 @@ export default function AuditPage() {
                     borderRadius: "6px", padding: "6px 14px", cursor: "pointer",
                     fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
                   }}>
-                    Try again
+                    {lang === "en" ? "Try again" : "Coba lagi"}
                   </button>
                 </>
               )}

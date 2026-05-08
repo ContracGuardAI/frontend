@@ -402,13 +402,13 @@ export interface ExtractedContract {
 export async function runClaudeExtract(contractText: string): Promise<ExtractedContract> {
   const prompt = `Kamu adalah asisten ekstraksi data kontrak. Baca teks kontrak berikut dan ekstrak informasi penting ke dalam format JSON.
 
-INSTRUKSI:
-- "title": judul singkat kontrak (maks 80 karakter)
+INSTRUKSI EKSTRAKSI:
+- "title": JUDUL kontrak yang sebenarnya yang ditulis di dalam dokumen — biasanya di bagian atas halaman atau setelah kata "PERJANJIAN", "KONTRAK", "PERIHAL", "TENTANG". JANGAN gunakan nama file. Cari teks seperti "Perjanjian Pengadaan ...", "Kontrak Kerja ...", "RAB Pengembangan ...". Maks 80 karakter.
 - "description": ringkasan kontrak dalam 2-4 kalimat — apa yang dikerjakan, siapa pihaknya, apa risikonya
-- "totalAmount": nilai kontrak dalam angka saja (tanpa Rp/IDR/simbol). 0 jika tidak disebutkan.
+- "totalAmount": NILAI TOTAL KONTRAK dalam ANGKA mentah saja (tanpa "Rp", titik, koma, atau simbol). Cari kata kunci: "Total", "Jumlah", "Nilai Kontrak", "Grand Total", "Harga Kontrak", "Sub Total Akhir", "TOTAL ANGGARAN". Contoh: jika kontrak menulis "Rp 850.000.000,00" → return 850000000. Jika dalam jutaan ditulis "850 juta" → return 850000000. Jika dalam rentang seperti "300-400 juta" → ambil rata-rata: 350000000. Return 0 HANYA jika benar-benar tidak ada angka nilai sama sekali.
 - "checkpoints": daftar milestone/tahapan. Setiap checkpoint: "name" (maks 50 karakter), "description" (maks 120 karakter), "payment" (persentase sebagai string angka, misal "30"). Total semua = 100. Jika tidak ada tahapan eksplisit, buat 3 checkpoint logis. Maksimal 6 checkpoint.
 
-PENTING: Jawab HANYA dengan JSON valid, tanpa teks lain.
+PENTING: Jawab HANYA dengan JSON valid, tanpa teks lain. Cari NILAI total dengan teliti — jangan return 0 kalau ada angka di kontrak.
 
 Format:
 {
@@ -425,7 +425,7 @@ Format:
 Teks Kontrak:
 ${truncateContract(contractText)}`;
 
-  const raw    = await runQVAC(prompt, "fast");
+  const raw    = await runQVAC(prompt, "smart");
   const parsed = parseJson(raw) as unknown as ExtractedContract;
 
   const cps   = Array.isArray(parsed.checkpoints) ? parsed.checkpoints : [];
@@ -544,8 +544,8 @@ export async function analyzeContract(
 
   const regulationList = regulations.map(r => `- ${r}`).join("\n");
   const langInstruction = lang === "en"
-    ? "IMPORTANT: Respond ONLY in English. All JSON text fields must be in English."
-    : "PENTING: Respond HANYA dalam Bahasa Indonesia.";
+    ? "CRITICAL LANGUAGE RULE: Respond ONLY in English. ALL JSON text fields (clause, issue, potential_impact, suggestion, notes, overall_summary, market_estimate, item, revision_suggestions) MUST be written in English. Even if the contract is in Indonesian, translate your analysis to English. Do NOT mix languages."
+    : "ATURAN BAHASA WAJIB: Respond HANYA dalam Bahasa Indonesia. SEMUA field text di JSON (clause, issue, potential_impact, suggestion, notes, overall_summary, market_estimate, item, revision_suggestions) WAJIB dalam Bahasa Indonesia. Jangan campur bahasa.";
 
   // Resolve model tier
   const tier = resolveModelTier(model);
@@ -567,14 +567,19 @@ BATASAN OUTPUT: MAKSIMAL 3 item di price_analysis, MAKSIMAL 3 item di risky_clau
 {
   "analysis_type": "contract_review",
   "fairness_score": <1-10>,
-  "price_analysis": [{ "item": "...", "contract_price": 0, "market_estimate": "...", "status": "overpriced|fair|underpriced", "notes": "..." }],
+  "price_analysis": [{ "item": "...", "contract_price": 0, "market_estimate": "Rp X–Y juta", "status": "overpriced|fair|underpriced", "notes": "..." }],
+ATURAN STATUS: Jika contract_price BERADA DALAM rentang market_estimate → status = "fair". status = "overpriced" HANYA jika contract_price > batas ATAS market_estimate. status = "underpriced" HANYA jika contract_price < batas BAWAH market_estimate.
   "risky_clauses": [{ "clause": "...", "risk_level": "high|medium|low", "issue": "...", "potential_impact": "...", "suggestion": "..." }],
   "revision_suggestions": ["..."],
   "overall_summary": "..."
 }
 
 ${lang === "en" ? "Contract Text:" : "Teks Kontrak:"}
-${truncateContract(contractText)}`;
+${truncateContract(contractText)}
+
+${lang === "en"
+  ? "REMINDER: Output JSON with ALL text fields in ENGLISH only. Even though the contract above may be in Indonesian, your response MUST be entirely in English."
+  : "PENGINGAT: Output JSON dengan SEMUA field text dalam Bahasa Indonesia saja."}`;
 
   const raw    = await runQVAC(prompt, tier);
   const parsed = parseJson(raw) as unknown as ContractReviewResult;
@@ -589,6 +594,22 @@ ${truncateContract(contractText)}`;
   parsed.price_analysis        = parsed.price_analysis        ?? [];
   parsed.risky_clauses         = parsed.risky_clauses         ?? [];
   parsed.revision_suggestions  = parsed.revision_suggestions  ?? [];
+
+  // Correct status inconsistencies: if price is within market range, force "fair"
+  parsed.price_analysis = parsed.price_analysis.map(item => {
+    if (!item.market_estimate || item.contract_price <= 0) return item;
+    const t = item.market_estimate.replace(/\./g, "").replace(/,/g, "");
+    const jutaRange = t.match(/(\d+)\s*[–\-]\s*(\d+)\s*juta/i);
+    if (jutaRange) {
+      const min = parseInt(jutaRange[1]) * 1_000_000;
+      const max = parseInt(jutaRange[2]) * 1_000_000;
+      if (item.contract_price >= min * 0.97 && item.contract_price <= max * 1.03)
+        return { ...item, status: "fair" as const };
+      if (item.contract_price < min * 0.97) return { ...item, status: "underpriced" as const };
+      if (item.contract_price > max * 1.03) return { ...item, status: "overpriced" as const };
+    }
+    return item;
+  });
 
   return parsed;
 }
@@ -609,8 +630,8 @@ export async function chatContract(
   }
 
   const langInstruction = lang === "en"
-    ? "IMPORTANT: Respond ONLY in English. Write in plain text, not JSON."
-    : "PENTING: Respond HANYA dalam Bahasa Indonesia. Tulis dalam plain text, bukan JSON.";
+    ? "CRITICAL LANGUAGE RULE: Respond ONLY in English. Write in plain text, not JSON. Even if the contract is in Indonesian, your entire answer MUST be in English. Do NOT mix languages."
+    : "ATURAN BAHASA WAJIB: Respond HANYA dalam Bahasa Indonesia. Tulis dalam plain text, bukan JSON. Jangan campur bahasa.";
 
   const contractSnippet = truncateContract(contractText);
 
@@ -624,17 +645,25 @@ export async function chatContract(
 
   const tier = resolveModelTier(model);
 
+  const answerInstruction = lang === "en"
+    ? "Answer in professional plain text (150–350 words). Reference contract clauses and legal basis when relevant. Consider both parties' perspectives."
+    : "Jawab dalam plain text profesional (150–350 kata). Referensikan pasal kontrak dan dasar hukum jika relevan. Pertimbangkan sudut pandang KEDUA pihak.";
+
   const prompt = `Contract Q&A Request (Mode 3)
 ${expertContext}
 ${langInstruction}
 
-Jawab dalam plain text profesional (150–350 kata). Referensikan pasal kontrak dan dasar hukum jika relevan. Pertimbangkan sudut pandang KEDUA pihak.
+${answerInstruction}
 
-Teks kontrak:
+${lang === "en" ? "Contract Text:" : "Teks kontrak:"}
 ${contractSnippet}
 ${analysisContext}
 
-Pertanyaan: ${userQuestion.trim()}`;
+${lang === "en" ? "Question" : "Pertanyaan"}: ${userQuestion.trim()}
+
+${lang === "en"
+  ? "REMINDER: Your answer MUST be entirely in English, regardless of the contract's language."
+  : "PENGINGAT: Jawaban WAJIB seluruhnya dalam Bahasa Indonesia."}`;
 
   const raw = await runQVAC(prompt, tier);
   return { answer: raw.trim() };
