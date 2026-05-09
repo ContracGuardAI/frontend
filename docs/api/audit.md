@@ -1,6 +1,6 @@
 # POST /api/audit
 
-Analyze a contract using AI. Returns a full structured review including fairness score, risky clauses, price analysis, and revision suggestions.
+Analyze a contract using the QVAC AI engine. Returns a full structured review including fairness score, risky clauses, price analysis, and revision suggestions.
 
 ---
 
@@ -16,7 +16,7 @@ Content-Type: application/json
 ```typescript
 {
   contractText: string,     // Required — full contract text
-  model?: string,           // Optional — Claude model to use
+  model?: string,           // Optional — QVAC tier: "fast" | "smart" | "best"
   lang?: "en" | "id"        // Optional — response language (default: "id")
 }
 ```
@@ -34,7 +34,7 @@ Content-Type: application/json
     analysis_hash: string,   // SHA-256 of the result JSON (for on-chain recording)
     analyzed_at: string,     // ISO 8601 timestamp
     char_count: number,      // Length of input contract text
-    model_used: string       // Which Claude model was used
+    model_used: string       // Which QVAC tier was used
   }
 }
 ```
@@ -125,9 +125,9 @@ curl -X POST http://localhost:3000/api/audit \
   },
   "meta": {
     "analysis_hash": "a3f9c2d1...",
-    "analyzed_at": "2026-05-02T10:30:00.000Z",
+    "analyzed_at": "2026-05-09T10:30:00.000Z",
     "char_count": 4521,
-    "model_used": "claude-sonnet-4-6"
+    "model_used": "smart"
   }
 }
 ```
@@ -137,5 +137,6 @@ curl -X POST http://localhost:3000/api/audit \
 ## Notes
 
 - This endpoint is synchronous — it waits for the full AI response before returning
-- For large contracts, consider using `/api/audit-stream` instead
-- Processing time: 5–30 seconds depending on model and contract length
+- For large contracts or to show progress during analysis, use `/api/audit-stream` instead
+- Processing time: 3–20 seconds depending on QVAC model tier and contract length
+- All AI inference is local (QVAC SDK) — no external API calls are made for analysis

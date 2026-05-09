@@ -1,6 +1,6 @@
 # POST /api/chat-contract
 
-Ask natural language questions about a specific contract. The AI answers based on the contract text and optionally the prior audit analysis.
+Ask natural language questions about a specific contract. The QVAC AI engine answers based on the contract text and optionally the prior audit analysis.
 
 ---
 
@@ -18,7 +18,7 @@ Content-Type: application/json
   contractText: string,          // Required — full contract text
   userQuestion: string,          // Required — the user's question
   analysisResult?: object,       // Optional — prior ContractReviewResult (improves answers)
-  model?: string,                // Optional — Claude model
+  model?: string,                // Optional — QVAC tier: "fast" | "smart" | "best"
   lang?: "en" | "id"             // Optional — response language (default: "id")
 }
 ```
@@ -74,6 +74,7 @@ curl -X POST http://localhost:3000/api/chat-contract \
 
 ## Notes
 
-- Passing `analysisResult` from a prior `/api/audit` call significantly improves answer quality
-- The AI answers in the same language as `lang` parameter
+- Passing `analysisResult` from a prior `/api/audit` call significantly improves answer quality, as the AI has the context of the full analysis
+- The AI answers in the same language as the `lang` parameter
 - Responses are plain text (not JSON within the answer)
+- All inference runs locally via QVAC SDK (`chatContract` function in `app/lib/contractAgent.ts`)

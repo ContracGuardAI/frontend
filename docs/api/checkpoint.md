@@ -1,13 +1,15 @@
-# POST /api/checkpoint
+# POST /api/review/checkpoint-with-contract
 
-Verify a contractor's milestone submission against the contract specification using AI.
+Verify a contractor's milestone submission against the contract specification using the QVAC AI engine. This is the primary checkpoint review endpoint — it reads evidence files from the local filesystem and cross-references them with the stored contract PDF.
+
+A simpler fallback endpoint (`POST /api/review-checkpoint`) is also available for metadata-only reviews without file access.
 
 ---
 
 ## Request
 
 ```http
-POST /api/checkpoint
+POST /api/review/checkpoint-with-contract
 Content-Type: application/json
 ```
 
@@ -15,11 +17,21 @@ Content-Type: application/json
 
 ```typescript
 {
-  contractSpec: string,    // Required — original contract text or milestone specification
-  evidenceText: string,    // Required — contractor's submitted evidence
-  model?: string,          // Optional — Claude model
-  lang?: "en" | "id"       // Optional — response language (default: "id")
+  pdaAddress: string,        // Required — on-chain contract PDA address (used to locate local files)
+  checkpointIndex: number,   // Required — which milestone to review (0-based)
+  model?: string,            // Optional — QVAC tier: "fast" | "smart" | "best"
+  lang?: "en" | "id"         // Optional — response language (default: "id")
 }
+```
+
+The API reads evidence files from:
+```
+D:\frontier\evidence\{pdaAddress}\{checkpointIndex}\
+```
+
+And the contract PDF from:
+```
+D:\frontier\evidence\{pdaAddress}\contract\
 ```
 
 ---
@@ -49,10 +61,25 @@ Content-Type: application/json
 
 ---
 
+## Fallback: POST /api/review-checkpoint
+
+For cases where local files are not available, this endpoint accepts metadata directly:
+
+```typescript
+{
+  contractSpec: string,    // Required — contract text or milestone specification
+  evidenceText: string,    // Required — contractor's submitted evidence description
+  model?: string,
+  lang?: "en" | "id"
+}
+```
+
+---
+
 ## Example
 
 ```bash
-curl -X POST http://localhost:3000/api/checkpoint \
+curl -X POST http://localhost:3000/api/review-checkpoint \
   -H "Content-Type: application/json" \
   -d '{
     "contractSpec": "Milestone 1: Deliver UI mockups for 5 screens in Figma with responsive design",
@@ -88,3 +115,10 @@ curl -X POST http://localhost:3000/api/checkpoint \
 | `APPROVED` | 80–100 | Client may approve payment release |
 | `NEEDS_REVISION` | 50–79 | Contractor must fix specific items |
 | `MAJOR_ISSUE` | 0–49 | Significant non-compliance; review required |
+
+---
+
+## Notes
+
+- The primary endpoint (`checkpoint-with-contract`) requires that evidence files have already been uploaded via `POST /api/evidence/upload` and the contract PDF via `POST /api/contracts/upload-pdf`
+- All AI inference runs locally via QVAC SDK (`reviewCheckpoint` function in `app/lib/contractAgent.ts`)

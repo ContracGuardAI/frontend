@@ -24,7 +24,7 @@ const INJECTION_PATTERNS = [
   /\[INST\]|\[\/INST\]|<\|system\|>|<\|user\|>|<\|im_start\|>/,
   /<<SYS>>|<\/SYS>/,
   /reveal\s+(your\s+)?(system\s+)?(prompt|instructions?)/i,
-  /you\s+are\s+now\s+(?:a\s+)?(?:different\s+|new\s+)?(?:ai|assistant|model|bot|gpt|claude)/i,
+  /you\s+are\s+now\s+(?:a\s+)?(?:different\s+|new\s+)?(?:ai|assistant|model|bot|gpt)/i,
   /new\s+instructions?:\s/i,
 ];
 
@@ -283,7 +283,7 @@ export async function POST(req: NextRequest) {
             analyzed_at:    new Date().toISOString(),
             char_count:     contractText.length,
             contract_type:  detection.contract_type,
-            model_used:     model ?? process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6",
+            model_used:     model ?? process.env.QVAC_MODEL_DEFAULT ?? "smart",
           },
         });
 

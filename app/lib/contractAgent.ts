@@ -139,6 +139,7 @@ async function runQVAC(
       modelId,
       stream: true,
       captureThinking: true,
+      temperature: 0,
       history: [
         { role: "system", content: "/no_think " + SYSTEM_PROMPT_AUDITOR },
         { role: "user", content: userPrompt },
@@ -460,13 +461,22 @@ Analisis teks kontrak berikut dan tentukan jenisnya. Respond HANYA dengan JSON v
   "confidence": 0.9
 }
 
-PENTING — ATURAN PRIORITAS:
-- Jika judul/isi mengandung kata "Pengembangan Website", "Sistem Informasi", "Aplikasi", "Software", "RAB IT", "RAB Website" → contract_type = "jasa_it"
-- Jika kontrak berisi pembelian barang/perangkat FISIK (laptop, komputer, printer, furnitur, kendaraan) → contract_type = "pengadaan_barang"
-- "jasa_it" untuk: pembuatan software/website/aplikasi/sistem, RAB pengembangan IT
-- "ketenagakerjaan" untuk: kontrak kerja, PKWT, outsourcing tenaga kerja
-- "jasa_lainnya" hanya jika benar-benar tidak cocok dengan kategori lain
-- "items_to_check" wajib diisi (maks 3 item) dengan nama barang/jasa yang ada harganya dalam kontrak
+PENTING — ATURAN PRIORITAS (urut dari atas, pakai aturan pertama yang cocok):
+
+1. "pengadaan_barang" JIKA kontrak berisi daftar BARANG FISIK dengan merek/spesifikasi dan harga satuan — contoh: server Dell, laptop, switch Cisco, UPS, kabel, printer, furnitur, kendaraan, genset, perangkat keras apapun. Ini TERMASUK pengadaan infrastruktur IT/hardware. RAB dengan tabel item fisik = pengadaan_barang.
+
+2. "konstruksi" JIKA kontrak berisi pekerjaan bangunan, sipil, atau instalasi fisik besar (gedung, jalan, jembatan).
+
+3. "jasa_it" HANYA untuk: pembuatan/pengembangan SOFTWARE, WEBSITE, APLIKASI, atau SISTEM INFORMASI dari nol. BUKAN untuk pembelian hardware/perangkat fisik.
+
+4. "jasa_konsultasi" untuk jasa konsultasi profesional (manajemen, bisnis, teknik).
+
+5. "ketenagakerjaan" untuk kontrak kerja, PKWT, outsourcing tenaga kerja.
+
+6. "jasa_lainnya" hanya jika benar-benar tidak cocok dengan kategori lain.
+
+KUNCI: Jika ada tabel RAB dengan item bermerek (Dell, Cisco, HP, Lenovo, dll) dan harga satuan → PASTI "pengadaan_barang".
+"items_to_check" wajib diisi (maks 3 item FISIK terpenting dengan nilai terbesar) untuk pengadaan_barang/konstruksi.
 
 Teks Kontrak (cuplikan):
 ${snippet}`;
@@ -598,11 +608,30 @@ ${lang === "en"
   // Correct status inconsistencies: if price is within market range, force "fair"
   parsed.price_analysis = parsed.price_analysis.map(item => {
     if (!item.market_estimate || item.contract_price <= 0) return item;
-    const t = item.market_estimate.replace(/\./g, "").replace(/,/g, "");
-    const jutaRange = t.match(/(\d+)\s*[–\-]\s*(\d+)\s*juta/i);
-    if (jutaRange) {
-      const min = parseInt(jutaRange[1]) * 1_000_000;
-      const max = parseInt(jutaRange[2]) * 1_000_000;
+    const t = item.market_estimate.replace(/,/g, "");
+    let min = 0, max = 0;
+
+    // Priority 1: "X–Y juta" or "Rp X–Y juta" — juta suffix after both numbers
+    const jutaRange = t.replace(/\./g, "").match(/(\d+)\s*[–\-]\s*(\d+)\s*juta/i);
+    if (jutaRange) { min = parseInt(jutaRange[1]) * 1_000_000; max = parseInt(jutaRange[2]) * 1_000_000; }
+
+    // Priority 2: "X juta – Y juta"
+    if (!min) {
+      const jutaRange2 = t.replace(/\./g, "").match(/(\d+)\s*juta\s*[–\-]\s*(?:Rp\.?\s*)?(\d+)\s*juta/i);
+      if (jutaRange2) { min = parseInt(jutaRange2[1]) * 1_000_000; max = parseInt(jutaRange2[2]) * 1_000_000; }
+    }
+
+    // Priority 3: full format "Rp 550.000.000–650.000.000" (must have dots = thousands separator)
+    if (!min) {
+      const fullRange = t.match(/(?:Rp\.?\s*)?(\d[\d.]+\.\d{3})\s*[–\-]\s*(?:Rp\.?\s*)?(\d[\d.]+\.\d{3})/i);
+      if (fullRange) {
+        const a = parseInt(fullRange[1].replace(/\./g, ""));
+        const b = parseInt(fullRange[2].replace(/\./g, ""));
+        if (a > 0 && b > 0) { min = Math.min(a, b); max = Math.max(a, b); }
+      }
+    }
+
+    if (min > 0 && max > 0) {
       if (item.contract_price >= min * 0.97 && item.contract_price <= max * 1.03)
         return { ...item, status: "fair" as const };
       if (item.contract_price < min * 0.97) return { ...item, status: "underpriced" as const };
@@ -645,13 +674,29 @@ export async function chatContract(
 
   const tier = resolveModelTier(model);
 
+  const numberFormatNote = lang === "en"
+    ? "NUMBER FORMAT: In Indonesian contracts, dots (.) are thousand separators, NOT decimals. So \"603.200.000\" = Rp 603.2 million (six hundred three million), NOT 603 billion. \"1.399.876.500\" = Rp 1.4 billion. Always read numbers correctly."
+    : "FORMAT ANGKA PENTING: Dalam kontrak Indonesia, titik (.) adalah pemisah ribuan, BUKAN desimal. Jadi \"603.200.000\" = Rp 603 juta (enam ratus tiga juta), BUKAN 603 miliar. \"1.399.876.500\" = Rp 1,4 miliar. Baca angka dengan benar sebelum menjawab.";
+
   const answerInstruction = lang === "en"
-    ? "Answer in professional plain text (150–350 words). Reference contract clauses and legal basis when relevant. Consider both parties' perspectives."
-    : "Jawab dalam plain text profesional (150–350 kata). Referensikan pasal kontrak dan dasar hukum jika relevan. Pertimbangkan sudut pandang KEDUA pihak.";
+    ? `Answer in professional plain text (150–300 words).
+PRIORITY RULES:
+- If asked about PRICE/VALUE: answer directly with numbers, comparison, and reasoning FIRST. Cite law only if directly relevant.
+- If asked about a clause: explain what it means practically for both parties, then mention legal basis if needed.
+- DO NOT start your answer with legal citations unless the question is specifically about law.
+- Be direct and practical. State facts from the contract clearly.`
+    : `Jawab dalam plain text profesional (150–300 kata).
+ATURAN PRIORITAS:
+- Jika pertanyaan tentang HARGA/NILAI: jawab LANGSUNG dengan angka, perbandingan, dan analisis. Hukum hanya jika benar-benar relevan.
+- Jika pertanyaan tentang klausul: jelaskan makna praktisnya untuk kedua pihak dulu, baru sebut dasar hukum jika perlu.
+- JANGAN mulai jawaban dengan kutipan undang-undang kecuali pertanyaan memang tentang hukum.
+- Langsung ke poin, faktual, berdasarkan isi kontrak.`;
 
   const prompt = `Contract Q&A Request (Mode 3)
 ${expertContext}
 ${langInstruction}
+
+${numberFormatNote}
 
 ${answerInstruction}
 
@@ -662,8 +707,8 @@ ${analysisContext}
 ${lang === "en" ? "Question" : "Pertanyaan"}: ${userQuestion.trim()}
 
 ${lang === "en"
-  ? "REMINDER: Your answer MUST be entirely in English, regardless of the contract's language."
-  : "PENGINGAT: Jawaban WAJIB seluruhnya dalam Bahasa Indonesia."}`;
+  ? "REMINDER: Answer in English only. Be direct and practical — answer the question, then add legal context only if relevant."
+  : "PENGINGAT: Jawab dalam Bahasa Indonesia saja. Langsung jawab pertanyaannya — fakta dulu, hukum hanya jika relevan."}`;
 
   const raw = await runQVAC(prompt, tier);
   return { answer: raw.trim() };
@@ -745,10 +790,3 @@ function resolveModelTier(modelOrKey?: string): QvacModelKey {
   return "smart";
 }
 
-// ─── Legacy export aliases (backward compat) ─────────────────────────────────
-export const CLAUDE_MODELS = {
-  haiku:  "fast",
-  sonnet: "smart",
-  opus:   "best",
-} as const;
-export type ClaudeModelKey = keyof typeof CLAUDE_MODELS;

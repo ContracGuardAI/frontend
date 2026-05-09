@@ -16,9 +16,16 @@ In development: `http://localhost:3000`
 |--------|-------|---------|
 | `POST` | [`/api/upload`](upload.md) | Upload and parse a PDF contract |
 | `POST` | [`/api/audit`](audit.md) | Analyze a contract with AI |
-| `POST` | [`/api/audit-stream`](audit-stream.md) | Stream audit results in real time |
-| `POST` | [`/api/checkpoint`](checkpoint.md) | Verify milestone evidence with AI |
+| `POST` | [`/api/audit-stream`](audit-stream.md) | Stream audit results in real time (SSE) |
 | `POST` | [`/api/chat-contract`](chat-contract.md) | Ask questions about a contract |
+| `POST` | [`/api/review/checkpoint-with-contract`](checkpoint.md) | AI review of evidence against contract (reads files locally) |
+| `POST` | `/api/review-checkpoint` | Fallback AI review based on metadata |
+| `POST` | `/api/evidence/upload` | Upload evidence files (local + Supabase + Pinata) |
+| `POST` | `/api/contracts/upload-pdf` | Upload contract PDF after on-chain deploy |
+| `POST` | `/api/contracts/save-metadata` | Save contract metadata to Supabase |
+| `GET`  | `/api/contracts/[pdaAddress]/metadata` | Retrieve contract metadata from Supabase |
+| `GET`  | `/api/market/prices` | Proxy to FastAPI market price backend |
+| `GET`  | `/api/demo-pdf` | Serve demo PDF from local disk |
 
 ---
 
@@ -28,7 +35,7 @@ In development: `http://localhost:3000`
 Content-Type: application/json
 ```
 
-For file upload (`/api/upload`):
+For file upload (`/api/upload`, `/api/evidence/upload`, `/api/contracts/upload-pdf`):
 ```http
 Content-Type: multipart/form-data
 ```
@@ -67,17 +74,20 @@ All endpoints return JSON:
 
 ## AI Model Selection
 
-All AI endpoints accept an optional `model` field in the request body:
+All AI endpoints accept an optional `model` field in the request body to select the QVAC inference tier:
 
 ```json
 {
-  "model": "claude-sonnet-4-6"
+  "model": "smart"
 }
 ```
 
 Valid values:
-- `claude-haiku-4-5-20251001` — fastest
-- `claude-sonnet-4-6` — balanced (recommended)
-- `claude-opus-4-7` — most capable
 
-If omitted, defaults to the `CLAUDE_MODEL` environment variable.
+| Tier | Model | Notes |
+|------|-------|-------|
+| `fast` | Llama 3.2 1B | Fastest, good for development |
+| `smart` | Qwen3 4B | Balanced, recommended for production |
+| `best` | Qwen3 8B | Most capable, for complex contracts |
+
+If omitted, defaults to the `QVAC_MODEL_DEFAULT` environment variable (default: `fast`).

@@ -281,14 +281,14 @@ export default function ContractDetailPage() {
     setReviewing(true);
     toast.info("AI Review dimulai...", "Menganalisis bukti kerja vs kontrak");
     try {
-      // Pakai endpoint baru yang bandingkan evidence vs PDF kontrak di Supabase
-      const body = submissionId
-        ? { submissionId, pdaAddress: idParam, checkpointIndex: cp.id - 1 }
-        : { cid: cp.evidence, checkpointName: cp.name, checkpointDescription: cp.description, contractTitle: contract.title, totalAmount: parseFloat(contract.totalAmount), paymentPercent: parseFloat(cp.payment) };
+      // Selalu pakai route baru — baca file lokal dari evidence/{pdaAddress}/
+      const body = {
+        submissionId: submissionId ?? undefined,
+        pdaAddress: idParam,
+        checkpointIndex: cp.id - 1,
+      };
 
-      const endpoint = submissionId ? "/api/review/checkpoint-with-contract" : "/api/review-checkpoint";
-
-      const res = await fetch(endpoint, {
+      const res = await fetch("/api/review/checkpoint-with-contract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

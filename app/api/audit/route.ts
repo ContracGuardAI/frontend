@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         analysis_hash: analysisHash,
         analyzed_at: new Date().toISOString(),
         char_count: contractText.length,
-        model_used: model ?? process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6",
+        model_used: model ?? process.env.QVAC_MODEL_DEFAULT ?? "smart",
       },
     });
   } catch (err) {

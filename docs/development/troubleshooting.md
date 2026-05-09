@@ -4,47 +4,39 @@ Common issues and how to fix them.
 
 ---
 
-## Claude CLI Issues
-
-### "claude: command not found"
-
-The Claude Code CLI is not installed or not in your PATH.
-
-```bash
-npm install -g @anthropic-ai/claude-code
-```
-
-Then verify:
-```bash
-claude --version
-```
-
-If installed but not found, check your global npm bin directory is in PATH:
-```bash
-npm config get prefix
-# Add <prefix>/bin to your PATH
-```
-
----
+## AI Engine Issues
 
 ### AI analysis returns empty or garbled JSON
 
-**Cause:** Claude returned non-JSON output (a conversational reply, an error message, or markdown-wrapped JSON).
+**Cause:** The QVAC model returned non-JSON output or a partial response.
 
-**Fix:** The `parseJson()` function in `contractAgent.ts` handles markdown-wrapped JSON. If it still fails:
-1. Check `CLAUDE_MODEL` in `.env.local` — try a more capable model (`claude-sonnet-4-6`)
-2. Check the `agent/CLAUDE.md` system prompt is intact
-3. Try a shorter or cleaner contract text input
+**Fix:**
+1. Try a higher-capability tier — set `QVAC_MODEL_DEFAULT=smart` or `best` in `.env.local`
+2. Verify the QVAC local inference server is running and accessible
+3. Try a shorter or simpler contract text input to isolate the issue
+4. Check that `frontend/agent/CLAUDE.md` is intact — this file is the AI system prompt
 
 ---
 
-### Analysis is slow (> 30 seconds)
+### Analysis is very slow (> 30 seconds)
 
-**Cause:** Large contract + capable model = slow.
+**Cause:** Large contract text + capable model = slow local inference.
 
 **Fix:**
-- Switch `CLAUDE_MODEL` to `claude-haiku-4-5-20251001` for development
-- Use `/api/audit-stream` to show progress instead of waiting silently
+- Switch `QVAC_MODEL_DEFAULT` to `fast` for development
+- Use `/api/audit-stream` so the user sees live progress instead of a blank screen
+- Consider chunking very long contracts before passing to the AI
+
+---
+
+### "QVAC inference server not reachable"
+
+**Cause:** The local QVAC runtime is not running.
+
+**Fix:**
+- Start the QVAC local inference server (refer to QVAC SDK documentation)
+- Verify it is listening on the expected port
+- Check firewall rules if running on a separate machine
 
 ---
 
@@ -84,6 +76,27 @@ solana airdrop 2 <YOUR_WALLET_ADDRESS> --url devnet
 
 ---
 
+## Evidence & File Storage Issues
+
+### Evidence upload fails
+
+**Cause:** The target directory `D:\frontier\evidence\{pdaAddress}\{checkpointIndex}\` may not exist or the process may not have write permissions.
+
+**Fix:**
+- Verify the `D:\frontier\evidence\` base directory exists
+- Check that the Next.js process has write access to that directory
+- Ensure `pdaAddress` and `checkpointIndex` are passed correctly in the upload request
+
+---
+
+### Checkpoint review returns "contract file not found"
+
+**Cause:** The contract PDF has not been uploaded for this PDA via `POST /api/contracts/upload-pdf`.
+
+**Fix:** After deploying the contract on-chain, upload the contract PDF from the dashboard. This stores the file at `D:\frontier\evidence\{pdaAddress}\contract\`.
+
+---
+
 ## PDF Upload Issues
 
 ### "Failed to parse PDF"
@@ -112,6 +125,28 @@ export const config = {
   },
 };
 ```
+
+---
+
+## Supabase Issues
+
+### "Supabase: Invalid JWT" or "Unauthorized"
+
+**Cause:** Incorrect or expired Supabase keys in `.env.local`.
+
+**Fix:**
+- Verify `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are correctly set
+- Get fresh keys from your Supabase project dashboard → Settings → API
+
+---
+
+### Missing Supabase tables
+
+**Cause:** The required tables have not been created in your Supabase project.
+
+**Required tables:** `contracts`, `checkpoints`, `evidence_submissions`, `market_price_cache`
+
+**Fix:** Run the table creation SQL from your Supabase SQL editor, or use the Supabase dashboard to create these tables according to the schema expected by the API routes.
 
 ---
 

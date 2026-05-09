@@ -6,56 +6,94 @@ Create `.env.local` in the `frontend/` directory:
 
 ```bash
 cp .env.example .env.local   # if example exists
-# or create manually:
-touch .env.local
+# or create manually
 ```
 
-### Required
+### AI Engine
 
 ```env
-# Claude model for AI contract analysis
-# Options: claude-haiku-4-5-20251001 | claude-sonnet-4-6 | claude-opus-4-7
-CLAUDE_MODEL=claude-haiku-4-5-20251001
+# QVAC model tier for AI contract analysis
+# Options: fast | smart | best
+QVAC_MODEL_DEFAULT=smart
 ```
 
-| Value | Speed | Quality | Best For |
-|-------|-------|---------|----------|
-| `claude-haiku-4-5-20251001` | Fast (~5s) | Good | Development, testing |
-| `claude-sonnet-4-6` | Medium (~15s) | Great | Production, demos |
-| `claude-opus-4-7` | Slow (~30s) | Best | Important audits |
+| Value | Model | Speed | Best For |
+|-------|-------|-------|----------|
+| `fast` | Llama 3.2 1B | ~2–5s | Development, testing |
+| `smart` | Qwen3 4B | ~5–15s | Production, demos (recommended) |
+| `best` | Qwen3 8B | ~15–40s | Complex or high-stakes contracts |
+
+### Solana
+
+```env
+NEXT_PUBLIC_PROGRAM_ID=2Htsz7Xf4YWZTc8tupBTgsFHwZNZDzi59FRr9AWmxdNq
+NEXT_PUBLIC_RPC_URL=https://api.devnet.solana.com
+```
+
+### Supabase
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+```
+
+### Backend
+
+```env
+# FastAPI backend for market price scraping
+BACKEND_URL=http://localhost:8000
+```
 
 ### Optional — Price Scraping
 
-ContractGuard can benchmark contract prices against real market data. To enable:
+ContractGuard benchmarks contract prices against real market data. To enable additional sources:
 
 ```env
 # SerpAPI — Google Shopping results
 SERPAPI_KEY=your_serpapi_key_here
+
+# Google Custom Search Engine (additional source)
+GOOGLE_CSE_KEY=your_key_here
+GOOGLE_CSE_ID=your_cse_id_here
 ```
 
-> Without this key, price analysis still runs using Blibli data only.
+> Without these keys, price analysis uses Blibli scraping only (via the FastAPI backend).
 
-### Optional — Agent Path Override
+### Optional — IPFS Storage
 
 ```env
-# Override the AI agent directory (defaults to ../agent relative to frontend/)
-AGENT_DIR=/absolute/path/to/contractguard-agent
+# Pinata for IPFS evidence storage
+PINATA_JWT=your_pinata_jwt_here
 ```
+
+---
+
+## Supabase Tables
+
+Your Supabase project must have these tables:
+
+| Table | Purpose |
+|-------|---------|
+| `contracts` | Contract metadata |
+| `checkpoints` | Milestone data per contract |
+| `evidence_submissions` | Evidence file records |
+| `market_price_cache` | Cached market price results |
 
 ---
 
 ## Solana Network
 
-The app connects to **Solana Devnet** by default. No additional configuration is needed.
+The app connects to **Solana Devnet** by default. No additional configuration is needed beyond setting `NEXT_PUBLIC_RPC_URL`.
 
 Program ID (deployed on Devnet):
 ```
 2Htsz7Xf4YWZTc8tupBTgsFHwZNZDzi59FRr9AWmxdNq
 ```
 
-To test with on-chain features, you'll need Phantom Wallet configured to **Devnet**:
+To test on-chain features, configure Phantom Wallet to **Devnet**:
 1. Open Phantom → Settings → Developer Settings → Change Network → Devnet
-2. Get Devnet SOL from [sol-faucet.com](https://sol-faucet.com) or the Solana CLI faucet
+2. Get Devnet SOL from [faucet.solana.com](https://faucet.solana.com) or the Solana CLI faucet
 
 ---
 

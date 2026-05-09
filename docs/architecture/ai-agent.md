@@ -1,18 +1,20 @@
-# AI Agent Architecture
+# AI Engine Architecture
 
 ## How the AI Works
 
-ContractGuard does not call the Anthropic API directly. Instead, it spawns the **Claude Code CLI** as a child process from the Next.js API routes. This approach means:
+ContractGuard uses the **QVAC SDK** (`@qvac/sdk`) to run local AI inference via Qwen3 models. All AI logic is contained in `app/lib/contractAgent.ts`. There is no subprocess spawning, no external AI API calls, and no API key needed for inference.
 
-- No API key in `.env` — uses the developer's authenticated Claude CLI session
-- The agent's behavior is controlled by a `CLAUDE.md` system prompt file
-- All AI outputs are returned as structured JSON
+Key characteristics:
+- All inference is local (Qwen3 models via QVAC runtime)
+- Temperature is always `0` — deterministic, consistent output
+- Three model tiers: `fast`, `smart`, `best`
+- Structured JSON output enforced via prompt engineering
 
 ---
 
-## Agent Directory
+## System Prompt
 
-The agent context lives at `agent/CLAUDE.md` (relative to `frontend/`). This file contains:
+The AI system prompt lives at `frontend/agent/CLAUDE.md`. It defines:
 
 1. **Expert persona** — Senior auditor with 10+ years in Indonesian procurement contracts
 2. **Three operating modes** (triggered by prompt structure):
@@ -21,24 +23,72 @@ The agent context lives at `agent/CLAUDE.md` (relative to `frontend/`). This fil
    - **Mode 3: Contract Q&A** → Conversational answers about a specific contract
 3. **Indonesian law references** (UU, PP, Perpres, KUH Perdata) for compliance checks
 
+This file is loaded as the system prompt for every QVAC call.
+
+---
+
+## Model Tiers
+
+| Tier key | Model | Speed | Best For |
+|----------|-------|-------|----------|
+| `fast` | Llama 3.2 1B | ~2–5s | Development, quick checks |
+| `smart` | Qwen3 4B | ~5–15s | Production, daily use |
+| `best` | Qwen3 8B | ~15–40s | Complex or high-stakes contracts |
+
+Configured via `QVAC_MODEL_DEFAULT` environment variable (default: `fast`).
+
 ---
 
 ## How `contractAgent.ts` Works
 
 **File:** `app/lib/contractAgent.ts`
 
-### Core Execution — `runClaude(prompt, model)`
+### Core Execution — `runQVAC(prompt, tier)`
 
 ```typescript
-function runClaude(prompt: string, model: string): Promise<string>
+async function runQVAC(prompt: string, tier?: string): Promise<string>
 ```
 
-Internally this runs:
-```bash
-claude -p "<prompt>" --model <model> --output-format text
+Internally calls the QVAC SDK with:
+- The system prompt loaded from `agent/CLAUDE.md`
+- The user prompt passed as argument
+- Temperature `0`
+- Selected model tier
+
+---
+
+### Contract Text Extraction — `runClaudeExtract()`
+
+```typescript
+async function runClaudeExtract(
+  pdfText: string,
+  model?: string
+): Promise<ExtractResult>
 ```
 
-The subprocess is spawned from `AGENT_DIR` (defaults to `../agent`) so the `CLAUDE.md` system prompt is picked up automatically.
+Extracts structured metadata (title, parties, dates, amounts) from raw PDF text.
+
+---
+
+### Contract Type Detection — `detectContractType()`
+
+```typescript
+async function detectContractType(
+  contractText: string,
+  model?: string
+): Promise<ContractDetectionResult>
+```
+
+Classifies the contract into one of the supported types and selects the appropriate expert persona.
+
+**Returns:**
+```typescript
+interface ContractDetectionResult {
+  contract_type: ContractType
+  expert_role: string
+  key_regulations: string[]
+}
+```
 
 ---
 
@@ -47,18 +97,18 @@ The subprocess is spawned from `AGENT_DIR` (defaults to `../agent`) so the `CLAU
 ```typescript
 async function analyzeContract(
   contractText: string,
-  model?: string,         // defaults to CLAUDE_MODEL env var
-  lang?: "en" | "id",    // response language
+  model?: string,
+  lang?: "en" | "id",
   detection?: ContractDetectionResult,
   preloadedMarketData?: Record<string, string>
 ): Promise<ContractReviewResult>
 ```
 
 **Execution steps:**
-1. Detect contract type via `detectContractType(contractText)` (separate Claude call)
-2. Optionally fetch market prices for each line item via `fetchAllMarketPrices(keywords)`
-3. Build a structured prompt injecting contract text + market data + language
-4. Call `runClaude(prompt, model)` → parse JSON output
+1. Detect contract type via `detectContractType(contractText)` (separate QVAC call)
+2. Optionally inject market price data fetched from Blibli/SerpAPI
+3. Build a structured prompt injecting contract text + market data + language + expert persona
+4. Call `runQVAC(prompt, model)` → parse JSON output
 
 **Returns:**
 ```typescript
@@ -119,14 +169,15 @@ async function chatContract(
 
 ## Market Price Integration
 
-When Claude reviews pricing in a contract, it can optionally benchmark against real market data:
+When the AI reviews pricing in a contract, it benchmarks against real market data:
 
 | Source | Function | API Required |
 |--------|----------|-------------|
-| Blibli.com | `fetchBlibliPrices(keyword)` | No (web scraping) |
+| Blibli.com | `fetchBlibliPrices(keyword)` | No (web scraping via FastAPI backend) |
 | Google Shopping | `fetchSerpApiPrices(keyword)` | `SERPAPI_KEY` |
+| Google CSE | `fetchGoogleCSEPrices(keyword)` | `GOOGLE_CSE_KEY` + `GOOGLE_CSE_ID` |
 
-All three run in parallel via `fetchAllMarketPrices(keywords)`. Results are summarized via `summarizePrices()` which filters outliers and formats a human-readable price range.
+All sources run in parallel via `fetchAllMarketPrices(keywords)`. Results are summarized by `summarizePrices()` which filters outliers and formats a human-readable price range, then injected into the QVAC analysis prompt.
 
 ---
 
@@ -144,4 +195,4 @@ type ContractType =
   | "jasa_lainnya"         // Other services
 ```
 
-Each type maps to a specific expert persona and a set of Indonesian regulations used for compliance checking.
+Each type maps to a specific expert persona and a set of Indonesian regulations used for compliance checking. The persona selection is done automatically by `detectContractType()`.

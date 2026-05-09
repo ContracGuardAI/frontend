@@ -18,13 +18,13 @@ Follow this path to test all features end-to-end:
 ### Step 1 — Audit a Contract
 
 1. Navigate to `/audit`
-2. Upload a PDF contract **or** paste contract text into the text area
-3. Click **Analyze Contract**
-4. Wait 5–30 seconds (depends on model and contract length)
+2. Upload a PDF contract, paste contract text, **or** click **Coba Demo Kontrak** to load the sample contract
+3. Click **Analyze Contract** (or analysis starts automatically after upload)
+4. Wait 3–20 seconds (depends on QVAC model tier and contract length)
 5. Review the results:
    - **Fairness Score** (1–10)
-   - **Risky Clauses** — highlighted in red/yellow
-   - **Price Analysis** — each line item vs. market price
+   - **Risky Clauses** — highlighted by risk level
+   - **Price Analysis** — each line item vs. Indonesian market price
    - **Revision Suggestions**
 
 > **Tip:** The analysis is also returned as a structured JSON hash you can record on-chain.
@@ -47,7 +47,7 @@ Follow this path to test all features end-to-end:
 
 ### Step 3 — Deploy a Contract On-Chain
 
-1. Navigate to `/create`
+1. Click **Create Contract** in the audit results, or navigate to `/create`
 2. Fill in contract details:
    - Client wallet address
    - Contractor wallet address
@@ -66,8 +66,13 @@ Follow this path to test all features end-to-end:
 1. Navigate to `/dashboard`
 2. All contracts where you are client or contractor appear here
 3. Click a contract to open the detail page
-4. **As contractor:** Submit milestone evidence (text/links)
-5. **As client:** Review AI-verified milestone → Approve release → Approve transaction
+4. **As contractor:**
+   - Click **Submit Evidence** on a milestone card
+   - Upload files and/or add a description
+   - QVAC AI reviews automatically — verdict appears within seconds
+5. **As client:**
+   - Review AI-verified milestone → Click **Approve Release** → Approve transaction in Phantom
+   - USDC releases to contractor immediately
 
 ---
 
@@ -78,3 +83,16 @@ npm run dev      # Start dev server (hot reload) on http://localhost:3000
 npm run build    # Build for production
 npm run start    # Run production build
 ```
+
+---
+
+## Backend (Optional)
+
+To enable market price fetching during audit, start the FastAPI backend:
+
+```bash
+cd D:\frontier\backend
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Then set `BACKEND_URL=http://localhost:8000` in `frontend/.env.local`.

@@ -27,7 +27,7 @@
 
 - [System Overview](architecture/overview.md)
 - [Frontend Structure](architecture/frontend.md)
-- [AI Agent](architecture/ai-agent.md)
+- [AI Engine](architecture/ai-agent.md)
 
 ## API Reference
 

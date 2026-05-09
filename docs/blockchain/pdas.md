@@ -94,7 +94,7 @@ export function getContractPDA(
 - Overall contract status
 - Total USDC locked in escrow
 
-> **Note:** The `created_at` value is set at deployment time and must be preserved to re-derive the same PDA later.
+> **Note:** The `created_at` value is set at deployment time and must be preserved to re-derive the same PDA later. It is also used to look up local evidence files at `D:\frontier\evidence\{pdaAddress}\`.
 
 ---
 

@@ -1,6 +1,6 @@
 # POST /api/audit-stream
 
-Stream audit results in real time using Server-Sent Events (SSE). Useful for long contracts where you want to show progress instead of a loading spinner.
+Stream audit results in real time using Server-Sent Events (SSE). This is the primary audit endpoint used by the `/audit` page. It shows live progress, fetches market prices from Blibli/SerpAPI, and runs the full QVAC analysis — all while streaming status updates to the browser.
 
 ---
 
@@ -16,7 +16,7 @@ Content-Type: application/json
 ```typescript
 {
   contractText: string,
-  model?: string,
+  model?: string,           // QVAC tier: "fast" | "smart" | "best"
   lang?: "en" | "id"
 }
 ```
@@ -38,7 +38,9 @@ Connection: keep-alive
 ```
 data: {"type": "progress", "message": "Detecting contract type..."}
 
-data: {"type": "progress", "message": "Fetching market prices..."}
+data: {"type": "progress", "message": "Fetching market prices from Blibli..."}
+
+data: {"type": "progress", "message": "Running AI analysis..."}
 
 data: {"type": "result", "data": { ...ContractReviewResult... }, "meta": { ... }}
 
@@ -53,6 +55,16 @@ data: {"type": "done"}
 | `result` | `{ data: ContractReviewResult, meta: {...} }` | Final analysis result |
 | `error` | `{ error: string }` | Processing error |
 | `done` | none | Stream complete |
+
+---
+
+## Processing Steps (in order)
+
+1. Detect contract type via QVAC (`detectContractType`)
+2. Fetch market prices from Blibli and/or SerpAPI in parallel
+3. Run full contract analysis via QVAC (`analyzeContract`) with market data injected
+4. Stream `result` event with the complete `ContractReviewResult`
+5. Stream `done` event
 
 ---
 
@@ -90,5 +102,7 @@ while (true) {
 
 ## Notes
 
-- Prefer this endpoint over `/api/audit` when the contract is long (> 2,000 characters)
+- Prefer this endpoint over `/api/audit` when the contract is long (> 2,000 characters) or when you want to show the user live progress
 - The final `result` event contains the same schema as the synchronous `/api/audit` response
+- Market price fetching (Blibli/SerpAPI) happens during streaming — results are injected into the QVAC prompt before analysis
+- All AI inference runs locally via QVAC SDK; only market price lookups make external network calls

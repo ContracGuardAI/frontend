@@ -656,6 +656,7 @@ export default function AuditPage() {
   const [fileState, setFileState] = useState<FileState>("idle");
   const [fileName, setFileName]   = useState("");
   const [fileHash, setFileHash]   = useState("");
+  const [demoLoading, setDemoLoading] = useState(false);
   const [chatMsgs, setChatMsgs]   = useState<AuditChatMsg[]>([]);
   const [chatTyping, setChatTyping] = useState(false);
   const [chatInput, setChatInput]   = useState("");
@@ -1129,9 +1130,56 @@ export default function AuditPage() {
                   <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--text)", marginBottom: "8px" }}>
                     {lang === "en" ? "Drop your contract PDF here" : "Taruh PDF kontrak kamu di sini"}
                   </div>
-                  <div style={{ fontSize: "13px", color: "var(--text-3)", marginBottom: "20px" }}>
+                  <div style={{ fontSize: "13px", color: "var(--text-3)", marginBottom: "16px" }}>
                     {lang === "en" ? "or click to browse" : "atau klik untuk memilih file"}
                   </div>
+
+                  {/* Demo button */}
+                  <button
+                    onClick={async e => {
+                      e.stopPropagation();
+                      if (demoLoading) return;
+                      setDemoLoading(true);
+                      try {
+                        const res = await fetch("/api/demo-pdf");
+                        if (!res.ok) throw new Error("Demo PDF tidak tersedia");
+                        const blob = await res.blob();
+                        const name = res.headers.get("X-Demo-Filename") ?? "demo_contract.pdf";
+                        const file = new File([blob], name, { type: "application/pdf" });
+                        handleFile(file);
+                      } catch {
+                        toast.error("Demo gagal", "File demo tidak ditemukan di server");
+                      } finally {
+                        setDemoLoading(false);
+                      }
+                    }}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: "7px",
+                      fontSize: "12.5px", fontWeight: 700,
+                      padding: "8px 18px", borderRadius: "8px", marginBottom: "14px",
+                      background: "var(--accent-bg)", border: "1px solid var(--accent-border)",
+                      color: "var(--accent-text)", cursor: demoLoading ? "wait" : "pointer",
+                      fontFamily: "var(--font-dm), 'DM Sans', sans-serif",
+                      transition: "opacity 0.18s",
+                      opacity: demoLoading ? 0.65 : 1,
+                    }}
+                  >
+                    {demoLoading ? (
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ animation: "spinRing 1s linear infinite", flexShrink: 0 }}>
+                        <circle cx="7" cy="7" r="4.5" stroke="var(--accent-text)" strokeWidth="1.5" strokeDasharray="9 9" />
+                      </svg>
+                    ) : (
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+                        <path d="M2 2h7l3 3v7H2z" stroke="var(--accent-text)" strokeWidth="1.3" fill="none" strokeLinejoin="round" />
+                        <path d="M9 2v3h3" stroke="var(--accent-text)" strokeWidth="1.3" fill="none" />
+                        <path d="M7 7v3M5.5 8.5L7 10l1.5-1.5" stroke="var(--accent-text)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                    {demoLoading
+                      ? (lang === "en" ? "Loading demo..." : "Memuat demo...")
+                      : (lang === "en" ? "Use Demo Contract" : "Coba Demo Kontrak")}
+                  </button>
+
                   <div style={{
                     display: "inline-flex", alignItems: "center", gap: "6px",
                     fontSize: "11.5px", color: "var(--text-4)",

@@ -6,10 +6,6 @@ There are AI tools. There are escrow services. There are contract templates. But
 
 ---
 
-![Why ContractGuard — Comparison Overview](../assets/screenshots/landing-features.png)
-
----
-
 ## vs. Hiring a Lawyer
 
 | | Lawyer | ContractGuard |
@@ -34,7 +30,8 @@ There are AI tools. There are escrow services. There are contract templates. But
 | Market price benchmarking | No | **Yes — Blibli + SerpAPI (Google Shopping)** |
 | Structured audit output | No | **Yes — scores, clause-by-clause JSON** |
 | Blockchain integration | No | **Yes — direct Solana deployment** |
-| Milestone verification | No | **Yes — AI reviews submitted evidence** |
+| Milestone verification | No | **Yes — AI reviews submitted evidence files** |
+| Runs locally | No | **Yes — QVAC local inference, no API dependency** |
 
 **General AI gives you a conversation. ContractGuard gives you a verdict.**
 
@@ -64,12 +61,12 @@ flowchart LR
         O1([Fill Word/PDF docs]) --> O2([Get physical signatures])
         O2 --> O3([File with procurement office])
         O3 --> O4([Wait for approval committee])
-        O4 --> O5([⏳ Weeks pass])
+        O4 --> O5([Weeks pass])
     end
 
     subgraph NEW ["ContractGuard"]
         direction TB
-        N1([Submit evidence in dashboard]) --> N2([AI reviews in seconds])
+        N1([Upload evidence in dashboard]) --> N2([AI reviews in seconds])
         N2 --> N3([Client approves — 1 click])
         N3 --> N4([Funds released instantly])
     end
@@ -88,14 +85,14 @@ We're not a generic tool with a Bahasa Indonesia toggle. ContractGuard was desig
 
 The AI knows the difference between **Pengadaan Barang** and **Jasa Konsultasi** and applies the right regulations, the right expert persona, and the right compliance checks for each — automatically.
 
-### 2. Claude AI — The Best Model Available
+### 2. QVAC AI — Local, Fast, Private
 
-ContractGuard uses **Claude by Anthropic** — consistently ranked the top AI model for legal reasoning, nuance, and following complex instructions. The difference shows in contract analysis quality: it doesn't just flag keywords, it understands clause intent.
+ContractGuard uses **QVAC SDK with Qwen3 local models** — all inference runs on your own hardware with no data sent to external APIs. Your contract text stays private.
 
-You choose the model based on the contract stakes:
-- **Haiku** — fast, for quick checks
-- **Sonnet** — balanced, for daily use
-- **Opus** — maximum depth, for high-value contracts
+Three model tiers give you control over the speed/quality trade-off:
+- **Fast (Llama 3.2 1B)** — for quick checks
+- **Smart (Qwen3 4B)** — balanced, for daily use
+- **Best (Qwen3 8B)** — maximum depth, for high-value contracts
 
 ### 3. Solana — Fast, Cheap, Trustless
 
@@ -131,46 +128,41 @@ graph TD
 
 ---
 
-## Roadmap
+## Feature Status
 
-What's live today, and what's coming next — with honest status labels.
-
-### What's Live Now (Hackathon Build)
+### What's Live Now
 
 | Feature | Status |
 |---------|--------|
-| AI contract audit — fairness score, risky clauses, price analysis | ✅ Live |
-| Regulation compliance check (8 Indonesian contract types) | ✅ Live |
-| Contract deployment to Solana Devnet with USDC escrow | ✅ Live |
-| Milestone submission & AI evidence verification | ✅ Live |
-| Client milestone approval & on-chain fund release | ✅ Live |
-| Mock USDC faucet (1,000 USDC/day per wallet) | ✅ Live |
-| Bilingual UI — English & Bahasa Indonesia | ✅ Live |
-| Dark mode & light mode | ✅ Live |
+| AI contract audit — fairness score, risky clauses, price analysis | Live |
+| Streaming audit with live progress (SSE) | Live |
+| Regulation compliance check (8 Indonesian contract types) | Live |
+| Contract deployment to Solana Devnet with USDC escrow | Live |
+| Evidence file upload (local + Supabase + Pinata optional) | Live |
+| Milestone AI review with file content analysis | Live |
+| Client milestone approval & on-chain fund release | Live |
+| Mock USDC faucet (1,000 USDC/day per wallet) | Live |
+| Contract Q&A chat powered by QVAC | Live |
+| Demo contract for quick testing | Live |
+| Bilingual UI — English & Bahasa Indonesia | Live |
+| Dark mode & light mode | Live |
+| Cloudflare Tunnel deployment at contractguard.site | Live |
 
-### In Progress (Post-Hackathon v1.1)
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Price Scraper v2 — more Indonesian market sources | 🔨 Building | Tokopedia, Shopee integration |
-| AI Chat Q&A — ask anything about your contract | 🔨 Building | `/api/chat-contract` endpoint ready, UI in progress |
-| Streaming audit progress | 🔨 Building | `/api/audit-stream` endpoint ready |
-
-### Planned (v1.2)
+### In Progress
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Contract Templates Library | 📋 Planned | 10 pre-audited Indonesian contract templates |
-| Multi-signature Milestone Approval | 📋 Planned | Require 2-of-3 approvers for large contracts |
-| Audit History & On-chain Proof Export | 📋 Planned | PDF certificate of audit for procurement files |
+| Price Scraper v2 — more Indonesian market sources | Building | Tokopedia, Shopee integration |
+| Supabase metadata sync improvements | Building | Better indexing for dashboard queries |
 
-### Long-Term Vision (v2.0)
+### Planned
 
-| Feature | Status |
-|---------|--------|
-| On-chain dispute arbitration with AI evidence review | 🔮 Roadmap |
-| Mobile app (iOS/Android) | 🔮 Roadmap |
-| Mainnet deployment (real USDC) | 🔮 Roadmap |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Contract Templates Library | Planned | 10 pre-audited Indonesian contract templates |
+| Multi-signature Milestone Approval | Planned | Require 2-of-3 approvers for large contracts |
+| Audit History & On-chain Proof Export | Planned | PDF certificate of audit for procurement files |
+| Mainnet deployment (real USDC) | Roadmap | After thorough security audit |
 
 ---
 

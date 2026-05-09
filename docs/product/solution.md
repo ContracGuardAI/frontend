@@ -10,13 +10,13 @@ ContractGuard handles the full contract lifecycle in three phases. You don't nee
 
 ```mermaid
 flowchart TD
-    A([📄 Upload Contract\nPDF or paste text]) --> B
+    A([Upload Contract\nPDF or paste text]) --> B
 
     subgraph AUDIT ["Phase 1 — AI Audit"]
-        B([🤖 Claude analyzes\nin under 30 seconds]) --> C1([📊 Fairness Score\n1–10])
-        B --> C2([⚠️ Risky Clauses\nflagged & explained])
+        B([QVAC AI analyzes\nin under 30 seconds]) --> C1([Fairness Score\n1–10])
+        B --> C2([Risky Clauses\nflagged & explained])
         B --> C3([Market Prices\nvs. real Indonesian data])
-        B --> C4([📋 Regulation Check\nUU · PP · Perpres])
+        B --> C4([Regulation Check\nUU · PP · Perpres])
     end
 
     C1 & C2 & C3 & C4 --> D{Both parties\nagree?}
@@ -24,18 +24,18 @@ flowchart TD
     D -->|Contract OK| E
 
     subgraph DEPLOY ["Phase 2 — Deploy Escrow"]
-        E([Deploy to Solana]) --> F1([🔒 USDC locked\nin smart contract])
+        E([Deploy to Solana]) --> F1([USDC locked\nin smart contract])
         E --> F2([Audit hash\nrecorded on-chain])
     end
 
     F1 & F2 --> G
 
     subgraph MILESTONE ["Phase 3 — Milestone Loop"]
-        G([Contractor works\non milestone]) --> H([📋 Submit evidence\nlinks · files · desc])
-        H --> I([🤖 AI verifies\ncompliance score 0–100])
+        G([Contractor works\non milestone]) --> H([Submit evidence\nfiles · links · desc])
+        H --> I([QVAC AI verifies\ncompliance score 0–100])
         I --> J{Verdict}
         J -->|NEEDS REVISION| G
-        J -->|APPROVED| K([✅ Client approves\none transaction])
+        J -->|APPROVED| K([Client approves\none transaction])
         K --> L([Funds released\ninstantly])
         L --> M{More\nmilestones?}
         M -->|Yes| G
@@ -51,9 +51,7 @@ flowchart TD
 
 ## Phase 1: Audit Before You Sign
 
-Upload your contract (PDF or paste text). In under 30 seconds, ContractGuard's AI gives you a complete analysis.
-
-![Contract Audit — Results Page](../assets/screenshots/audit-results.png)
+Upload your contract (PDF or paste text). In under 30 seconds, ContractGuard's QVAC AI gives you a complete analysis.
 
 **What the AI checks:**
 
@@ -67,14 +65,12 @@ A single number that tells you how balanced the contract is — before you sign 
 | 1–4 | Significant imbalance | Request revisions |
 
 ### Risky Clauses
-Every clause that could hurt you is flagged with exact text, the reason it's risky (in plain language), and a specific revision suggestion.
-
-![Risky Clauses — Highlighted with Risk Level](../assets/screenshots/audit-risky-clauses.png)
+Every clause that could hurt you is flagged with exact text, the reason it's risky (in plain language), and a specific revision suggestion grounded in Indonesian law.
 
 ### Market Price Comparison
-Every line item is compared against real Indonesian market data pulled from Blibli, Google Shopping, and other sources.
+Every line item is compared against real Indonesian market data pulled from Blibli, Google Shopping, and other sources via the FastAPI backend.
 
-> *"Server hosting: Rp 15,000,000/month — market rate is Rp 4,000,000–7,000,000. **Significantly overpriced.**"*
+> *"Server hosting: Rp 15,000,000/month — market rate is Rp 4,000,000–7,000,000. Significantly overpriced."*
 
 ### Regulation Compliance
 The AI checks your contract type against Indonesian laws and flags any non-compliance — specific article, specific issue.
@@ -84,8 +80,6 @@ The AI checks your contract type against Indonesian laws and flags any non-compl
 ## Phase 2: Deploy On-Chain
 
 Once the contract is agreed and audited, deploy it to Solana in one click.
-
-![Create Contract — Multi-step Form](../assets/screenshots/create-contract.png)
 
 **What happens on-chain:**
 1. Client's USDC transfers into a **smart contract escrow** — locked, inaccessible to either party
@@ -98,12 +92,11 @@ Once the contract is agreed and audited, deploy it to Solana in one click.
 
 ## Phase 3: Verify Milestones & Release Funds
 
-When the contractor finishes a milestone, they submit evidence directly in the dashboard.
+When the contractor finishes a milestone, they upload evidence files and a description directly in the dashboard.
 
-![Dashboard — Milestone Submission](../assets/screenshots/milestone-submit.png)
-
-**The AI reviews evidence automatically:**
-- Checks evidence against the original contract specification
+**The QVAC AI reviews evidence automatically:**
+- Reads evidence files from local storage at `D:\frontier\evidence\{pdaAddress}\{checkpointIndex}\`
+- Cross-references with the original contract PDF stored at `D:\frontier\evidence\{pdaAddress}\contract\`
 - Returns a compliance score (0–100) and specific findings
 - Verdict: `APPROVED`, `NEEDS REVISION`, or `MAJOR ISSUE`
 

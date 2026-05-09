@@ -12,14 +12,20 @@ graph TB
     subgraph NextAPI["Next.js API Routes"]
         upload["/api/upload\npdf-parse"]
         audit["/api/audit\n/api/audit-stream"]
-        checkpoint["/api/checkpoint"]
+        checkpoint["/api/review/checkpoint-with-contract"]
         chat["/api/chat-contract"]
+        evidence["/api/evidence/upload"]
     end
 
     subgraph AI["AI Layer"]
-        cli["Claude Code CLI\nSubprocess\nclaude -p '...'"]
-        prompt["agent/CLAUDE.md\nSystem Prompt\nExpert Personas · Law Refs"]
+        qvac["QVAC SDK\n@qvac/sdk\nQwen3 local inference"]
         prices["Market Price APIs\nBlibli · SerpAPI"]
+    end
+
+    subgraph Storage["Storage"]
+        localfs["Local Filesystem\nD:\\frontier\\evidence\\"]
+        supabase["Supabase\nPostgreSQL + Storage"]
+        pinata["Pinata / IPFS\n(optional)"]
     end
 
     subgraph Solana["Solana Devnet"]
@@ -30,10 +36,17 @@ graph TB
         ata["User ATAs"]
     end
 
+    subgraph Backend["FastAPI Backend"]
+        fastapi["market price scraping\nBlibli · SerpAPI"]
+    end
+
     UI --> NextAPI
-    NextAPI --> cli
-    cli --> prompt
-    cli --> prices
+    NextAPI --> qvac
+    NextAPI --> prices
+    NextAPI --> localfs
+    NextAPI --> supabase
+    NextAPI --> pinata
+    NextAPI --> fastapi
     UI --> Wallet
     Wallet --> program
     program --> config
@@ -45,44 +58,83 @@ graph TB
     style NextAPI fill:#0d1f1a,stroke:#14F195
     style AI fill:#1a0d2e,stroke:#9945FF
     style Solana fill:#0d1a2d,stroke:#38BDF8
+    style Storage fill:#1a1a0d,stroke:#14F195
+    style Backend fill:#0d1a1a,stroke:#38BDF8
 ```
 
 ---
 
-## Data Flow — Contract Audit
+## Data Flow — Contract Audit (Streaming)
 
 ```mermaid
 sequenceDiagram
     participant U as User Browser
-    participant API as /api/audit
-    participant CLI as Claude CLI
+    participant API as /api/audit-stream
+    participant QVAC as QVAC SDK
     participant MP as Market Price APIs
 
     U->>API: POST { contractText, lang }
-    API->>CLI: detectContractType(text)
-    CLI-->>API: { type: "jasa_it" }
+    API-->>U: SSE: "Detecting contract type..."
+    API->>QVAC: detectContractType(text)
+    QVAC-->>API: { type: "jasa_it" }
+    API-->>U: SSE: "Fetching market prices..."
     API->>MP: fetchAllMarketPrices(keywords)
     MP-->>API: price ranges per item
-    API->>CLI: analyzeContract(text + prices + persona)
-    CLI-->>API: { fairness_score, risky_clauses, ... }
-    API-->>U: { data: ContractReviewResult, meta: { hash } }
+    API-->>U: SSE: "Running AI analysis..."
+    API->>QVAC: analyzeContract(text + prices + persona)
+    QVAC-->>API: { fairness_score, risky_clauses, ... }
+    API-->>U: SSE: result event { data: ContractReviewResult }
+    API-->>U: SSE: done
+```
+
+---
+
+## Data Flow — Evidence Upload & Checkpoint Review
+
+```mermaid
+sequenceDiagram
+    participant C as Contractor Browser
+    participant API as /api/evidence/upload
+    participant FS as Local Filesystem
+    participant SB as Supabase Storage
+    participant RV as /api/review/checkpoint-with-contract
+    participant QVAC as QVAC SDK
+
+    C->>API: POST multipart (files, pdaAddress, checkpointIndex)
+    API->>FS: Save to evidence/{pdaAddress}/{checkpointIndex}/
+    API->>SB: Upload to Supabase Storage
+    API-->>C: { success: true, filePaths }
+
+    C->>RV: POST { pdaAddress, checkpointIndex }
+    RV->>FS: Read contract PDF + evidence files
+    RV->>QVAC: reviewCheckpoint(contractText, evidenceText)
+    QVAC-->>RV: { status, compliance_score, findings }
+    RV-->>C: CheckpointReviewResult
 ```
 
 ---
 
 ## Key Architectural Decisions
 
-### 1. Claude CLI as Subprocess (not API)
-The AI layer calls `claude -p "..."` as a child process instead of using the Anthropic API directly.
+### 1. QVAC SDK for Local AI Inference
 
-**Why:**
-- No API key billing in `.env` — uses the developer's authenticated Claude CLI session
-- The agent's `CLAUDE.md` system prompt lives in `agent/CLAUDE.md`, kept outside the web request path
-- Output is captured as JSON, parsed, and returned to the browser
+All AI analysis (contract review, checkpoint verification, Q&A) runs through the **QVAC SDK** (`@qvac/sdk`), which calls a locally-running Qwen3 model. This means:
 
-**Tradeoff:** The Claude CLI must be installed and authenticated on the server machine.
+- No external AI API key required
+- No subprocess spawning or child processes
+- Deterministic output (temperature = 0)
+- Three model tiers: `fast` (Llama 3.2 1B), `smart` (Qwen3 4B), `best` (Qwen3 8B)
 
-### 2. No External State Management
+All AI calls go through the `runQVAC()` function in `app/lib/contractAgent.ts`.
+
+### 2. Local Filesystem for Evidence Storage
+
+Evidence files are stored on the local filesystem at `D:\frontier\evidence\{pdaAddress}\{checkpointIndex}\`. This allows the checkpoint review API to read actual file contents for AI analysis, rather than relying on text descriptions.
+
+Contract PDFs (uploaded after on-chain deployment) are stored at `D:\frontier\evidence\{pdaAddress}\contract\`.
+
+### 3. No External State Management
+
 All UI state uses React's built-in hooks and Context API:
 - `LanguageProvider` — EN/ID switching
 - `ThemeProvider` — dark/light theme + CSS variables
@@ -90,10 +142,12 @@ All UI state uses React's built-in hooks and Context API:
 
 No Redux, Zustand, or similar libraries — keeps the bundle lean.
 
-### 3. Anchor IDL for Type-Safe Blockchain Calls
+### 4. Anchor IDL for Type-Safe Blockchain Calls
+
 The Solana program's IDL (`app/lib/idl.ts`) is imported to create an Anchor `Program` client. This provides type-safe method calls matching the on-chain program instructions exactly.
 
-### 4. PDA-Based Contract Identity
+### 5. PDA-Based Contract Identity
+
 Every on-chain contract is a Program Derived Address seeded with `[client_pubkey, contractor_pubkey, created_at_timestamp]`. Contracts are deterministically addressable with no central registry.
 
 ---
@@ -111,13 +165,25 @@ frontend/
 │   ├── dashboard/
 │   │   ├── page.tsx          ← Contract list
 │   │   └── [id]/page.tsx     ← Contract detail + milestones
-│   ├── pricing/page.tsx      ← Pricing tiers
 │   ├── api/                  ← Next.js API routes (server-side)
+│   │   ├── upload/           ← PDF text extraction
+│   │   ├── audit/            ← Synchronous AI audit
+│   │   ├── audit-stream/     ← Streaming AI audit (SSE)
+│   │   ├── chat-contract/    ← AI Q&A
+│   │   ├── review/           ← Checkpoint review (with files)
+│   │   ├── review-checkpoint/← Checkpoint review (metadata only)
+│   │   ├── evidence/         ← Evidence file upload
+│   │   ├── contracts/        ← Contract PDF + metadata endpoints
+│   │   ├── market/           ← Market price proxy
+│   │   └── demo-pdf/         ← Serve demo PDF
 │   ├── components/           ← Reusable React components
 │   ├── lib/                  ← Utilities, hooks, AI agent
+│   │   ├── contractAgent.ts  ← All AI logic via QVAC SDK
+│   │   ├── useContractProgram.ts ← Solana/Anchor hooks
+│   │   └── idl.ts            ← Anchor IDL
 │   └── i18n/                 ← Translation dictionaries
-├── agent/                    ← Claude agent system prompt (CLAUDE.md)
+├── agent/                    ← AI system prompt (CLAUDE.md — used as QVAC system prompt)
 ├── public/                   ← Static assets
-├── docs/                     ← This GitBook documentation
+├── docs/                     ← This documentation
 └── .env.local                ← Environment config
 ```

@@ -1,5 +1,9 @@
 import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
+
+const EVIDENCE_ROOT = path.resolve(process.cwd(), "..", "evidence");
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -30,12 +34,26 @@ export async function POST(req: NextRequest) {
 
   const timestamp = Date.now();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const path = `${pdaAddress}/${timestamp}_${safeName}`;
+  const storagePath = `${pdaAddress}/${timestamp}_${safeName}`;
 
   const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  // ── 1. Simpan ke lokal: evidence/{pdaAddress}/contract/{filename} ──────────
+  const localDir  = path.join(EVIDENCE_ROOT, pdaAddress, "contract");
+  const localFile = path.join(localDir, safeName);
+  try {
+    await mkdir(localDir, { recursive: true });
+    await writeFile(localFile, buffer);
+    console.log(`[upload-pdf] Saved locally: ${localFile}`);
+  } catch (e) {
+    console.error("[upload-pdf] Local save failed:", e);
+  }
+
+  // ── 2. Upload ke Supabase Storage ─────────────────────────────────────────
   const { error } = await supabaseAdmin.storage
     .from("contracts")
-    .upload(path, arrayBuffer, {
+    .upload(storagePath, buffer, {
       contentType: "application/pdf",
       upsert: false,
     });
@@ -48,8 +66,8 @@ export async function POST(req: NextRequest) {
   // Update pdf_path di tabel contracts
   await supabaseAdmin
     .from("contracts")
-    .update({ pdf_path: path })
+    .update({ pdf_path: storagePath })
     .eq("pda_address", pdaAddress);
 
-  return Response.json({ path, success: true });
+  return Response.json({ path: storagePath, success: true });
 }

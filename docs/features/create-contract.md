@@ -1,13 +1,9 @@
 # Create & Deploy Contract
 
-**Route:** `/create`  
+**Route:** `/create`
 **File:** `app/create/page.tsx`
 
 The Create page deploys a contract on-chain as a Solana escrow. Funds are locked in the smart contract and can only be released when milestones are approved.
-
----
-
-![Create Contract — Form Overview](../assets/screenshots/create-page.png)
 
 ---
 
@@ -33,11 +29,11 @@ Before creating a contract:
 | Audit Hash | No | SHA-256 from the Audit page |
 | Start Date / End Date | No | Contract period |
 
+> **Tip:** If you just audited a contract on `/audit`, click **Create Contract** there — the form will be pre-filled from the audit results.
+
 ---
 
 ## Defining Milestones
-
-![Create Contract — Milestone Definition](../assets/screenshots/create-milestones.png)
 
 A contract must have at least one milestone. Milestone amounts must add up to the total contract value.
 
@@ -65,7 +61,7 @@ sequenceDiagram
     UI->>Sol: Build create_contract transaction
     UI->>P: Request transaction approval
     P-->>U: Show transaction details
-    U->>P: Approve ✓
+    U->>P: Approve
     P->>Sol: Submit transaction
     Sol-->>UI: Confirmation + Contract PDA address
     UI-->>U: Redirect to Dashboard
@@ -75,14 +71,19 @@ sequenceDiagram
 
 ## What Gets Created On-Chain
 
-![Contract Created — Success State](../assets/screenshots/create-success.png)
-
 After deployment, two accounts are created on Solana:
 
 | Account | Address | Content |
 |---------|---------|---------|
 | Contract PDA | Derived from `[client, contractor, created_at]` | Contract data, milestones, status |
 | USDC Escrow ATA | ATA owned by Contract PDA | Locked USDC funds |
+
+Additionally, the contract PDF (if uploaded) is stored locally at:
+```
+D:\frontier\evidence\{pdaAddress}\contract\
+```
+
+And contract metadata is saved to Supabase for fast querying.
 
 ---
 

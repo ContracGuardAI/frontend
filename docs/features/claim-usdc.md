@@ -6,8 +6,6 @@ ContractGuard runs on Solana Devnet with a custom **mock USDC token** for testin
 
 ## How to Claim
 
-![Navbar — Wallet Connected with Claim Button](../assets/screenshots/navbar-claim.png)
-
 1. Connect your Phantom wallet (set to Devnet)
 2. The **Claim 1,000** button appears to the right of your wallet address in the navbar
 3. Click it
@@ -32,13 +30,11 @@ stateDiagram-v2
 |-------|-------------|-------------|
 | Ready | `Claim 1,000` | Available to claim |
 | In-flight | `claiming...` + spinner | Transaction pending |
-| Cooldown | `⏳ 23h 42m` | Countdown to next claim |
+| Cooldown | `23h 42m` | Countdown to next claim |
 
 ---
 
 ## Wallet Popup
-
-![Navbar — Wallet Popup with Balances](../assets/screenshots/wallet-popup.png)
 
 Click your wallet **address pill** (left of the claim button) to open a popup showing:
 - **SOL balance** — your Devnet SOL for transaction fees

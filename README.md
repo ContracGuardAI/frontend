@@ -7,12 +7,12 @@ AI-powered contract auditing and on-chain escrow platform built on Solana. Uploa
 ## How It Works
 
 ```
-PDF Upload → AI Audit (Claude) → Review Results → Create On-Chain Contract → Milestone Escrow
+PDF Upload → AI Audit (QVAC) → Review Results → Create On-Chain Contract → Milestone Escrow
 ```
 
-1. **Audit** — User uploads a PDF contract. The backend extracts text and passes it to the Claude AI agent, which analyzes clauses, detects price markups, and flags risky terms.
+1. **Audit** — User uploads a PDF contract. The backend extracts text and passes it to the QVAC AI engine, which analyzes clauses, detects price markups, and flags risky terms.
 2. **Create Contract** — After the audit, the user clicks "Create Contract". The form is pre-filled from audit results. User sets the USDC amount, contractor wallet, and milestones, then deploys to Solana Devnet.
-3. **Dashboard** — Both client and contractor track progress. Contractor submits evidence per milestone; the AI agent reviews it; client approves or requests revision.
+3. **Dashboard** — Both client and contractor track progress. Contractor submits evidence per milestone; the AI engine reviews it; client approves or requests revision.
 
 ---
 
@@ -21,12 +21,14 @@ PDF Upload → AI Audit (Claude) → Review Results → Create On-Chain Contract
 | Layer | Technology |
 |-------|-----------|
 | Frontend | Next.js 14 (App Router), TypeScript |
-| Styling | CSS-in-JS (inline styles), Tailwind CSS |
+| Styling | TailwindCSS (via CSS variables) |
 | Blockchain | Solana Devnet, Anchor 1.0 |
 | Wallet | Phantom via `@solana/wallet-adapter` |
-| AI Agent | Claude Code CLI (`claude -p`) as a subprocess |
+| AI Engine | QVAC SDK (`@qvac/sdk`) — Qwen3 local models |
 | Token | Mock USDC (custom SPL mint on Devnet) |
 | PDF parsing | pdf-parse |
+| Database | Supabase (PostgreSQL) |
+| Storage | Local `evidence/` directory + Supabase Storage + Pinata/IPFS (optional) |
 
 ---
 
@@ -35,36 +37,37 @@ PDF Upload → AI Audit (Claude) → Review Results → Create On-Chain Contract
 | Tool | Version | Notes |
 |------|---------|-------|
 | [Node.js](https://nodejs.org) | 18+ | |
-| [Claude Code CLI](https://claude.ai/code) | latest | The AI agent runs as a `claude` subprocess |
 | [Phantom Wallet](https://phantom.app) | latest | Browser extension for Solana |
+| QVAC runtime | latest | Local AI inference server (Qwen3 models) |
 
 ---
 
 ## Folder Structure
 
-This project is part of a monorepo. **The three folders must share the same parent directory:**
+This project is part of a monorepo:
 
 ```
-Frontier/
+D:\frontier\
 ├── frontend/              ← Next.js app (this folder)
 │   ├── app/
-│   │   ├── api/           ← API routes (upload, audit-stream, checkpoint)
+│   │   ├── api/           ← API routes (upload, audit, audit-stream, checkpoint, evidence, etc.)
 │   │   ├── audit/         ← Audit page
 │   │   ├── create/        ← Create contract page
 │   │   ├── dashboard/     ← Dashboard + contract detail
 │   │   └── lib/
-│   │       ├── contractAgent.ts   ← Agent runner (spawns claude CLI)
+│   │       ├── contractAgent.ts   ← All AI logic via QVAC SDK
 │   │       ├── useContractProgram.ts  ← Solana/Anchor hooks & PDAs
 │   │       └── idl.ts             ← Anchor IDL
 │   └── .env.local
 │
-├── contractguard-agent/   ← AI agent context
-│   └── CLAUDE.md          ← Agent system prompt (contract review instructions)
-│
-└── smartcontract/         ← Solana Anchor program (deployed on Devnet)
+├── backend/               ← FastAPI — market price scraping (Blibli + SerpAPI)
+├── smartcontract/         ← Solana Anchor program (deployed on Devnet)
+└── evidence/              ← Local evidence file storage
+    └── {pdaAddress}/
+        ├── contract/      ← PDF contract uploaded after on-chain deploy
+        ├── 0/             ← Evidence for checkpoint index 0
+        └── 1/             ← Evidence for checkpoint index 1
 ```
-
-> The frontend resolves the agent at `../contractguard-agent` by default. You can override this with `AGENT_DIR` in `.env.local`.
 
 ---
 
@@ -74,45 +77,49 @@ Frontier/
 
 ```bash
 git clone <repo-url>
-cd Frontier/frontend
+cd D:\frontier\frontend
 npm install
 ```
 
-### 2. Log in to Claude Code CLI
-
-The AI agent runs by spawning `claude -p` as a child process. You must be authenticated:
-
-```bash
-claude login
-```
-
-Verify it works:
-```bash
-claude -p "Say hello" --output-format text
-```
-
-### 3. Set up environment variables
+### 2. Set up environment variables
 
 Create `frontend/.env.local`:
 
 ```env
-# Claude model for the AI agent
-# claude-haiku-4-5-20251001  → fast & cheap (good for testing)
-# claude-sonnet-4-6           → balanced (recommended)
-# claude-opus-4-7             → most capable (for important demos)
-CLAUDE_MODEL=claude-sonnet-4-6
+# QVAC AI model tier
+# fast  → Llama 3.2 1B (fastest)
+# smart → Qwen3 4B (recommended)
+# best  → Qwen3 8B (most capable)
+QVAC_MODEL_DEFAULT=smart
 
-# Optional: override agent folder path
-# AGENT_DIR=/absolute/path/to/contractguard-agent
+# Solana
+NEXT_PUBLIC_PROGRAM_ID=2Htsz7Xf4YWZTc8tupBTgsFHwZNZDzi59FRr9AWmxdNq
+NEXT_PUBLIC_RPC_URL=https://api.devnet.solana.com
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Backend
+BACKEND_URL=http://localhost:8000
+
+# Optional — market price APIs
+SERPAPI_KEY=
+GOOGLE_CSE_KEY=
+GOOGLE_CSE_ID=
+
+# Optional — IPFS storage
+PINATA_JWT=
 ```
 
-### 4. Set up Phantom Wallet on Devnet
+### 3. Set up Phantom Wallet on Devnet
 
 1. Install [Phantom](https://phantom.app)
 2. Go to **Settings → Developer Settings → Change Network → Devnet**
 3. Get free testnet SOL: [faucet.solana.com](https://faucet.solana.com)
 
-### 5. Run the dev server
+### 4. Run the dev server
 
 ```bash
 npm run dev
@@ -122,28 +129,29 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## How the AI Agent Works
+## How the AI Engine Works
 
-The agent is **not an API call** — it runs Claude Code CLI as a subprocess directly on your machine.
+All AI logic runs through the **QVAC SDK** (`@qvac/sdk`), which calls a local Qwen3 model. There is no external AI API and no subprocess spawning.
 
-When a user uploads a contract for audit, the backend (`app/lib/contractAgent.ts`) does this:
+`app/lib/contractAgent.ts` exposes the following functions, all powered by `runQVAC()` internally:
 
-```
-Next.js API route → spawn("claude", ["-p", "--model", ...]) → contractguard-agent/ (cwd)
-                                                                       ↓
-                                                               CLAUDE.md is loaded as context
-                                                                       ↓
-                                                               Contract text sent via stdin
-                                                                       ↓
-                                                               Claude responds with JSON
-```
+| Function | Purpose |
+|----------|---------|
+| `runClaudeExtract` | Extract contract metadata |
+| `detectContractType` | Classify contract type |
+| `analyzeContract` | Full contract audit (fairness score, risky clauses, price analysis) |
+| `chatContract` | Q&A about a specific contract |
+| `reviewCheckpoint` | Verify milestone evidence against contract spec |
 
-**`contractguard-agent/CLAUDE.md`** is the agent's system prompt. It defines two modes:
+**Model tiers:**
 
-- **Contract Review** — analyzes a full contract PDF. Returns a JSON with `fairness_score`, `price_analysis`, `risky_clauses`, and `overall_summary`.
-- **Checkpoint Review** — checks a contractor's submitted evidence against contract specs. Returns `APPROVED`, `NEEDS_REVISION`, or `MAJOR_ISSUE`.
+| Tier | Model | Speed |
+|------|-------|-------|
+| `fast` | Llama 3.2 1B | Fastest |
+| `smart` | Qwen3 4B | Balanced (default) |
+| `best` | Qwen3 8B | Most capable |
 
-The agent always responds in the same language as the UI (EN/ID), enforced via the prompt.
+All AI calls use temperature `0` for deterministic, consistent output.
 
 ---
 
@@ -151,8 +159,8 @@ The agent always responds in the same language as the UI (EN/ID), enforced via t
 
 ### Step 1 — Audit a contract
 1. Go to `/audit`
-2. Upload any PDF contract (must contain selectable text, not a scanned image)
-3. Wait for the AI to analyze (~15–60 seconds depending on contract length)
+2. Click **Coba Demo Kontrak** to load the demo PDF, or upload your own PDF
+3. Wait for the AI to analyze (~5–20 seconds depending on model tier)
 4. Review the fairness score, risky clauses, and overpriced items
 
 ### Step 2 — Create an on-chain contract
@@ -178,19 +186,28 @@ The agent always responds in the same language as the UI (EN/ID), enforced via t
 
 ---
 
+## Deployment
+
+ContractGuard is deployed via **Cloudflare Tunnel** (Zero Trust) at `contractguard.site`.
+
+- Auto-start configured via Windows Task Scheduler: `C:\Users\user\start-contractguard.bat`
+- Cloudflared runs as a Windows Service
+
+---
+
 ## Production Build
 
 ```bash
 npm run build
-npm run start
+npm start
 ```
 
 ---
 
 ## Troubleshooting
 
-**`Gagal menjalankan Claude Code` / `Failed to run Claude Code`**
-→ Claude CLI is not installed or not logged in. Run `claude login` and try again.
+**AI analysis fails or returns empty result**
+→ Verify the QVAC local inference server is running and reachable. Check `QVAC_MODEL_DEFAULT` is set to a valid tier (`fast`, `smart`, `best`).
 
 **PDF upload fails with "failed to extract text"**
 → The PDF is likely a scanned image. Use a PDF with real selectable text.

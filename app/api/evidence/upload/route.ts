@@ -1,16 +1,18 @@
 import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
 
+// Root folder evidence: D:\frontier\evidence\
+const EVIDENCE_ROOT = path.resolve(process.cwd(), "..", "evidence");
+
 export async function POST(req: NextRequest) {
   const jwt = process.env.PINATA_JWT;
-  if (!jwt) {
-    return Response.json({ error: "Pinata not configured" }, { status: 500 });
-  }
 
   let formData: FormData;
   try {
@@ -37,49 +39,65 @@ export async function POST(req: NextRequest) {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  // ── 1. Upload ke Pinata (untuk CID on-chain) ──────────────
-  const pinataForm = new FormData();
-  pinataForm.append("file", new Blob([buffer], { type: file.type }), file.name);
-  pinataForm.append("pinataMetadata", JSON.stringify({ name: `evidence_${Date.now()}_${file.name}` }));
-  pinataForm.append("pinataOptions", JSON.stringify({ cidVersion: 1 }));
-
-  const pinataRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${jwt}` },
-    body: pinataForm,
-  });
-
-  if (!pinataRes.ok) {
-    const errText = await pinataRes.text();
-    console.error("[evidence/upload] Pinata error:", errText);
-    return Response.json({ error: "Upload ke IPFS gagal" }, { status: 502 });
-  }
-
-  const pinataData = await pinataRes.json() as { IpfsHash: string };
-  const ipfsCid = pinataData.IpfsHash;
-
-  // ── 2. Upload ke Supabase Storage (untuk AI bisa baca) ───
   const timestamp = Date.now();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const supabasePath = `${pdaAddress}/${checkpointIndex}/${timestamp}_${safeName}`;
+  const relativePath = `${pdaAddress}/${checkpointIndex}/${timestamp}_${safeName}`;
 
-  // Auto-create bucket jika belum ada
-  const { data: buckets } = await supabaseAdmin.storage.listBuckets();
-  if (!buckets?.find(b => b.name === "evidence")) {
-    await supabaseAdmin.storage.createBucket("evidence", { public: false });
+  // ── 1. Simpan ke lokal disk ────────────────────────────────
+  const localDir  = path.join(EVIDENCE_ROOT, pdaAddress, checkpointIndex);
+  const localFile = path.join(localDir, `${timestamp}_${safeName}`);
+  let localPath: string | null = null;
+  try {
+    await mkdir(localDir, { recursive: true });
+    await writeFile(localFile, buffer);
+    localPath = localFile;
+    console.log(`[evidence/upload] Saved locally: ${localFile}`);
+  } catch (e) {
+    console.error("[evidence/upload] Local save failed:", e);
+    // Tidak hard-fail
   }
 
-  const { error: storageErr } = await supabaseAdmin.storage
-    .from("evidence")
-    .upload(supabasePath, buffer, { contentType: file.type, upsert: false });
+  // ── 2. Upload ke Pinata (opsional, untuk CID on-chain) ────
+  let ipfsCid: string | null = null;
+  if (jwt) {
+    try {
+      const pinataForm = new FormData();
+      pinataForm.append("file", new Blob([buffer], { type: file.type }), file.name);
+      pinataForm.append("pinataMetadata", JSON.stringify({ name: `evidence_${timestamp}_${file.name}` }));
+      pinataForm.append("pinataOptions", JSON.stringify({ cidVersion: 1 }));
 
-  if (storageErr) {
-    console.error("[evidence/upload] Supabase storage error:", storageErr);
-    // Tidak hard-fail — CID Pinata sudah ada, lanjutkan
+      const pinataRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${jwt}` },
+        body: pinataForm,
+      });
+
+      if (pinataRes.ok) {
+        const pinataData = await pinataRes.json() as { IpfsHash: string };
+        ipfsCid = pinataData.IpfsHash;
+        console.log(`[evidence/upload] Pinata CID: ${ipfsCid}`);
+      }
+    } catch (e) {
+      console.error("[evidence/upload] Pinata error:", e);
+    }
   }
 
-  // ── 3. Simpan record ke evidence_submissions ──────────────
-  // Cari contract_id dulu, lalu checkpoint_id
+  // ── 3. Upload ke Supabase Storage (backup) ────────────────
+  let supabasePath: string | null = null;
+  try {
+    const { data: buckets } = await supabaseAdmin.storage.listBuckets();
+    if (!buckets?.find(b => b.name === "evidence")) {
+      await supabaseAdmin.storage.createBucket("evidence", { public: false });
+    }
+    const { error: storageErr } = await supabaseAdmin.storage
+      .from("evidence")
+      .upload(relativePath, buffer, { contentType: file.type, upsert: false });
+    if (!storageErr) supabasePath = relativePath;
+  } catch (e) {
+    console.error("[evidence/upload] Supabase storage error:", e);
+  }
+
+  // ── 4. Simpan record ke evidence_submissions ──────────────
   const { data: contract } = await supabaseAdmin
     .from("contracts")
     .select("id")
@@ -95,23 +113,24 @@ export async function POST(req: NextRequest) {
         .maybeSingle()
     : { data: null };
 
-  // Simpan dengan checkpoint_id jika ketemu
   const { data: submission } = await supabaseAdmin
     .from("evidence_submissions")
     .insert({
       checkpoint_id: checkpoint?.id ?? null,
-      ipfs_cid: ipfsCid,
-      supabase_path: storageErr ? null : supabasePath,
+      ipfs_cid: ipfsCid ?? `local_${timestamp}`,
+      supabase_path: supabasePath,
       file_type: file.type,
       file_size: file.size,
       submitted_by: contractorWallet ?? null,
+      // local_path disimpan di metadata jika kolom ada, atau fallback ke supabase_path
     })
     .select("id")
     .single();
 
   return Response.json({
-    ipfsCid,
-    supabasePath: storageErr ? null : supabasePath,
+    ipfsCid: ipfsCid ?? `local_${timestamp}`,
+    supabasePath,
+    localPath,
     submissionId: submission?.id ?? null,
     success: true,
   });

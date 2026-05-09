@@ -4,16 +4,11 @@
 
 ---
 
-![ContractGuard AI — Landing Page](assets/screenshots/landing.png)
-
----
-
 ContractGuard AI is the first platform that combines **AI contract auditing** with **on-chain escrow** — built specifically for freelancers, vendors, and procurement teams in Indonesia.
 
 Before you sign anything, ContractGuard tells you exactly what's risky, what's unfair, and what the market price should be. After you sign, your payment is locked on Solana and released automatically when work is verified.
 
-> **🔗 Live Demo** — [contractguard.vercel.app](https://contractguard.vercel.app)  
-> **🎬 Video Walkthrough** — [Watch 2-minute demo](https://youtube.com)
+> **Live at:** [contractguard.site](https://contractguard.site) (via Cloudflare Tunnel)
 
 ---
 
@@ -34,10 +29,10 @@ Every year, thousands of freelancers and vendors in Indonesia sign contracts the
 
 ```mermaid
 flowchart LR
-    A([📄 Upload Contract]) --> B([🤖 AI Audit])
+    A([Upload Contract]) --> B([AI Audit])
     B --> C([Deploy Escrow])
-    C --> D([📋 Submit Evidence])
-    D --> E([✅ Release Funds])
+    C --> D([Submit Evidence])
+    D --> E([Release Funds])
 
     style A fill:#1a1a2e,stroke:#9945FF,color:#f0f0ff
     style B fill:#1a1a2e,stroke:#9945FF,color:#f0f0ff
@@ -53,7 +48,7 @@ flowchart LR
 ## Why ContractGuard
 
 - **Built for Indonesia** — understands Indonesian law, Indonesian market prices, Bahasa Indonesia
-- **AI-powered by Claude** — the most capable AI available, not a generic chatbot
+- **AI-powered by QVAC (Qwen3 local)** — fast local inference, no external API dependency
 - **Trustless escrow** — Solana smart contract enforces payment, not a third party
 - **No fees, no middleman** — open, permissionless, free during beta
 

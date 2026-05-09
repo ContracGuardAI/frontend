@@ -11,10 +11,10 @@ All pages and layouts use the App Router convention. There is no `src/` director
 | Route | File | Description |
 |-------|------|-------------|
 | `/` | `app/page.tsx` | Landing page — hero, features, how-it-works, stats, CTA |
-| `/audit` | `app/audit/page.tsx` | AI contract audit — upload PDF or paste text |
+| `/audit` | `app/audit/page.tsx` | AI contract audit — upload PDF, paste text, or try demo contract |
 | `/create` | `app/create/page.tsx` | Multi-step form to deploy contract on Solana |
 | `/dashboard` | `app/dashboard/page.tsx` | List of all user contracts |
-| `/dashboard/[id]` | `app/dashboard/[id]/page.tsx` | Contract detail, milestone management |
+| `/dashboard/[id]` | `app/dashboard/[id]/page.tsx` | Contract detail, milestone management, evidence upload, AI review |
 | `/pricing` | `app/pricing/page.tsx` | Pricing tiers (Free / Pro / Enterprise) |
 
 ---
@@ -77,15 +77,34 @@ The root layout wraps all pages with the required providers in this order:
 | File | Purpose |
 |------|---------|
 | `useContractProgram.ts` | React hook returning `{ program, wallet, connection }` + PDA helpers |
-| `contractAgent.ts` | All AI logic: analyze contract, review checkpoint, chat Q&A, price fetching |
+| `contractAgent.ts` | All AI logic via QVAC SDK: analyze contract, review checkpoint, chat Q&A, price fetching |
 | `idl.ts` | Anchor Program IDL — defines on-chain instruction types |
 | `contract.json` | Contract metadata / sample schema |
 
 ---
 
+## API Routes (`app/api/`)
+
+| Route | Purpose |
+|-------|---------|
+| `upload/` | PDF text extraction (not persisted) |
+| `audit/` | Synchronous QVAC contract analysis |
+| `audit-stream/` | Streaming QVAC analysis (SSE) with market price fetching |
+| `chat-contract/` | QVAC Q&A about a contract |
+| `review/checkpoint-with-contract/` | QVAC checkpoint review with local file access |
+| `review-checkpoint/` | QVAC checkpoint review (metadata only, fallback) |
+| `evidence/upload/` | Evidence file upload (local + Supabase + Pinata) |
+| `contracts/upload-pdf/` | Contract PDF storage after on-chain deploy |
+| `contracts/save-metadata/` | Save contract metadata to Supabase |
+| `contracts/[pdaAddress]/metadata/` | Retrieve contract metadata |
+| `market/prices/` | Proxy to FastAPI market price backend |
+| `demo-pdf/` | Serve demo PDF from `D:\frontier\RAB_Pengembangan_Website.pdf` |
+
+---
+
 ## Styling
 
-### Tailwind CSS
+### TailwindCSS
 
 Configured in `tailwind.config.ts`. Custom colors:
 ```typescript
@@ -101,3 +120,5 @@ Custom animations: `pulse-slow`, `float`, `spin-slow`
 ### CSS Custom Properties
 
 All theme colors are exposed as CSS variables in `app/globals.css`, allowing dark/light switching without class toggling. See [Theming System](../development/theming.md) for the full variable reference.
+
+Components use inline `style={{ ... }}` with `var(--variable-name)` references for theme-aware rendering.

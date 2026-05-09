@@ -1,13 +1,9 @@
 # Contract Audit
 
-**Route:** `/audit`  
+**Route:** `/audit`
 **File:** `app/audit/page.tsx`
 
-The Audit page is the starting point for every contract workflow. It analyzes a contract for fairness, risks, and price accuracy — in under 30 seconds.
-
----
-
-![Audit Page — Upload Interface](../assets/screenshots/audit-page.png)
+The Audit page is the starting point for every contract workflow. It analyzes a contract for fairness, risks, and price accuracy using local QVAC AI — in under 30 seconds.
 
 ---
 
@@ -22,31 +18,33 @@ The Audit page is the starting point for every contract workflow. It analyzes a 
 - Click the **Text** tab and paste raw contract text directly
 - Best for: contracts in Google Docs, email, or any digital format
 
+### 3. Demo Contract
+- Click **Coba Demo Kontrak** to load a pre-loaded sample contract (`D:\frontier\RAB_Pengembangan_Website.pdf`) via `/api/demo-pdf`
+- Best for: quick testing without a real contract file
+
 ---
 
 ## Analysis Process
 
 ```mermaid
 flowchart LR
-    A([📄 Contract Text]) --> B([🔍 Detect\nContract Type])
+    A([Contract Text]) --> B([Detect\nContract Type])
     B --> C([Fetch Market\nPrices])
-    B --> D([🤖 Claude Analyzes\nwith Expert Persona])
+    B --> D([QVAC Analyzes\nwith Expert Persona])
     C --> D
-    D --> E([📊 Structured\nJSON Result])
-    E --> F([🖥️ Rendered\nin UI])
+    D --> E([Structured\nJSON Result])
+    E --> F([Rendered\nin UI])
 ```
 
-**Time:** 5–30 seconds depending on model and contract length.
+**Time:** 3–20 seconds depending on QVAC model tier and contract length.
 
-For long contracts, the streaming endpoint (`/api/audit-stream`) shows live progress so you're never staring at a blank screen.
+Analysis runs through `/api/audit-stream`, which streams live status updates via SSE so the user sees progress instead of a blank screen.
 
 ---
 
 ## Output Sections
 
 ### Fairness Score
-
-![Audit Results — Fairness Score](../assets/screenshots/audit-score.png)
 
 A single score from **1–10** representing overall contract balance:
 
@@ -60,8 +58,6 @@ A single score from **1–10** representing overall contract balance:
 
 ### Risky Clauses
 
-![Audit Results — Risky Clauses](../assets/screenshots/audit-clauses.png)
-
 Each flagged clause includes:
 - **Risk level** badge: `HIGH` / `MEDIUM` / `LOW`
 - **Exact clause text** from the contract
@@ -72,13 +68,11 @@ Each flagged clause includes:
 
 ### Price Analysis
 
-![Audit Results — Price Analysis](../assets/screenshots/audit-prices.png)
-
 Line-by-line comparison against real Indonesian market data:
 - Item name and contracted price
-- Market price range (from Blibli, Google Shopping, SerpAPI)
+- Market price range (fetched from Blibli via FastAPI backend, and optionally Google Shopping / SerpAPI)
 - Status badge: `OVERPRICED` / `FAIR` / `UNDERPRICED`
-- Notes explaining the discrepancy
+- Notes explaining the discrepancy from both perspectives (client and contractor)
 
 ---
 
@@ -86,7 +80,7 @@ Line-by-line comparison against real Indonesian market data:
 
 Checks relevant Indonesian laws based on the detected contract type. Each check shows:
 - Regulation reference (e.g., *Perpres No. 16/2018 Pasal 7*)
-- Compliance status: ✅ Compliant / ⚠️ Non-compliant
+- Compliance status: Compliant / Non-compliant
 - Specific notes on what needs to change
 
 ---
@@ -102,12 +96,21 @@ Checks relevant Indonesian laws based on the detected contract type. Each check 
 
 After analysis, a **SHA-256 hash** of the audit result is displayed.
 
-![Audit Hash — On-chain Recording](../assets/screenshots/audit-hash.png)
-
 This hash:
 - Proves the contract was audited before deployment
 - Is recorded on-chain when you deploy the contract
 - Can be used to verify audit integrity at any time
+
+---
+
+## Contract Chat (Q&A)
+
+After auditing, a **Chat** tab appears on the page. You can ask any question about the contract in plain language:
+
+> *"Does this contract have a late payment penalty clause?"*
+> *"What are my IP rights under Clause 5?"*
+
+Powered by `/api/chat-contract`. The prior audit result is automatically passed as context for better answers.
 
 ---
 

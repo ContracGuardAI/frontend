@@ -16,7 +16,7 @@ flowchart TD
     D -->|Client says not done yet| E([Revise for free\nrepeatedly])
     E --> D
     D -->|Client agrees| F([Invoice sent])
-    F --> G([⏳ Wait 30–90 days\nfor payment])
+    F --> G([Wait 30–90 days\nfor payment])
     G --> H{Payment arrives?}
     H -->|No| I([Chase payment\nno enforcement])
     I --> H
@@ -95,7 +95,7 @@ graph LR
     A["77 Million\nMSMEs in Indonesia"] --> D
     B["$2.3B+\nFreelance transactions 2023"] --> D
     C["Rp 2,000T+\nGovernment procurement/year"] --> D
-    D(["⚠️ Most contracts reviewed\nby zero legal experts"])
+    D(["Most contracts reviewed\nby zero legal experts"])
 
     style D fill:#2d1b1b,stroke:#ff4444,color:#ffcccc,font-weight:bold
     style A fill:#1a1a2e,stroke:#9945FF,color:#f0f0ff

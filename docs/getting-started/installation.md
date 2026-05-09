@@ -6,8 +6,8 @@
 |-------------|---------|-------|
 | Node.js | 18+ | LTS recommended |
 | npm | 8+ | Included with Node.js |
-| Claude Code CLI | latest | `npm i -g @anthropic-ai/claude-code` |
-| Phantom Wallet | latest | Browser extension |
+| QVAC runtime | latest | Local AI inference server (Qwen3 models) |
+| Phantom Wallet | latest | Browser extension for Solana |
 | Git | any | For cloning the repo |
 
 ---
@@ -26,26 +26,22 @@ npm install
 ```
 
 This installs:
-- `next` 14.2.5
+- `next` 14
 - `@solana/web3.js`, `@solana/wallet-adapter-*`
 - `@anchor-lang/core`
+- `@qvac/sdk`
 - `pdf-parse`
-- TypeScript + Tailwind CSS dev tools
+- TypeScript + TailwindCSS dev tools
 
-## 3. Install & Authenticate Claude CLI
+## 3. Set Up the QVAC Runtime
 
-ContractGuard uses the Claude Code CLI as its AI engine. The CLI must be installed and authenticated separately from this project.
+ContractGuard uses the **QVAC SDK** (`@qvac/sdk`) for all AI inference. The QVAC local inference server must be running before starting the app.
 
-```bash
-# Install globally
-npm install -g @anthropic-ai/claude-code
+1. Install and start the QVAC local runtime (refer to QVAC SDK documentation)
+2. Verify it is accessible at the expected endpoint
+3. Set `QVAC_MODEL_DEFAULT` in `.env.local` to your preferred model tier (`fast`, `smart`, or `best`)
 
-# Authenticate (opens browser login)
-claude login
-```
-
-> **Important:** The CLI authentication is per-machine. You only need to do this once.
-> The frontend calls `claude -p "..."` as a subprocess — no Anthropic API key is needed in `.env`.
+> **No external AI API key is needed.** All inference is local.
 
 ## 4. Verify Installation
 
@@ -53,11 +49,11 @@ claude login
 # Check Node.js
 node --version     # should be v18+
 
-# Check Claude CLI
-claude --version
+# Check npm
+npm --version
 
 # Check wallet extension
-# Open your browser → Phantom extension should be visible
+# Open your browser — Phantom extension should be visible
 ```
 
 ---
