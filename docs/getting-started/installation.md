@@ -15,8 +15,8 @@
 ## 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/contractguard-ai.git
-cd contractguard-ai/frontend
+git clone https://github.com/DivaManik/ContractGuardAI.git
+cd ContractGuardAI/frontend
 ```
 
 ## 2. Install Dependencies
